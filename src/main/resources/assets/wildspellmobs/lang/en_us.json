@@ -13,5 +13,10 @@
   "wildspellmobs.configuration.undergroundCreeperCap": "Underground Creeper Cap",
   "wildspellmobs.configuration.undergroundCapRadius": "Underground Cap Radius",
   "subtitles.wildspellmobs.entity.frozen_zombie.crunch": "Frozen joints crunch",
-  "item.wildspellmobs.enchanted_ice_crystal": "Enchanted Ice Crystal"
+  "item.wildspellmobs.enchanted_ice_crystal": "Enchanted Ice Crystal",
+  "entity.wildspellmobs.ice_lich": "Ice Lich",
+  "item.wildspellmobs.ice_lich_spawn_egg": "Ice Lich Spawn Egg",
+  "item.wildspellmobs.frozen_phylactery": "Frozen Phylactery",
+  "item.wildspellmobs.frostbound_staff": "Frostbound Staff",
+  "wildspellmobs.configuration.enchantedIceLichChance": "Enchanted Ice Lich Chance"
 }

@@ -247,4 +247,80 @@ for y in range(1, 15):
 for (x, y) in [(6, 4), (6, 5), (7, 3)]:
     crystal.putpixel((x, y), (255, 255, 255, 255))
 crystal.save(f"{OUT}/item/enchanted_ice_crystal.png")
+# --- Ice Lich (64x32 skeleton layout, drawn 1.3x scale) --------------------------------------------
+# head (0,0) 8x8x8; crown on the hat layer (32,0); robe on the body (16,16) 8x12x4; thin bone arms
+# (40,16) and legs (0,16) 2x12x2 (the model mirrors the right limbs onto the left).
+
+LICH_BONE = [(206, 228, 242), (192, 218, 236), (216, 236, 248)]
+ROBE = [(28, 36, 72), (24, 30, 62), (34, 44, 84)]
+TRIM = (120, 182, 232)
+lich = Image.new("RGBA", (64, 32), (0, 0, 0, 0))
+lich_eyes = Image.new("RGBA", (64, 32), (0, 0, 0, 0))
+
+
+def lich_box(u, v, w, h, d, palette_at):
+    for x in range(u, u + 2 * (d + w)):
+        for y in range(v, v + d + h):
+            in_top_row = y < v + d
+            if in_top_row and not (u + d <= x < u + d + 2 * w):
+                continue
+            lich.putpixel((x, y), jitter(rng.choice(palette_at(x - u, y - v)), 0, 6))
+
+
+lich_box(0, 0, 8, 8, 8, lambda x, y: LICH_BONE)                                  # skull
+lich_box(16, 16, 8, 12, 4, lambda x, y: ROBE)                                    # robe
+lich_box(40, 16, 2, 12, 2, lambda x, y: LICH_BONE)                               # arms
+lich_box(0, 16, 2, 12, 2, lambda x, y: ROBE if y < 2 + 6 else LICH_BONE)          # robe hem over bone shins
+for y in range(20, 32):                                                          # robe front: trim down the middle
+    lich.putpixel((23, y), TRIM + (255,))
+    lich.putpixel((24, y), TRIM + (255,))
+for x in range(20, 28):                                                          # collar
+    lich.putpixel((x, 20), TRIM + (255,))
+for (x, y) in [(9, 11), (10, 11), (9, 12), (10, 12), (13, 11), (14, 11), (13, 12), (14, 12), (11, 13), (12, 13)]:
+    lich.putpixel((x, y), (18, 24, 42, 255))                                     # sockets and nose
+for x in range(9, 15):
+    lich.putpixel((x, 15), (236, 246, 252, 255) if x % 2 else (40, 54, 80, 255))  # grin
+for (x, y), c in {(9, 11): (120, 240, 255), (10, 11): (220, 255, 255), (9, 12): (70, 200, 255), (10, 12): (120, 240, 255),
+                  (13, 11): (220, 255, 255), (14, 11): (120, 240, 255), (13, 12): (120, 240, 255), (14, 12): (70, 200, 255)}.items():
+    lich_eyes.putpixel((x, y), c + (255,))
+# Crown of ice on the hat layer: a band around the brow with spikes rising from it.
+for x in range(32, 64):
+    lich.putpixel((x, 9), (150, 214, 250, 255))
+    if (x - 32) % 3 == 1:
+        lich.putpixel((x, 8), (204, 240, 255, 255))
+for x in range(40, 48):                                                          # crown seen from above
+    for y in (0, 7):
+        lich.putpixel((x, y), (150, 214, 250, 255))
+for y in range(0, 8):
+    for x in (40, 47):
+        lich.putpixel((x, y), (150, 214, 250, 255))
+lich.save(f"{OUT}/entity/ice_lich.png")
+lich_eyes.save(f"{OUT}/entity/ice_lich_eyes.png")
+
+# Item: Frozen Phylactery, a frosted vial with a glowing blue core.
+vial = Image.new("RGBA", (16, 16), (0, 0, 0, 0))
+for y in range(2, 15):
+    half = 2 if y < 5 else 4 if y < 13 else 3
+    for x in range(8 - half, 8 + half):
+        rim = x in (8 - half, 8 + half - 1) or y in (2, 14)
+        core = 6 <= x <= 9 and 7 <= y <= 11
+        vial.putpixel((x, y), (28, 44, 92, 255) if rim else (90, 220, 255, 255) if core else jitter((196, 232, 250), 0, 6))
+for x in range(6, 10):
+    vial.putpixel((x, 1), (230, 246, 255, 255))                                  # icy stopper
+for (x, y) in [(7, 8), (8, 9)]:
+    vial.putpixel((x, y), (230, 255, 255, 255))
+vial.save(f"{OUT}/item/frozen_phylactery.png")
+
+# Item: Frostbound Staff, a dark shaft topped with an ice crystal (held diagonally).
+staff = Image.new("RGBA", (16, 16), (0, 0, 0, 0))
+for i in range(2, 12):
+    staff.putpixel((i, 15 - i), (70, 80, 112, 255))
+    staff.putpixel((i + 1, 15 - i), (48, 56, 84, 255))
+for (x, y) in [(5, 10), (8, 7)]:                                                 # frost bands on the shaft
+    staff.putpixel((x, y), (180, 226, 250, 255))
+for (x, y), c in {(12, 3): (150, 220, 255), (13, 2): (210, 245, 255), (11, 2): (120, 200, 250), (13, 4): (120, 200, 250),
+                  (12, 1): (200, 240, 255), (14, 3): (200, 240, 255), (12, 2): (240, 255, 255), (11, 3): (150, 220, 255),
+                  (13, 3): (150, 220, 255), (12, 4): (90, 180, 240)}.items():
+    staff.putpixel((x, y), c + (255,))
+staff.save(f"{OUT}/item/frostbound_staff.png")
 print("textures written")

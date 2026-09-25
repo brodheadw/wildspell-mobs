@@ -30,6 +30,7 @@ public class WildspellMobsClient {
         event.registerEntityRenderer(WildspellMobs.RIME_SKULL.get(), RimeSkullRenderer::new);
         event.registerEntityRenderer(WildspellMobs.FROST_SHARD.get(), ThrownItemRenderer::new);
         event.registerEntityRenderer(WildspellMobs.FROZEN_ZOMBIE.get(), FrozenZombieRenderer::new);
+        event.registerEntityRenderer(WildspellMobs.ICE_LICH.get(), IceLichRenderer::new);
     }
 
     @SubscribeEvent

@@ -3,7 +3,9 @@ package com.wildspell.mobs;
 import com.mojang.serialization.MapCodec;
 import com.wildspell.mobs.entity.FrostShard;
 import com.wildspell.mobs.entity.FrozenZombie;
+import com.wildspell.mobs.entity.IceLich;
 import com.wildspell.mobs.entity.RimeSkull;
+import com.wildspell.mobs.item.FrostboundStaffItem;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.core.particles.ParticleType;
 import net.minecraft.core.particles.SimpleParticleType;
@@ -76,6 +78,13 @@ public class WildspellMobs {
                     .clientTrackingRange(8)
                     .build("frozen_zombie"));
 
+    public static final DeferredHolder<EntityType<?>, EntityType<IceLich>> ICE_LICH = ENTITY_TYPES.register("ice_lich",
+            () -> EntityType.Builder.of(IceLich::new, MobCategory.MONSTER)
+                    .sized(0.8F, 2.6F)
+                    .eyeHeight(2.25F)
+                    .clientTrackingRange(10)
+                    .build("ice_lich"));
+
     public static final DeferredItem<Item> RIME_SHARD = ITEMS.registerSimpleItem("rime_shard");
 
     /** Drops from YUNG's Enchanted Ice when mined without Silk Touch (see loot_modifiers/). */
@@ -84,6 +93,16 @@ public class WildspellMobs {
 
     public static final DeferredItem<DeferredSpawnEggItem> RIME_SKULL_SPAWN_EGG = ITEMS.register("rime_skull_spawn_egg",
             () -> new DeferredSpawnEggItem(RIME_SKULL, 0xD6F1FF, 0x4FA8D8, new Item.Properties()));
+
+    /** Thrown into icy water, summons an Ice Lich (see LichSummoning). */
+    public static final DeferredItem<Item> FROZEN_PHYLACTERY = ITEMS.registerSimpleItem("frozen_phylactery",
+            new Item.Properties().rarity(Rarity.RARE).stacksTo(16));
+
+    public static final DeferredItem<FrostboundStaffItem> FROSTBOUND_STAFF = ITEMS.register("frostbound_staff",
+            () -> new FrostboundStaffItem(new Item.Properties().rarity(Rarity.EPIC).durability(250)));
+
+    public static final DeferredItem<DeferredSpawnEggItem> ICE_LICH_SPAWN_EGG = ITEMS.register("ice_lich_spawn_egg",
+            () -> new DeferredSpawnEggItem(ICE_LICH, 0xCFEFFF, 0x1E2B55, new Item.Properties()));
 
     public static final DeferredItem<DeferredSpawnEggItem> FROZEN_ZOMBIE_SPAWN_EGG = ITEMS.register("frozen_zombie_spawn_egg",
             () -> new DeferredSpawnEggItem(FROZEN_ZOMBIE, 0x9FD4E8, 0x3F6B4A, new Item.Properties()));
@@ -100,6 +119,8 @@ public class WildspellMobs {
         container.registerConfig(ModConfig.Type.COMMON, SpawnBalance.SPEC);
         NeoForge.EVENT_BUS.addListener(SpawnBalance::onPositionCheck);
         NeoForge.EVENT_BUS.addListener(ZombieFreezing::onEntityTick);
+        NeoForge.EVENT_BUS.addListener(LichSummoning::onEntityTick);
+        NeoForge.EVENT_BUS.addListener(LichSummoning::onBlockBreak);
     }
 
     public static ResourceLocation id(String path) {
@@ -113,6 +134,7 @@ public class WildspellMobs {
     private static void registerAttributes(EntityAttributeCreationEvent event) {
         event.put(RIME_SKULL.get(), RimeSkull.createAttributes().build());
         event.put(FROZEN_ZOMBIE.get(), FrozenZombie.createAttributes().build());
+        event.put(ICE_LICH.get(), IceLich.createAttributes().build());
     }
 
     private static void registerSpawnPlacements(RegisterSpawnPlacementsEvent event) {
@@ -126,9 +148,13 @@ public class WildspellMobs {
         if (event.getTabKey() == CreativeModeTabs.SPAWN_EGGS) {
             event.accept(RIME_SKULL_SPAWN_EGG);
             event.accept(FROZEN_ZOMBIE_SPAWN_EGG);
+            event.accept(ICE_LICH_SPAWN_EGG);
         } else if (event.getTabKey() == CreativeModeTabs.INGREDIENTS) {
             event.accept(RIME_SHARD);
             event.accept(ENCHANTED_ICE_CRYSTAL);
+            event.accept(FROZEN_PHYLACTERY);
+        } else if (event.getTabKey() == CreativeModeTabs.COMBAT) {
+            event.accept(FROSTBOUND_STAFF);
         }
     }
 }

@@ -1,6 +1,7 @@
 package com.wildspell.mobs;
 
 import com.wildspell.mobs.entity.FrozenZombie;
+import com.wildspell.mobs.entity.IceLich;
 import com.wildspell.mobs.entity.RimeSkull;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.registries.Registries;
@@ -221,6 +222,111 @@ public class WildspellMobsTests {
                     + " pig at " + helper.relativeVec(pig.position()) + " ended at " + landed);
             helper.assertTrue(closest[0] > 2.0, "closed to melee range: " + closest[0]);
         });
+    }
+
+    @GameTest(template = ARENA)
+    public static void phylacteryRecipeIsRegistered(GameTestHelper helper) {
+        var recipe = helper.getLevel().getRecipeManager().byKey(WildspellMobs.id("frozen_phylactery"));
+        helper.assertTrue(recipe.isPresent(), "frozen phylactery recipe missing");
+        helper.assertTrue(recipe.get().value().getResultItem(helper.getLevel().registryAccess()).is(WildspellMobs.FROZEN_PHYLACTERY.get()), "wrong result");
+        helper.succeed();
+    }
+
+    @GameTest(template = ARENA, timeoutTicks = 100, batch = "lichRitual")
+    public static void phylacteryInIcyWaterSummonsTheLich(GameTestHelper helper) {
+        helper.setBlock(4, 0, 4, Blocks.WATER);
+        helper.setBlock(5, 0, 4, Blocks.PACKED_ICE);
+        net.minecraft.world.entity.item.ItemEntity phylactery = helper.spawnItem(WildspellMobs.FROZEN_PHYLACTERY.get(), 4.5F, 1.0F, 4.5F);
+        helper.succeedWhen(() -> {
+            helper.assertEntityPresent(WildspellMobs.ICE_LICH.get());
+            helper.assertTrue(!phylactery.isAlive(), "phylactery not consumed");
+            helper.assertBlockPresent(Blocks.ICE, new BlockPos(4, 0, 4));
+        });
+    }
+
+    @GameTest(template = ARENA, timeoutTicks = 100)
+    public static void phylacteryInPlainWaterDoesNothing(GameTestHelper helper) {
+        helper.setBlock(4, 0, 4, Blocks.WATER);
+        helper.spawnItem(WildspellMobs.FROZEN_PHYLACTERY.get(), 4.5F, 1.0F, 4.5F);
+        helper.runAfterDelay(80, () -> {
+            helper.assertEntityNotPresent(WildspellMobs.ICE_LICH.get());
+            helper.succeed();
+        });
+    }
+
+    @GameTest(template = ARENA)
+    public static void miningEnchantedIceCanWakeALich(GameTestHelper helper) {
+        net.minecraft.world.level.block.Block rareIce = net.minecraft.core.registries.BuiltInRegistries.BLOCK.get(
+                net.minecraft.resources.ResourceLocation.fromNamespaceAndPath("yungscavebiomes", "rare_ice"));
+        BlockPos pos = helper.absolutePos(new BlockPos(4, 1, 4));
+        helper.getLevel().setBlockAndUpdate(pos, rareIce.defaultBlockState());
+        net.minecraft.world.entity.player.Player miner = net.neoforged.neoforge.common.util.FakePlayerFactory.getMinecraft(helper.getLevel());
+        double chance = SpawnBalance.ENCHANTED_ICE_LICH_CHANCE.get();
+        SpawnBalance.ENCHANTED_ICE_LICH_CHANCE.set(1.0);
+        try {
+            NeoForge.EVENT_BUS.post(new net.neoforged.neoforge.event.level.BlockEvent.BreakEvent(helper.getLevel(), pos, rareIce.defaultBlockState(), miner));
+        } finally {
+            SpawnBalance.ENCHANTED_ICE_LICH_CHANCE.set(chance);
+        }
+        helper.assertEntityPresent(WildspellMobs.ICE_LICH.get());
+        helper.succeed();
+    }
+
+    @GameTest(template = ARENA, timeoutTicks = 600, batch = "lichFight")
+    public static void lichFightsWithVolleysMinionsAndBursts(GameTestHelper helper) {
+        Pig pig = helper.spawn(EntityType.PIG, 4.5F, 1.0F, 4.5F);
+        pig.setNoAi(true);
+        pig.getAttribute(net.minecraft.world.entity.ai.attributes.Attributes.MAX_HEALTH).setBaseValue(1000.0);
+        pig.setHealth(1000.0F);
+        IceLich lich = helper.spawn(WildspellMobs.ICE_LICH.get(), 4.5F, 4.0F, 1.5F);
+        lich.setTarget(pig);
+        lich.setHealth(lich.getMaxHealth() * 0.4F);  // enraged, so the ice burst joins in
+        boolean[] saw = new boolean[2];  // shard fired, minion raised
+        helper.onEachTick(() -> {
+            if (lich.getTarget() != pig) {
+                lich.setTarget(pig);
+            }
+            saw[0] |= !helper.getEntities(WildspellMobs.FROST_SHARD.get()).isEmpty();
+            saw[1] |= helper.getLevel().getEntitiesOfClass(net.minecraft.world.entity.Mob.class, lich.getBoundingBox().inflate(32),
+                    m -> m.getTags().contains(IceLich.MINION_TAG)).size() > 0;
+        });
+        helper.succeedWhen(() -> {
+            helper.assertTrue(saw[0], "lich never fired a volley");
+            helper.assertTrue(saw[1], "lich never raised minions");
+            helper.assertTrue(pig.getTicksFrozen() > 0 && pig.getHealth() < 1000.0F, "nothing hurt and froze the target");
+            helper.assertTrue(lich.isEnraged(), "lich not enraged below half health");
+        });
+    }
+
+    @GameTest(template = ARENA, timeoutTicks = 300, batch = "lichDeath")
+    public static void lichMinionsShatterWhenItDies(GameTestHelper helper) {
+        Pig pig = helper.spawn(EntityType.PIG, 4.5F, 1.0F, 4.5F);
+        pig.setNoAi(true);
+        pig.setInvulnerable(true);
+        IceLich lich = helper.spawn(WildspellMobs.ICE_LICH.get(), 4.5F, 4.0F, 1.5F);
+        lich.setTarget(pig);
+        helper.succeedWhen(() -> {
+            java.util.List<net.minecraft.world.entity.Mob> minions = helper.getLevel().getEntitiesOfClass(net.minecraft.world.entity.Mob.class,
+                    lich.getBoundingBox().inflate(48), m -> m.getTags().contains(IceLich.MINION_TAG));
+            helper.assertTrue(!minions.isEmpty(), "no minions yet");
+            lich.hurt(helper.getLevel().damageSources().genericKill(), Float.MAX_VALUE);
+            helper.assertTrue(!lich.isAlive(), "lich survived");
+            helper.assertTrue(minions.stream().noneMatch(net.minecraft.world.entity.Mob::isAlive), "minions outlived the lich");
+        });
+    }
+
+    @GameTest(template = ARENA)
+    public static void frostboundStaffFiresAShard(GameTestHelper helper) {
+        net.minecraft.world.entity.player.Player player = net.neoforged.neoforge.common.util.FakePlayerFactory.getMinecraft(helper.getLevel());
+        BlockPos pos = helper.absolutePos(new BlockPos(4, 1, 4));
+        player.moveTo(pos.getX() + 0.5, pos.getY(), pos.getZ() + 0.5);
+        ItemStack staff = new ItemStack(WildspellMobs.FROSTBOUND_STAFF.get());
+        player.setItemInHand(net.minecraft.world.InteractionHand.MAIN_HAND, staff);
+        staff.use(helper.getLevel(), player, net.minecraft.world.InteractionHand.MAIN_HAND);
+        helper.assertTrue(!helper.getLevel().getEntitiesOfClass(com.wildspell.mobs.entity.FrostShard.class, player.getBoundingBox().inflate(4)).isEmpty(),
+                "staff fired nothing");
+        helper.assertTrue(staff.getDamageValue() == 1, "staff took no wear");
+        helper.succeed();
     }
 
     @GameTest(template = ARENA)

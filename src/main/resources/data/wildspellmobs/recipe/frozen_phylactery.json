@@ -1,0 +1,34 @@
+{
+  "neoforge:conditions": [
+    {
+      "type": "neoforge:mod_loaded",
+      "modid": "yungscavebiomes"
+    }
+  ],
+  "type": "minecraft:crafting_shapeless",
+  "category": "misc",
+  "ingredients": [
+    {
+      "item": "wildspellmobs:rime_shard"
+    },
+    {
+      "item": "wildspellmobs:rime_shard"
+    },
+    {
+      "item": "wildspellmobs:rime_shard"
+    },
+    {
+      "item": "wildspellmobs:rime_shard"
+    },
+    {
+      "item": "wildspellmobs:enchanted_ice_crystal"
+    },
+    {
+      "item": "yungscavebiomes:frost_lily"
+    }
+  ],
+  "result": {
+    "id": "wildspellmobs:frozen_phylactery",
+    "count": 1
+  }
+}

@@ -14,7 +14,10 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.EntityHitResult;
 import net.minecraft.world.phys.HitResult;
 
-/** Ice spit fired by the Rime Skull, or a snowball thrown by an ice-bound Frozen Zombie: light damage, a short slow, and a flash of frost. */
+/**
+ * Frost projectile: the Rime Skull's spit, an ice-bound Frozen Zombie's snowball, the Ice Lich's volleys and the
+ * Frostbound Staff's shot. Light damage, a short slow, and a flash of frost.
+ */
 public class FrostShard extends ThrowableItemProjectile {
     private static final byte EVENT_SHATTER = 3;
     /** Blocks per tick squared; public so throwers can aim for the drop. */
@@ -55,6 +58,10 @@ public class FrostShard extends ThrowableItemProjectile {
     protected void onHitEntity(EntityHitResult result) {
         super.onHitEntity(result);
         if (!(result.getEntity() instanceof LivingEntity target)) {
+            return;
+        }
+        // A lich's shards don't hurt the minions it raised.
+        if (this.getOwner() instanceof IceLich && (target instanceof IceLich || target.getTags().contains(IceLich.MINION_TAG))) {
             return;
         }
         target.hurt(this.damageSources().thrown(this, this.getOwner()), 3.0F);

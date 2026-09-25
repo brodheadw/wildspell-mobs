@@ -9,6 +9,11 @@ The player-facing description is [publish/DESCRIPTION.md](publish/DESCRIPTION.md
 - **Frozen Zombie**: zombies that linger in the Frosted Caves freeze into one. Laboured stop-start
   gait; variants: whole, one-armed, and ice-bound (sunk into the ice block it froze on, throws
   snowballs, freed if the ice breaks).
+- **Ice Lich**: a floating skeletal boss with a boss bar. It hangs back, fires frost-shard volleys,
+  raises Frozen Zombies and Rime Skulls, and below half health calls up ice bursts under its target;
+  its minions shatter when it dies. Drops the **Frostbound Staff** (fires frost shards). Summoned by
+  throwing a **Frozen Phylactery** (4 Rime Shards + Enchanted Ice Crystal + Frost Lily) into icy water,
+  or rarely woken by mining Enchanted Ice without Silk Touch (`enchantedIceLichChance`, default 3%).
 - **Spawn balance**: thins creepers and other monsters in caves (no skylight), with a local cap.
   Tunable in `config/wildspellmobs-common.toml`.
   Creepers are made super rare in the Frosted Caves (a custom `reweigh_spawns` biome modifier); with
@@ -20,7 +25,9 @@ The player-facing description is [publish/DESCRIPTION.md](publish/DESCRIPTION.md
 
 - `src/main/java/com/wildspell/mobs/`: registration (`WildspellMobs`), cave spawn balancing
   (`SpawnBalance`), zombie freezing (`ZombieFreezing`), gametests (`WildspellMobsTests`).
-  - `entity/`: `RimeSkull`, `FrozenZombie`, `FrostShard` (skull spit and zombie snowballs).
+  - `entity/`: `RimeSkull`, `FrozenZombie`, `IceLich`, `FrostShard` (every frost projectile).
+  - `LichSummoning`: the phylactery ritual and the Enchanted Ice wake-up chance.
+  - `item/`: `FrostboundStaffItem`.
   - `client/`: models, renderers, the frost mote particle.
 - `src/main/resources/`: textures, sounds, lang, loot tables, biome modifiers and biome tags.
 - `tools/`: generators for the art and sound. Edit these, not the PNG/OGG files directly.

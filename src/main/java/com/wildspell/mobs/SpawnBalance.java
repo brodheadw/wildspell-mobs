@@ -49,6 +49,10 @@ public final class SpawnBalance {
             .comment("Radius in blocks used by the two underground caps.")
             .defineInRange("undergroundCapRadius", 32, 8, 128);
 
+    static final ModConfigSpec.DoubleValue ENCHANTED_ICE_LICH_CHANCE = BUILDER
+            .comment("Chance (0-1) that mining Enchanted Ice without Silk Touch wakes an Ice Lich. 0 = never.")
+            .defineInRange("enchantedIceLichChance", 0.03, 0.0, 1.0);
+
     static final ModConfigSpec SPEC = BUILDER.build();
 
     // Spawning probes thousands of spots per tick; count neighbours once per chunk section per tick.
