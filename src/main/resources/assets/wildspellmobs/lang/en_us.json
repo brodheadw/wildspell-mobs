@@ -1,0 +1,16 @@
+{
+  "entity.wildspellmobs.rime_skull": "Rime Skull",
+  "entity.wildspellmobs.frost_shard": "Frost Shard",
+  "item.wildspellmobs.rime_shard": "Rime Shard",
+  "item.wildspellmobs.rime_skull_spawn_egg": "Rime Skull Spawn Egg",
+  "wildspellmobs.configuration.title": "Wildspell Mobs",
+  "wildspellmobs.configuration.undergroundCreeperChance": "Underground Creeper Chance",
+  "wildspellmobs.configuration.undergroundMonsterChance": "Underground Monster Chance",
+  "entity.wildspellmobs.frozen_zombie": "Frozen Zombie",
+  "item.wildspellmobs.frozen_zombie_spawn_egg": "Frozen Zombie Spawn Egg",
+  "subtitles.wildspellmobs.entity.frozen_zombie.shatter": "Frozen Zombie shatters",
+  "wildspellmobs.configuration.undergroundLocalCap": "Underground Local Cap",
+  "wildspellmobs.configuration.undergroundCreeperCap": "Underground Creeper Cap",
+  "wildspellmobs.configuration.undergroundCapRadius": "Underground Cap Radius",
+  "subtitles.wildspellmobs.entity.frozen_zombie.crunch": "Frozen joints crunch"
+}

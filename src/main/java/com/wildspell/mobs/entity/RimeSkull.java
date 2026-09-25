@@ -1,0 +1,470 @@
+package com.wildspell.mobs.entity;
+
+import java.util.EnumSet;
+import javax.annotation.Nullable;
+import net.minecraft.core.BlockPos;
+import com.wildspell.mobs.WildspellMobs;
+import net.minecraft.core.particles.ParticleTypes;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.network.syncher.EntityDataAccessor;
+import net.minecraft.network.syncher.EntityDataSerializers;
+import net.minecraft.network.syncher.SynchedEntityData;
+import net.minecraft.sounds.SoundEvent;
+import net.minecraft.sounds.SoundSource;
+import net.minecraft.sounds.SoundEvents;
+import net.minecraft.tags.DamageTypeTags;
+import net.minecraft.util.Mth;
+import net.minecraft.world.DifficultyInstance;
+import net.minecraft.world.damagesource.DamageSource;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.MobSpawnType;
+import net.minecraft.world.entity.SpawnGroupData;
+import net.minecraft.world.entity.ai.attributes.AttributeSupplier;
+import net.minecraft.world.entity.ai.attributes.Attributes;
+import net.minecraft.world.entity.ai.control.MoveControl;
+import net.minecraft.world.entity.ai.goal.FloatGoal;
+import net.minecraft.world.entity.ai.goal.Goal;
+import net.minecraft.world.entity.ai.goal.LookAtPlayerGoal;
+import net.minecraft.world.entity.ai.goal.target.HurtByTargetGoal;
+import net.minecraft.world.entity.ai.goal.target.NearestAttackableTargetGoal;
+import net.minecraft.world.entity.monster.Monster;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.level.ClipContext;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.level.ServerLevelAccessor;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.phys.HitResult;
+import net.minecraft.world.phys.Vec3;
+
+/**
+ * A floating, frost-rimed skull. It jitters around its target, lunges with its jaw open, and
+ * spits ice shards from range. Flies freely (no gravity) but still collides with terrain.
+ */
+public class RimeSkull extends Monster {
+    private static final EntityDataAccessor<Boolean> DATA_CHARGING = SynchedEntityData.defineId(RimeSkull.class, EntityDataSerializers.BOOLEAN);
+    private static final EntityDataAccessor<Integer> DATA_VARIANT = SynchedEntityData.defineId(RimeSkull.class, EntityDataSerializers.INT);
+    /** Subtle looks a skull can spawn with: frost tint, crack pattern, eye glow and crown layout. */
+    public static final int VARIANTS = 3;
+
+    private int chargeCooldown = 20;
+    private int spitCooldown = 60;
+    private int gnashCooldown = 40;
+
+    private static final byte EVENT_GNASH = 100;
+    private static final int CHOMP_TICKS = 5;
+    // Client-side gnash animation: ticks left and how many chomps this gnash has.
+    private int gnashTicks;
+    private int gnashLength;
+
+    public RimeSkull(EntityType<? extends RimeSkull> type, Level level) {
+        super(type, level);
+        this.moveControl = new SkullMoveControl();
+        this.setNoGravity(true);
+        this.xpReward = 6;
+    }
+
+    public static AttributeSupplier.Builder createAttributes() {
+        return Monster.createMonsterAttributes()
+                .add(Attributes.MAX_HEALTH, 12.0)
+                .add(Attributes.ATTACK_DAMAGE, 4.0)
+                .add(Attributes.FOLLOW_RANGE, 32.0)
+                .add(Attributes.ARMOR, 2.0);
+    }
+
+    @Override
+    protected void defineSynchedData(SynchedEntityData.Builder builder) {
+        super.defineSynchedData(builder);
+        builder.define(DATA_CHARGING, false);
+        builder.define(DATA_VARIANT, 0);
+    }
+
+    public int getVariant() {
+        return this.entityData.get(DATA_VARIANT);
+    }
+
+    public void setVariant(int variant) {
+        this.entityData.set(DATA_VARIANT, Math.floorMod(variant, VARIANTS));
+    }
+
+    @Override
+    public SpawnGroupData finalizeSpawn(ServerLevelAccessor level, DifficultyInstance difficulty, MobSpawnType spawnType, @Nullable SpawnGroupData spawnGroupData) {
+        this.setVariant(this.random.nextInt(VARIANTS));
+        return super.finalizeSpawn(level, difficulty, spawnType, spawnGroupData);
+    }
+
+    @Override
+    public void addAdditionalSaveData(CompoundTag tag) {
+        super.addAdditionalSaveData(tag);
+        tag.putInt("Variant", this.getVariant());
+    }
+
+    @Override
+    public void readAdditionalSaveData(CompoundTag tag) {
+        super.readAdditionalSaveData(tag);
+        this.setVariant(tag.getInt("Variant"));
+    }
+
+    public boolean isCharging() {
+        return this.entityData.get(DATA_CHARGING);
+    }
+
+    private void setCharging(boolean charging) {
+        this.entityData.set(DATA_CHARGING, charging);
+    }
+
+    @Override
+    protected void registerGoals() {
+        this.goalSelector.addGoal(0, new FloatGoal(this));
+        this.goalSelector.addGoal(2, new ChargeGoal());
+        this.goalSelector.addGoal(3, new SpitGoal());
+        this.goalSelector.addGoal(4, new CircleTargetGoal());
+        this.goalSelector.addGoal(8, new DriftGoal());
+        this.goalSelector.addGoal(9, new LookAtPlayerGoal(this, Player.class, 8.0F));
+        this.targetSelector.addGoal(1, new HurtByTargetGoal(this));
+        this.targetSelector.addGoal(2, new NearestAttackableTargetGoal<>(this, Player.class, true));
+    }
+
+    @Override
+    public void aiStep() {
+        super.aiStep();
+        if (this.level().isClientSide) {
+            this.clientEffects();
+            return;
+        }
+        if (this.chargeCooldown > 0) {
+            --this.chargeCooldown;
+        }
+        if (this.spitCooldown > 0) {
+            --this.spitCooldown;
+        }
+        if (this.gnashCooldown > 0) {
+            --this.gnashCooldown;
+        }
+        LivingEntity target = this.getTarget();
+        if (target != null && !this.isCharging() && this.gnashCooldown <= 0 && this.distanceToSqr(target) < 144.0 && this.random.nextInt(25) == 0) {
+            this.gnash();
+        }
+    }
+
+    /** Snap the jaw shut two or three times; the animation and chomp sounds play client-side. */
+    private void gnash() {
+        this.level().broadcastEntityEvent(this, EVENT_GNASH);
+        this.gnashCooldown = 60 + this.random.nextInt(80);
+    }
+
+    @Override
+    public void handleEntityEvent(byte id) {
+        if (id == EVENT_GNASH) {
+            this.gnashLength = (2 + this.random.nextInt(2)) * CHOMP_TICKS;
+            this.gnashTicks = this.gnashLength;
+        } else {
+            super.handleEntityEvent(id);
+        }
+    }
+
+    private void clientEffects() {
+        // Ice motes spilling off the skull and falling away, plus the odd snowflake.
+        for (int i = 0; i < 2; ++i) {
+            this.level().addParticle(WildspellMobs.FROST_MOTE.get(),
+                    this.getX() + (this.random.nextDouble() - 0.5) * 0.7, this.getY() + 0.1 + this.random.nextDouble() * 0.5,
+                    this.getZ() + (this.random.nextDouble() - 0.5) * 0.7,
+                    (this.random.nextDouble() - 0.5) * 0.03, -0.01 - this.random.nextDouble() * 0.02, (this.random.nextDouble() - 0.5) * 0.03);
+        }
+        if (this.random.nextInt(5) == 0) {
+            this.level().addParticle(ParticleTypes.SNOWFLAKE, this.getRandomX(0.6), this.getRandomY(), this.getRandomZ(0.6), 0.0, -0.02, 0.0);
+        }
+        if (this.gnashTicks > 0) {
+            --this.gnashTicks;
+            // The jaw snaps shut at the end of each chomp.
+            if ((this.gnashLength - this.gnashTicks) % CHOMP_TICKS == 0) {
+                this.level().playLocalSound(this.getX(), this.getY(), this.getZ(), SoundEvents.EVOKER_FANGS_ATTACK, SoundSource.HOSTILE,
+                        0.7F, 1.5F + this.random.nextFloat() * 0.2F, false);
+            }
+        }
+    }
+
+    /** Jaw openness 0..1 during a gnash (one open-and-snap per chomp), or -1 when not gnashing. */
+    public float gnashOpenness(float partialTick) {
+        if (this.gnashTicks <= 0) {
+            return -1.0F;
+        }
+        float progress = (this.gnashLength - this.gnashTicks + partialTick) / CHOMP_TICKS;
+        return Math.abs(Mth.sin(progress * Mth.PI));
+    }
+
+    @Override
+    public boolean doHurtTarget(Entity target) {
+        boolean hit = super.doHurtTarget(target);
+        if (hit && target instanceof LivingEntity living) {
+            living.setTicksFrozen(Math.max(living.getTicksFrozen(), living.getTicksRequiredToFreeze() + 60));
+            this.playSound(SoundEvents.PLAYER_HURT_FREEZE, 1.0F, 1.2F);
+        }
+        return hit;
+    }
+
+    @Override
+    public boolean hurt(DamageSource source, float amount) {
+        if (source.is(DamageTypeTags.IS_FIRE)) {
+            amount *= 2.0F;
+        }
+        return super.hurt(source, amount);
+    }
+
+    @Override
+    public boolean canFreeze() {
+        return false;
+    }
+
+    @Override
+    public boolean causeFallDamage(float fallDistance, float multiplier, DamageSource source) {
+        return false;
+    }
+
+    @Override
+    protected void checkFallDamage(double y, boolean onGround, BlockState state, BlockPos pos) {
+    }
+
+    @Override
+    protected SoundEvent getAmbientSound() {
+        return SoundEvents.SKELETON_AMBIENT;
+    }
+
+    @Override
+    protected SoundEvent getHurtSound(DamageSource source) {
+        return SoundEvents.SKELETON_HURT;
+    }
+
+    @Override
+    protected SoundEvent getDeathSound() {
+        return SoundEvents.GLASS_BREAK;
+    }
+
+    @Override
+    public float getVoicePitch() {
+        return super.getVoicePitch() * 1.35F;
+    }
+
+    /** Vex-style steering: accelerate straight at the wanted point, brake on arrival. */
+    private class SkullMoveControl extends MoveControl {
+        SkullMoveControl() {
+            super(RimeSkull.this);
+        }
+
+        @Override
+        public void tick() {
+            if (this.operation != MoveControl.Operation.MOVE_TO) {
+                return;
+            }
+            Vec3 toWanted = new Vec3(this.wantedX - RimeSkull.this.getX(), this.wantedY - RimeSkull.this.getY(), this.wantedZ - RimeSkull.this.getZ());
+            double distance = toWanted.length();
+            if (distance < RimeSkull.this.getBoundingBox().getSize()) {
+                this.operation = MoveControl.Operation.WAIT;
+                RimeSkull.this.setDeltaMovement(RimeSkull.this.getDeltaMovement().scale(0.5));
+                return;
+            }
+            RimeSkull.this.setDeltaMovement(RimeSkull.this.getDeltaMovement().add(toWanted.scale(this.speedModifier * 0.05 / distance)));
+            LivingEntity target = RimeSkull.this.getTarget();
+            double faceX = target == null ? RimeSkull.this.getDeltaMovement().x : target.getX() - RimeSkull.this.getX();
+            double faceZ = target == null ? RimeSkull.this.getDeltaMovement().z : target.getZ() - RimeSkull.this.getZ();
+            RimeSkull.this.setYRot(-((float) Mth.atan2(faceX, faceZ)) * Mth.RAD_TO_DEG);
+            RimeSkull.this.yBodyRot = RimeSkull.this.getYRot();
+        }
+    }
+
+    /** Lunge at the target's face. The aim locks after a few ticks so the lunge can be dodged. */
+    private class ChargeGoal extends Goal {
+        private static final int AIM_TICKS = 8;
+        private static final int MAX_TICKS = 40;
+        private int chargeTicks;
+
+        ChargeGoal() {
+            this.setFlags(EnumSet.of(Goal.Flag.MOVE, Goal.Flag.LOOK));
+        }
+
+        @Override
+        public boolean canUse() {
+            LivingEntity target = RimeSkull.this.getTarget();
+            return target != null && target.isAlive() && RimeSkull.this.chargeCooldown <= 0
+                    && RimeSkull.this.random.nextInt(reducedTickDelay(10)) == 0
+                    && RimeSkull.this.distanceToSqr(target) < 144.0 && RimeSkull.this.getSensing().hasLineOfSight(target);
+        }
+
+        @Override
+        public boolean canContinueToUse() {
+            LivingEntity target = RimeSkull.this.getTarget();
+            return target != null && target.isAlive() && RimeSkull.this.isCharging() && this.chargeTicks < MAX_TICKS;
+        }
+
+        @Override
+        public void start() {
+            this.chargeTicks = 0;
+            RimeSkull.this.setCharging(true);
+            this.aimAt(RimeSkull.this.getTarget());
+            RimeSkull.this.playSound(SoundEvents.PHANTOM_SWOOP, 0.8F, 1.6F);
+        }
+
+        @Override
+        public void stop() {
+            RimeSkull.this.setCharging(false);
+            RimeSkull.this.chargeCooldown = 30 + RimeSkull.this.random.nextInt(40);
+        }
+
+        @Override
+        public boolean requiresUpdateEveryTick() {
+            return true;
+        }
+
+        @Override
+        public void tick() {
+            LivingEntity target = RimeSkull.this.getTarget();
+            if (target == null) {
+                return;
+            }
+            ++this.chargeTicks;
+            RimeSkull.this.getLookControl().setLookAt(target);
+            if (RimeSkull.this.getBoundingBox().inflate(0.2).intersects(target.getBoundingBox())) {
+                RimeSkull.this.doHurtTarget(target);
+                RimeSkull.this.gnash();
+                RimeSkull.this.setCharging(false);
+            } else if (this.chargeTicks < AIM_TICKS) {
+                this.aimAt(target);
+            } else if (!RimeSkull.this.getMoveControl().hasWanted()) {
+                RimeSkull.this.setCharging(false);
+            }
+        }
+
+        private void aimAt(LivingEntity target) {
+            Vec3 eye = target.getEyePosition();
+            RimeSkull.this.getMoveControl().setWantedPosition(eye.x, eye.y - 0.4, eye.z, 1.0);
+        }
+    }
+
+    /** Spit an ice shard from mid range. Flagless, so it fires while the skull keeps circling. */
+    private class SpitGoal extends Goal {
+        @Override
+        public boolean canUse() {
+            LivingEntity target = RimeSkull.this.getTarget();
+            if (target == null || !target.isAlive() || RimeSkull.this.spitCooldown > 0 || RimeSkull.this.isCharging()) {
+                return false;
+            }
+            double distance = RimeSkull.this.distanceToSqr(target);
+            return distance > 16.0 && distance < 400.0 && RimeSkull.this.getSensing().hasLineOfSight(target);
+        }
+
+        @Override
+        public boolean canContinueToUse() {
+            return false;
+        }
+
+        @Override
+        public void start() {
+            LivingEntity target = RimeSkull.this.getTarget();
+            FrostShard shard = new FrostShard(RimeSkull.this.level(), RimeSkull.this);
+            double dx = target.getX() - RimeSkull.this.getX();
+            double dy = target.getY(0.5) - shard.getY();
+            double dz = target.getZ() - RimeSkull.this.getZ();
+            double horizontal = Math.sqrt(dx * dx + dz * dz);
+            shard.shoot(dx, dy + horizontal * 0.12, dz, 1.3F, 4.0F);
+            RimeSkull.this.level().addFreshEntity(shard);
+            RimeSkull.this.playSound(SoundEvents.SNOW_GOLEM_SHOOT, 1.0F, 0.7F);
+            RimeSkull.this.spitCooldown = 60 + RimeSkull.this.random.nextInt(60);
+        }
+    }
+
+    /** Hover around the target, darting to a new nearby point every second or two. */
+    private class CircleTargetGoal extends Goal {
+        private int repickTicks;
+
+        CircleTargetGoal() {
+            this.setFlags(EnumSet.of(Goal.Flag.MOVE));
+        }
+
+        @Override
+        public boolean canUse() {
+            LivingEntity target = RimeSkull.this.getTarget();
+            return target != null && target.isAlive();
+        }
+
+        @Override
+        public void start() {
+            this.repickTicks = 0;
+        }
+
+        @Override
+        public boolean requiresUpdateEveryTick() {
+            return true;
+        }
+
+        @Override
+        public void tick() {
+            LivingEntity target = RimeSkull.this.getTarget();
+            if (target == null) {
+                return;
+            }
+            RimeSkull.this.getLookControl().setLookAt(target, 30.0F, 30.0F);
+            if (--this.repickTicks > 0 && RimeSkull.this.getMoveControl().hasWanted()) {
+                return;
+            }
+            this.repickTicks = 15 + RimeSkull.this.random.nextInt(25);
+            Vec3 targetEye = target.getEyePosition();
+            for (int attempt = 0; attempt < 12; ++attempt) {
+                double angle = RimeSkull.this.random.nextDouble() * Math.PI * 2.0;
+                double radius = 3.5 + RimeSkull.this.random.nextDouble() * 3.0;
+                Vec3 spot = new Vec3(target.getX() + Math.cos(angle) * radius,
+                        target.getY() + 1.2 + RimeSkull.this.random.nextDouble() * 2.0,
+                        target.getZ() + Math.sin(angle) * radius);
+                // Steering is a straight line, so only take spots it can actually fly to and see from.
+                if (RimeSkull.this.level().isEmptyBlock(BlockPos.containing(spot))
+                        && this.clearPath(RimeSkull.this.getEyePosition(), spot)
+                        && this.clearPath(spot, targetEye)) {
+                    RimeSkull.this.getMoveControl().setWantedPosition(spot.x, spot.y, spot.z, 0.55);
+                    return;
+                }
+            }
+            // Boxed in (usually tucked under a ledge): rise to get a new view, else close in.
+            BlockPos above = RimeSkull.this.blockPosition().above(2);
+            if (RimeSkull.this.level().isEmptyBlock(above) && RimeSkull.this.level().isEmptyBlock(above.below())) {
+                RimeSkull.this.getMoveControl().setWantedPosition(RimeSkull.this.getX(), RimeSkull.this.getY() + 2.0, RimeSkull.this.getZ(), 0.55);
+            } else {
+                RimeSkull.this.getMoveControl().setWantedPosition(targetEye.x, targetEye.y, targetEye.z, 0.55);
+            }
+        }
+
+        private boolean clearPath(Vec3 from, Vec3 to) {
+            return RimeSkull.this.level().clip(new ClipContext(from, to, ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, RimeSkull.this))
+                    .getType() == HitResult.Type.MISS;
+        }
+    }
+
+    /** Idle drift to a nearby open spot when nothing is being hunted. */
+    private class DriftGoal extends Goal {
+        DriftGoal() {
+            this.setFlags(EnumSet.of(Goal.Flag.MOVE));
+        }
+
+        @Override
+        public boolean canUse() {
+            return RimeSkull.this.getTarget() == null && !RimeSkull.this.getMoveControl().hasWanted()
+                    && RimeSkull.this.random.nextInt(reducedTickDelay(7)) == 0;
+        }
+
+        @Override
+        public boolean canContinueToUse() {
+            return false;
+        }
+
+        @Override
+        public void start() {
+            BlockPos origin = RimeSkull.this.blockPosition();
+            for (int attempt = 0; attempt < 3; ++attempt) {
+                BlockPos pos = origin.offset(RimeSkull.this.random.nextInt(9) - 4, RimeSkull.this.random.nextInt(5) - 2, RimeSkull.this.random.nextInt(9) - 4);
+                if (RimeSkull.this.level().isEmptyBlock(pos)) {
+                    RimeSkull.this.getMoveControl().setWantedPosition(pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5, 0.25);
+                    return;
+                }
+            }
+        }
+    }
+}

@@ -1,0 +1,18 @@
+{
+  "entity.frozen_zombie.crunch": {
+    "subtitle": "subtitles.wildspellmobs.entity.frozen_zombie.crunch",
+    "sounds": [
+      "wildspellmobs:frozen_zombie/crunch1",
+      "wildspellmobs:frozen_zombie/crunch2",
+      "wildspellmobs:frozen_zombie/crunch3",
+      "wildspellmobs:frozen_zombie/crunch4"
+    ]
+  },
+  "entity.frozen_zombie.shatter": {
+    "subtitle": "subtitles.wildspellmobs.entity.frozen_zombie.shatter",
+    "sounds": [
+      "wildspellmobs:frozen_zombie/shatter1",
+      "wildspellmobs:frozen_zombie/shatter2"
+    ]
+  }
+}
