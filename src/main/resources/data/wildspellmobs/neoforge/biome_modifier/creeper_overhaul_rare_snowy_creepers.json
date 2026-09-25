@@ -1,0 +1,6 @@
+{
+  "neoforge:conditions": [{"type": "neoforge:mod_loaded", "modid": "creeperoverhaul"}],
+  "type": "neoforge:add_spawns",
+  "biomes": "#wildspellmobs:rare_creepers",
+  "spawners": {"type": "creeperoverhaul:snowy_creeper", "weight": 3, "minCount": 1, "maxCount": 1}
+}

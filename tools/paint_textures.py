@@ -234,4 +234,17 @@ for y in range(2, 14):
 for (x, y) in [(7, 5), (7, 6), (6, 8)]:
     shard.putpixel((x, y), (255, 255, 255, 255))
 shard.save(f"{OUT}/item/rime_shard.png")
+
+# Item: Enchanted Ice Crystal, a faceted glowing crystal (the item also gets the enchantment glint).
+crystal = Image.new("RGBA", (16, 16), (0, 0, 0, 0))
+edge = (34, 96, 170, 255)
+for y in range(1, 15):
+    half = min(y - 1, 14 - y, 4) + 1
+    for x in range(8 - half, 8 + half):
+        rim = x in (8 - half, 8 + half - 1) or y in (1, 14)
+        core = abs(x - 7.5) < 1.6 and 4 <= y <= 11
+        crystal.putpixel((x, y), edge if rim else (206, 250, 255, 255) if core else jitter((96, 196, 250), -12 if x >= 8 else 12, 6))
+for (x, y) in [(6, 4), (6, 5), (7, 3)]:
+    crystal.putpixel((x, y), (255, 255, 255, 255))
+crystal.save(f"{OUT}/item/enchanted_ice_crystal.png")
 print("textures written")

@@ -1,0 +1,7 @@
+{
+  "type": "wildspellmobs:reweigh_spawns",
+  "biomes": "#wildspellmobs:rare_creepers",
+  "entity_types": "minecraft:creeper",
+  "weight": 3,
+  "max_count": 1
+}

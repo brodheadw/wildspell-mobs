@@ -11,6 +11,10 @@ The player-facing description is [publish/DESCRIPTION.md](publish/DESCRIPTION.md
   snowballs, freed if the ice breaks).
 - **Spawn balance**: thins creepers and other monsters in caves (no skylight), with a local cap.
   Tunable in `config/wildspellmobs-common.toml`.
+  Creepers are made super rare in the Frosted Caves (a custom `reweigh_spawns` biome modifier); with
+  Creeper Overhaul installed, the only ones there are its Snowy Creepers.
+- **Enchanted Ice Crystal**: YUNG's Enchanted Ice drops one when mined without Silk Touch (a global
+  loot modifier), on top of its XP. Silk Touch still gives the block.
 
 ## Layout
 
@@ -37,7 +41,9 @@ Needs JDK 21 (`JAVA_HOME`).
 
 Gametests cover spawning, AI, variants and the spawn balance. They need YUNG's Cave Biomes and its
 dependencies at dev runtime: put `YungsCaveBiomes`, `YungsApi`, `geckolib` and `TerraBlender` jars
-for NeoForge 1.21.1 in `libs/` (gitignored, never shipped).
+for NeoForge 1.21.1 in `libs/` (gitignored, never shipped). Add `CreeperOverhaul`, `resourcefulconfig`
+and `resourcefullib` too to cover the Creeper Overhaul rules (only snowy creepers, and rarely, in the
+Frosted Caves); the creeper test checks whichever setup it runs in.
 
     ./gradlew runGameTestServer
 

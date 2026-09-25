@@ -12,5 +12,6 @@
   "wildspellmobs.configuration.undergroundLocalCap": "Underground Local Cap",
   "wildspellmobs.configuration.undergroundCreeperCap": "Underground Creeper Cap",
   "wildspellmobs.configuration.undergroundCapRadius": "Underground Cap Radius",
-  "subtitles.wildspellmobs.entity.frozen_zombie.crunch": "Frozen joints crunch"
+  "subtitles.wildspellmobs.entity.frozen_zombie.crunch": "Frozen joints crunch",
+  "item.wildspellmobs.enchanted_ice_crystal": "Enchanted Ice Crystal"
 }

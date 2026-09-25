@@ -1,0 +1,14 @@
+{
+  "type": "neoforge:add_table",
+  "conditions": [
+    {"condition": "neoforge:loot_table_id", "loot_table_id": "yungscavebiomes:blocks/rare_ice"},
+    {
+      "condition": "minecraft:inverted",
+      "term": {
+        "condition": "minecraft:match_tool",
+        "predicate": {"predicates": {"minecraft:enchantments": [{"enchantments": "minecraft:silk_touch", "levels": {"min": 1}}]}}
+      }
+    }
+  ],
+  "table": "wildspellmobs:blocks/enchanted_ice_crystal"
+}

@@ -1,0 +1,27 @@
+{
+  "neoforge:conditions": [
+    {
+      "type": "neoforge:mod_loaded",
+      "modid": "creeperoverhaul"
+    }
+  ],
+  "type": "neoforge:remove_spawns",
+  "biomes": "#wildspellmobs:rare_creepers",
+  "entity_types": [
+    "creeperoverhaul:badlands_creeper",
+    "creeperoverhaul:bamboo_creeper",
+    "creeperoverhaul:beach_creeper",
+    "creeperoverhaul:birch_creeper",
+    "creeperoverhaul:cave_creeper",
+    "creeperoverhaul:dark_oak_creeper",
+    "creeperoverhaul:desert_creeper",
+    "creeperoverhaul:dripstone_creeper",
+    "creeperoverhaul:hills_creeper",
+    "creeperoverhaul:jungle_creeper",
+    "creeperoverhaul:mushroom_creeper",
+    "creeperoverhaul:ocean_creeper",
+    "creeperoverhaul:savannah_creeper",
+    "creeperoverhaul:spruce_creeper",
+    "creeperoverhaul:swamp_creeper"
+  ]
+}

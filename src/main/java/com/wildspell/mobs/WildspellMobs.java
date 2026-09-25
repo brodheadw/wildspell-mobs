@@ -1,8 +1,10 @@
 package com.wildspell.mobs;
 
+import com.mojang.serialization.MapCodec;
 import com.wildspell.mobs.entity.FrostShard;
 import com.wildspell.mobs.entity.FrozenZombie;
 import com.wildspell.mobs.entity.RimeSkull;
+import net.minecraft.core.component.DataComponents;
 import net.minecraft.core.particles.ParticleType;
 import net.minecraft.core.particles.SimpleParticleType;
 import net.minecraft.core.registries.Registries;
@@ -14,12 +16,14 @@ import net.minecraft.world.entity.SpawnPlacementTypes;
 import net.minecraft.world.entity.monster.Monster;
 import net.minecraft.world.item.CreativeModeTabs;
 import net.minecraft.world.item.Item;
+import net.minecraft.world.item.Rarity;
 import net.minecraft.world.level.levelgen.Heightmap;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.fml.ModContainer;
 import net.neoforged.fml.common.Mod;
 import net.neoforged.fml.config.ModConfig;
 import net.neoforged.neoforge.common.DeferredSpawnEggItem;
+import net.neoforged.neoforge.common.world.BiomeModifier;
 import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.event.BuildCreativeModeTabContentsEvent;
 import net.neoforged.neoforge.event.entity.EntityAttributeCreationEvent;
@@ -27,6 +31,7 @@ import net.neoforged.neoforge.event.entity.RegisterSpawnPlacementsEvent;
 import net.neoforged.neoforge.registries.DeferredHolder;
 import net.neoforged.neoforge.registries.DeferredItem;
 import net.neoforged.neoforge.registries.DeferredRegister;
+import net.neoforged.neoforge.registries.NeoForgeRegistries;
 
 @Mod(WildspellMobs.MODID)
 public class WildspellMobs {
@@ -36,6 +41,11 @@ public class WildspellMobs {
     public static final DeferredRegister.Items ITEMS = DeferredRegister.createItems(MODID);
     public static final DeferredRegister<SoundEvent> SOUND_EVENTS = DeferredRegister.create(Registries.SOUND_EVENT, MODID);
     public static final DeferredRegister<ParticleType<?>> PARTICLE_TYPES = DeferredRegister.create(Registries.PARTICLE_TYPE, MODID);
+    public static final DeferredRegister<MapCodec<? extends BiomeModifier>> BIOME_MODIFIER_SERIALIZERS =
+            DeferredRegister.create(NeoForgeRegistries.Keys.BIOME_MODIFIER_SERIALIZERS, MODID);
+
+    public static final DeferredHolder<MapCodec<? extends BiomeModifier>, MapCodec<ReweighSpawnsBiomeModifier>> REWEIGH_SPAWNS =
+            BIOME_MODIFIER_SERIALIZERS.register("reweigh_spawns", () -> ReweighSpawnsBiomeModifier.CODEC);
 
     public static final DeferredHolder<SoundEvent, SoundEvent> FROZEN_ZOMBIE_CRUNCH = sound("entity.frozen_zombie.crunch");
     public static final DeferredHolder<SoundEvent, SoundEvent> FROZEN_ZOMBIE_SHATTER = sound("entity.frozen_zombie.shatter");
@@ -68,6 +78,10 @@ public class WildspellMobs {
 
     public static final DeferredItem<Item> RIME_SHARD = ITEMS.registerSimpleItem("rime_shard");
 
+    /** Drops from YUNG's Enchanted Ice when mined without Silk Touch (see loot_modifiers/). */
+    public static final DeferredItem<Item> ENCHANTED_ICE_CRYSTAL = ITEMS.registerSimpleItem("enchanted_ice_crystal",
+            new Item.Properties().rarity(Rarity.UNCOMMON).component(DataComponents.ENCHANTMENT_GLINT_OVERRIDE, true));
+
     public static final DeferredItem<DeferredSpawnEggItem> RIME_SKULL_SPAWN_EGG = ITEMS.register("rime_skull_spawn_egg",
             () -> new DeferredSpawnEggItem(RIME_SKULL, 0xD6F1FF, 0x4FA8D8, new Item.Properties()));
 
@@ -79,6 +93,7 @@ public class WildspellMobs {
         ITEMS.register(modBus);
         SOUND_EVENTS.register(modBus);
         PARTICLE_TYPES.register(modBus);
+        BIOME_MODIFIER_SERIALIZERS.register(modBus);
         modBus.addListener(WildspellMobs::registerAttributes);
         modBus.addListener(WildspellMobs::registerSpawnPlacements);
         modBus.addListener(WildspellMobs::addToCreativeTabs);
@@ -113,6 +128,7 @@ public class WildspellMobs {
             event.accept(FROZEN_ZOMBIE_SPAWN_EGG);
         } else if (event.getTabKey() == CreativeModeTabs.INGREDIENTS) {
             event.accept(RIME_SHARD);
+            event.accept(ENCHANTED_ICE_CRYSTAL);
         }
     }
 }

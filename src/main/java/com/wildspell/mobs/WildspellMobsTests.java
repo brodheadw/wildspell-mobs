@@ -282,6 +282,43 @@ public class WildspellMobsTests {
         });
     }
 
+    @GameTest(template = ARENA)
+    public static void creepersAreRareInFrostedCaves(GameTestHelper helper) {
+        ResourceKey<Biome> key = ResourceKey.create(Registries.BIOME, net.minecraft.resources.ResourceLocation.fromNamespaceAndPath("yungscavebiomes", "frosted_caves"));
+        Biome biome = helper.getLevel().registryAccess().registryOrThrow(Registries.BIOME).get(key);
+        helper.assertTrue(biome != null, "yungscavebiomes:frosted_caves is not loaded");
+        java.util.List<net.minecraft.world.level.biome.MobSpawnSettings.SpawnerData> monsters = biome.getMobSettings().getMobs(MobCategory.MONSTER).unwrap();
+        java.util.List<String> creepers = monsters.stream()
+                .filter(data -> net.minecraft.core.registries.BuiltInRegistries.ENTITY_TYPE.getKey(data.type).getPath().contains("creeper"))
+                .map(data -> net.minecraft.core.registries.BuiltInRegistries.ENTITY_TYPE.getKey(data.type) + " " + data.getWeight().asInt() + "x" + data.maxCount)
+                .toList();
+        // With Creeper Overhaul installed its cave creepers give way to rare snowy ones; otherwise vanilla creepers are made rare.
+        String expected = net.neoforged.fml.ModList.get().isLoaded("creeperoverhaul") ? "creeperoverhaul:snowy_creeper 3x1" : "minecraft:creeper 3x1";
+        helper.assertTrue(creepers.equals(java.util.List.of(expected)), "frosted caves creepers: " + creepers + ", expected only " + expected);
+        helper.succeed();
+    }
+
+    @GameTest(template = ARENA)
+    public static void enchantedIceDropsACrystalUnlessSilkTouched(GameTestHelper helper) {
+        net.minecraft.world.level.block.Block rareIce = net.minecraft.core.registries.BuiltInRegistries.BLOCK.get(
+                net.minecraft.resources.ResourceLocation.fromNamespaceAndPath("yungscavebiomes", "rare_ice"));
+        helper.assertTrue(rareIce != Blocks.AIR, "yungscavebiomes:rare_ice is not loaded");
+        BlockPos pos = helper.absolutePos(new BlockPos(4, 1, 4));
+        helper.getLevel().setBlockAndUpdate(pos, rareIce.defaultBlockState());
+        ItemStack silkPick = new ItemStack(Items.DIAMOND_PICKAXE);
+        silkPick.enchant(helper.getLevel().registryAccess().registryOrThrow(Registries.ENCHANTMENT)
+                .getHolderOrThrow(net.minecraft.world.item.enchantment.Enchantments.SILK_TOUCH), 1);
+        for (ItemStack tool : java.util.List.of(ItemStack.EMPTY, new ItemStack(Items.DIAMOND_PICKAXE), silkPick)) {
+            java.util.List<ItemStack> drops = net.minecraft.world.level.block.Block.getDrops(helper.getLevel().getBlockState(pos), helper.getLevel(), pos,
+                    helper.getLevel().getBlockEntity(pos), null, tool);
+            boolean crystal = drops.stream().anyMatch(stack -> stack.is(WildspellMobs.ENCHANTED_ICE_CRYSTAL.get()));
+            boolean block = drops.stream().anyMatch(stack -> stack.is(rareIce.asItem()));
+            boolean silk = tool == silkPick;
+            helper.assertTrue(crystal != silk && block == silk, (silk ? "silk touch" : "plain " + tool) + " dropped " + drops);
+        }
+        helper.succeed();
+    }
+
     @GameTest(template = ARENA, timeoutTicks = 100)
     public static void undergroundCreepersAreThinned(GameTestHelper helper) {
         BlockPos spot = new BlockPos(4, 1, 4);
