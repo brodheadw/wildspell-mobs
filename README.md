@@ -12,8 +12,10 @@ The player-facing description is [publish/DESCRIPTION.md](publish/DESCRIPTION.md
 - **Ice Lich**: a floating skeletal boss with a boss bar. It hangs back, fires frost-shard volleys,
   raises Frozen Zombies and Rime Skulls, and below half health calls up ice bursts under its target;
   its minions shatter when it dies. Drops the **Frostbound Staff** (fires frost shards). Summoned by
-  throwing a **Frozen Phylactery** (4 Rime Shards + Enchanted Ice Crystal + Frost Lily) into icy water,
+  throwing a **Frozen Phylactery** into icy water (shaped: Rime Shards in the corners, Frost Lilies
+  top and bottom, Ice either side, an Enchanted Ice Crystal in the middle),
   or rarely woken by mining Enchanted Ice without Silk Touch (`enchantedIceLichChance`, default 3%).
+- **Ice Cube drops**: YUNG's Ice Cubes have no loot of their own; this gives them 0-2 Ice.
 - **Spawn balance**: thins creepers and other monsters in caves (no skylight), with a local cap.
   Tunable in `config/wildspellmobs-common.toml`.
   Creepers are made super rare in the Frosted Caves (a custom `reweigh_spawns` biome modifier); with

@@ -225,10 +225,43 @@ public class WildspellMobsTests {
     }
 
     @GameTest(template = ARENA)
-    public static void phylacteryRecipeIsRegistered(GameTestHelper helper) {
-        var recipe = helper.getLevel().getRecipeManager().byKey(WildspellMobs.id("frozen_phylactery"));
-        helper.assertTrue(recipe.isPresent(), "frozen phylactery recipe missing");
-        helper.assertTrue(recipe.get().value().getResultItem(helper.getLevel().registryAccess()).is(WildspellMobs.FROZEN_PHYLACTERY.get()), "wrong result");
+    public static void phylacteryRecipeIsSymmetric(GameTestHelper helper) {
+        var holder = helper.getLevel().getRecipeManager().byKey(WildspellMobs.id("frozen_phylactery"));
+        helper.assertTrue(holder.isPresent(), "frozen phylactery recipe missing");
+        helper.assertTrue(holder.get().value() instanceof net.minecraft.world.item.crafting.ShapedRecipe, "recipe is not shaped");
+        var recipe = (net.minecraft.world.item.crafting.ShapedRecipe) holder.get().value();
+        java.util.List<net.minecraft.world.item.crafting.Ingredient> grid = recipe.getIngredients();
+        helper.assertTrue(recipe.getWidth() == 3 && recipe.getHeight() == 3, "not a full 3x3 grid");
+        for (int slot : new int[] {0, 2, 6, 8}) {
+            helper.assertTrue(grid.get(slot).test(new ItemStack(WildspellMobs.RIME_SHARD.get())), "corner " + slot + " is not a Rime Shard");
+        }
+        for (int slot = 0; slot < 9; ++slot) {
+            ItemStack[] here = grid.get(slot).getItems();
+            ItemStack[] mirror = grid.get(slot / 3 * 3 + (2 - slot % 3)).getItems();
+            ItemStack[] flipped = grid.get((2 - slot / 3) * 3 + slot % 3).getItems();
+            helper.assertTrue(here[0].is(mirror[0].getItem()) && here[0].is(flipped[0].getItem()), "grid not symmetric at slot " + slot);
+        }
+        helper.assertTrue(grid.get(3).test(new ItemStack(Items.ICE)) && grid.get(4).test(new ItemStack(WildspellMobs.ENCHANTED_ICE_CRYSTAL.get())),
+                "middle row should be ice, crystal, ice");
+        helper.succeed();
+    }
+
+    @GameTest(template = ARENA)
+    public static void iceCubesDropIce(GameTestHelper helper) {
+        EntityType<?> iceCubeType = net.minecraft.core.registries.BuiltInRegistries.ENTITY_TYPE.get(
+                net.minecraft.resources.ResourceLocation.fromNamespaceAndPath("yungscavebiomes", "ice_cube"));
+        net.minecraft.world.entity.Entity cube = helper.spawn(iceCubeType, 4.5F, 1.0F, 4.5F);
+        var table = helper.getLevel().getServer().reloadableRegistries().getLootTable(((net.minecraft.world.entity.LivingEntity) cube).getLootTable());
+        int ice = 0;
+        for (int i = 0; i < 40; ++i) {
+            var params = new net.minecraft.world.level.storage.loot.LootParams.Builder(helper.getLevel())
+                    .withParameter(net.minecraft.world.level.storage.loot.parameters.LootContextParams.THIS_ENTITY, cube)
+                    .withParameter(net.minecraft.world.level.storage.loot.parameters.LootContextParams.ORIGIN, cube.position())
+                    .withParameter(net.minecraft.world.level.storage.loot.parameters.LootContextParams.DAMAGE_SOURCE, helper.getLevel().damageSources().generic())
+                    .create(net.minecraft.world.level.storage.loot.parameters.LootContextParamSets.ENTITY);
+            ice += table.getRandomItems(params).stream().filter(s -> s.is(Items.ICE)).mapToInt(ItemStack::getCount).sum();
+        }
+        helper.assertTrue(ice > 10, "ice cubes dropped only " + ice + " ice over 40 kills");
         helper.succeed();
     }
 
