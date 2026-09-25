@@ -48,11 +48,16 @@ Needs JDK 21 (`JAVA_HOME`).
 
 ## Test
 
-Gametests cover spawning, AI, variants and the spawn balance. They need YUNG's Cave Biomes and its
+Gametests cover the mobs' spawning, AI and variants, zombie freezing, the spawn balance, the Ice Lich
+(ritual, mining chance, volleys, minions, enraged bursts, minions shattering), the staff, the recipe
+and the new drops. They need YUNG's Cave Biomes and its
 dependencies at dev runtime: put `YungsCaveBiomes`, `YungsApi`, `geckolib` and `TerraBlender` jars
 for NeoForge 1.21.1 in `libs/` (gitignored, never shipped). Add `CreeperOverhaul`, `resourcefulconfig`
 and `resourcefullib` too to cover the Creeper Overhaul rules (only snowy creepers, and rarely, in the
-Frosted Caves); the creeper test checks whichever setup it runs in.
+Frosted Caves); the creeper test checks whichever setup it runs in. Adding `ftb-quests`,
+`ftb-library`, `ftb-teams` and `architectury` lets the test server load the modpack's quest book
+(write it into `run/config/ftbquests/quests/` with the modpack repo's `tools/make_quests.py <folder>`)
+and log any quest that fails to parse.
 
     ./gradlew runGameTestServer
 
