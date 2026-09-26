@@ -25,6 +25,7 @@ import net.minecraft.util.Mth;
 import net.minecraft.world.Difficulty;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.tags.BlockTags;
@@ -35,19 +36,17 @@ import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 
 /**
- * The phylactery's side of the lich's unlife. It
+ * The phylactery on its altar, and the crypt around it. The lich's soul itself (its body, a soul in
+ * flight, re-forming) is kept in {@link LichSouls}, so it follows the phylactery if it's carried off;
+ * this block entity looks after the crypt. It
  * <ul>
  *   <li>raises the lich, very rarely, behind a player wandering the Frosted Caves near the crypt, and
  *       sends it hunting them;</li>
- *   <li>re-forms the lich on the altar when its soul (a {@link LichWisp}) flies home after it's struck down;</li>
  *   <li>wakes the crypt when a player walks in: its flames (soul-fire braziers and candles) ignite one
  *       by one and the lich is called home to face them. While it fights there, they burn down with its health;</li>
- *   <li>keeps itself warded, and so unbreakable, while any Rime Ward stands in the crypt.</li>
+ *   <li>keeps itself warded, and so immovable, while any Rime Ward stands in the crypt. Unwarded it
+ *       can be taken, as a {@link PhylacteryItem}; only fire destroys it.</li>
  * </ul>
- *
- * <p>The lich has at most one form at a time: a body ({@link #lichId}), a soul in flight
- * ({@link #soulTicks}), or a re-forming countdown ({@link #reformTicks}). Nothing raises a new body
- * while it has any of them.
  *
  * <p>All the work happens once a second, and only with a player within {@link #AMBUSH_RANGE}; the
  * crypt's blocks are only touched while all its chunks are loaded, so the phylactery never loads
@@ -72,8 +71,6 @@ public class PhylacteryBlockEntity extends BlockEntity {
     public static final int RISE_TICKS = 40;
     /** Seconds (spent with a player near) before the lich can ambush again after giving up a hunt. */
     public static final int RETREAT_COOLDOWN = 300;
-    /** Seconds a lich can go unfound before the phylactery stops waiting for it. */
-    private static final int MISSING_LIMIT = 60;
     /** Seconds the crypt stays awake with nobody in it. */
     private static final int EMPTY_LIMIT = 30;
     /** Flames left burning however hurt the lich is. */
@@ -83,15 +80,12 @@ public class PhylacteryBlockEntity extends BlockEntity {
     private static final int WARD_RESCAN_INTERVAL = 40;
     private static final double BEAM_VIEW_RANGE = 32.0;
 
+    /** The soul bound to this phylactery; given one the first time it ticks, if it was generated without. */
     @Nullable
-    private UUID lichId;
+    private UUID soulId;
+    /** A phylactery saved before souls moved to {@link LichSouls}: its lich, to carry over. */
     @Nullable
-    private UUID reformHunting;
-    private int reformTicks = -1;
-    /** Ticks left before a soul in flight is given up for lost. */
-    private int soulTicks;
-    private int ambushCooldown;
-    private int missingSeconds;
+    private UUID legacyLich;
     private boolean awake;
     private int emptySeconds;
     /** Braziers still to light as the crypt wakes, nearest the intruder first. */
@@ -113,9 +107,14 @@ public class PhylacteryBlockEntity extends BlockEntity {
 
     /** The crypt's interior, from its floor to its ceiling. */
     public AABB cryptBounds() {
-        BlockPos center = this.worldPosition.relative(this.getBlockState().getValue(PhylacteryBlock.FACING), CRYPT_CENTER);
-        return new AABB(center.getX() - CRYPT_HALF, this.worldPosition.getY() - CRYPT_BELOW, center.getZ() - CRYPT_HALF,
-                center.getX() + CRYPT_HALF + 1, this.worldPosition.getY() + CRYPT_ABOVE, center.getZ() + CRYPT_HALF + 1);
+        return cryptBounds(this.worldPosition, this.getBlockState().getValue(PhylacteryBlock.FACING));
+    }
+
+    /** The interior of the crypt whose altar is at {@code altar}, facing {@code facing}. */
+    public static AABB cryptBounds(BlockPos altar, net.minecraft.core.Direction facing) {
+        BlockPos center = altar.relative(facing, CRYPT_CENTER);
+        return new AABB(center.getX() - CRYPT_HALF, altar.getY() - CRYPT_BELOW, center.getZ() - CRYPT_HALF,
+                center.getX() + CRYPT_HALF + 1, altar.getY() + CRYPT_ABOVE, center.getZ() + CRYPT_HALF + 1);
     }
 
     /** Every block position in the crypt. */
@@ -129,14 +128,43 @@ public class PhylacteryBlockEntity extends BlockEntity {
         return level.hasChunksAt(BlockPos.containing(crypt.minX, crypt.minY, crypt.minZ), BlockPos.containing(crypt.maxX - 1, crypt.maxY - 1, crypt.maxZ - 1));
     }
 
-    @Nullable
-    public UUID lichId() {
-        return this.lichId;
+    public boolean isAwake() {
+        return this.awake;
     }
 
-    /** No body, no soul in flight and no re-forming under way: the lich is waiting to rise. */
-    private boolean dormant() {
-        return this.lichId == null && this.soulTicks <= 0 && this.reformTicks < 0;
+    /** This phylactery's soul, made on first use. */
+    public LichSouls.Soul soul(ServerLevel level) {
+        LichSouls souls = LichSouls.get(level);
+        LichSouls.Soul soul = souls.soul(this.soulId);
+        if (soul == null) {
+            soul = souls.create(level, this.worldPosition);
+            this.soulId = soul.id;
+            if (this.legacyLich != null && level.getEntity(this.legacyLich) instanceof IceLich lich) {
+                soul.claim(lich);
+            }
+            this.changed();
+        }
+        return soul;
+    }
+
+    @Nullable
+    public UUID soulId() {
+        return this.soulId;
+    }
+
+    /** Binds a phylactery set down on an altar (by hand) to the soul it carries. */
+    void bindSoul(ServerLevel level, UUID soulId) {
+        LichSouls.Soul soul = LichSouls.get(level).soul(soulId);
+        if (soul != null) {
+            this.soulId = soulId;
+            soul.placeOnAltar(level, this.worldPosition);
+            this.changed();
+        }
+    }
+
+    @Nullable
+    public UUID lichId() {
+        return this.soulId == null || !(this.level instanceof ServerLevel level) ? null : this.soul(level).lichId();
     }
 
     private static boolean canRaise(Level level) {
@@ -149,11 +177,6 @@ public class PhylacteryBlockEntity extends BlockEntity {
 
     static void serverTick(Level level, BlockPos pos, BlockState state, PhylacteryBlockEntity phylactery) {
         ServerLevel server = (ServerLevel) level;
-        if (phylactery.reformTicks > 0 && --phylactery.reformTicks == 0) {
-            phylactery.reformTicks = -1;
-            phylactery.reform(server);
-            phylactery.changed();
-        }
         if (!phylactery.toIgnite.isEmpty() && level.getGameTime() % 3 == 0) {
             phylactery.igniteNext(server);
         }
@@ -167,26 +190,23 @@ public class PhylacteryBlockEntity extends BlockEntity {
     }
 
     private void secondTick(ServerLevel level) {
-        IceLich lich = this.findLich(level);
-        if (this.soulTicks > 0) {
-            this.soulTicks = Math.max(0, this.soulTicks - 20);
-            this.changed();
-        }
+        LichSouls.Soul soul = this.soul(level);
+        IceLich lich = soul.findLich(level);
         List<Player> near = level.getEntitiesOfClass(Player.class, new AABB(this.worldPosition).inflate(AMBUSH_RANGE), PhylacteryBlockEntity::isPrey);
         if (near.isEmpty()) {
             return;
         }
         AABB crypt = this.cryptBounds();
         if (this.cryptLoaded(level)) {
-            this.tendCrypt(level, lich, near, crypt);
+            this.tendCrypt(level, soul, lich, near, crypt);
         }
-        if (!this.awake && this.dormant()) {
-            this.tryAmbush(level, near, crypt);
+        if (!this.awake && soul.dormant()) {
+            this.tryAmbush(level, soul, near, crypt);
         }
     }
 
     /** Wards, braziers and intruders: everything that needs the crypt's blocks, so only while they're all loaded. */
-    private void tendCrypt(ServerLevel level, @Nullable IceLich lich, List<Player> near, AABB crypt) {
+    private void tendCrypt(ServerLevel level, LichSouls.Soul soul, @Nullable IceLich lich, List<Player> near, AABB crypt) {
         List<BlockPos> wards = new ArrayList<>();
         List<BlockPos> braziers = new ArrayList<>();
         for (BlockPos p : this.cryptBlocks()) {
@@ -209,10 +229,10 @@ public class PhylacteryBlockEntity extends BlockEntity {
         if (intruder != null) {
             this.emptySeconds = 0;
             if (!this.awake) {
-                this.awaken(level, intruder, lich, braziers);
-            } else if (this.dormant()) {
+                this.awaken(level, soul, intruder, lich, braziers);
+            } else if (soul.dormant()) {
                 // Its old body was lost (unloaded far off, then forgotten): rise afresh for whoever's here.
-                this.scheduleRise(intruder);
+                soul.scheduleRise(intruder, RISE_TICKS);
             }
         } else if (this.awake && ++this.emptySeconds >= EMPTY_LIMIT) {
             this.sleep(level, braziers);
@@ -222,45 +242,8 @@ public class PhylacteryBlockEntity extends BlockEntity {
         }
     }
 
-    /** The phylactery's lich, if it's loaded; forgets a lich that has stayed unfound too long. */
-    @Nullable
-    private IceLich findLich(ServerLevel level) {
-        if (this.lichId == null) {
-            return null;
-        }
-        Entity entity = level.getEntity(this.lichId);
-        if (entity instanceof IceLich lich && lich.isAlive()) {
-            this.missingSeconds = 0;
-            return lich;
-        }
-        if (++this.missingSeconds >= MISSING_LIMIT) {
-            this.lichId = null;
-            this.missingSeconds = 0;
-            this.changed();
-        }
-        return null;
-    }
-
-    /**
-     * A bound lich checking in. It's this phylactery's lich if it's the one on record, or if the
-     * phylactery has lost track of its lich and this body turns up; any other body is a stale copy.
-     */
-    public boolean claim(IceLich lich) {
-        if (lich.getUUID().equals(this.lichId)) {
-            return true;
-        }
-        if (this.lichId == null && this.reformTicks < 0) {
-            this.lichId = lich.getUUID();
-            this.soulTicks = 0;
-            this.missingSeconds = 0;
-            this.changed();
-            return true;
-        }
-        return false;
-    }
-
     /** A player has walked into the crypt: light the braziers and call the lich home. */
-    private void awaken(ServerLevel level, Player intruder, @Nullable IceLich lich, List<BlockPos> braziers) {
+    private void awaken(ServerLevel level, LichSouls.Soul soul, Player intruder, @Nullable IceLich lich, List<BlockPos> braziers) {
         this.awake = true;
         this.changed();
         this.queueIgnition(level, braziers, intruder.blockPosition());
@@ -268,18 +251,12 @@ public class PhylacteryBlockEntity extends BlockEntity {
         level.playSound(null, this.worldPosition, SoundEvents.AMBIENT_SOUL_SAND_VALLEY_MOOD.value(), SoundSource.HOSTILE, 2.0F, 0.7F);
         if (lich != null) {
             lich.recall(this.altarSpot(), intruder);
-        } else if (this.dormant()) {
-            this.scheduleRise(intruder);
-        } else if (this.reformTicks >= 0) {
-            this.reformTicks = Math.min(this.reformTicks, RISE_TICKS);
+        } else if (soul.dormant()) {
+            soul.scheduleRise(intruder, RISE_TICKS);
+        } else {
+            soul.hurryRise(RISE_TICKS);
         }
         // Otherwise its soul is still on the way home, or its body is out of reach: it comes when it can.
-    }
-
-    private void scheduleRise(Player prey) {
-        this.reformHunting = prey.getUUID();
-        this.reformTicks = RISE_TICKS;
-        this.changed();
     }
 
     /** Queues the unlit braziers for lighting, nearest {@code from} first. */
@@ -349,10 +326,9 @@ public class PhylacteryBlockEntity extends BlockEntity {
     }
 
     /** Very rarely, rise behind a player roaming the Frosted Caves nearby. */
-    private void tryAmbush(ServerLevel level, List<Player> near, AABB crypt) {
-        if (this.ambushCooldown > 0) {
-            --this.ambushCooldown;
-            this.changed();
+    private void tryAmbush(ServerLevel level, LichSouls.Soul soul, List<Player> near, AABB crypt) {
+        if (soul.ambushCooldown() > 0) {
+            soul.coolAmbush();
             return;
         }
         if (!canRaise(level)) {
@@ -365,7 +341,7 @@ public class PhylacteryBlockEntity extends BlockEntity {
                     && level.getBiome(player.blockPosition()).is(ZombieFreezing.FREEZES_ZOMBIES) && level.random.nextDouble() < chance) {
                 Vec3 spot = findAmbushSpot(level, player);
                 if (spot != null) {
-                    this.raise(level, spot, player);
+                    soul.raise(level, spot, player);
                     return;
                 }
             }
@@ -395,89 +371,22 @@ public class PhylacteryBlockEntity extends BlockEntity {
         return Vec3.atBottomCenterOf(this.worldPosition.above());
     }
 
-    /** Raises this phylactery's lich at {@code at}, hunting {@code prey} if given. Nothing rises on Peaceful. */
-    @Nullable
-    public IceLich raise(ServerLevel level, Vec3 at, @Nullable Player prey) {
-        IceLich lich = canRaise(level) ? IceLich.summon(level, at, this.worldPosition) : null;
-        if (lich != null) {
-            if (prey != null) {
-                lich.hunt(prey);
-            }
-            this.lichId = lich.getUUID();
-            this.missingSeconds = 0;
-            this.soulTicks = 0;
-            this.changed();
-        }
-        return lich;
-    }
-
-    private void reform(ServerLevel level) {
-        Player prey = this.reformHunting != null && level.getEntity(this.reformHunting) instanceof Player player ? player : null;
-        this.reformHunting = null;
-        if (prey != null && (!isPrey(prey) || prey.distanceToSqr(Vec3.atCenterOf(this.worldPosition)) > LEASH * LEASH)) {
-            prey = null;
-        }
-        if (prey == null) {
-            prey = level.getEntitiesOfClass(Player.class, this.cryptBounds(), PhylacteryBlockEntity::isPrey).stream().findFirst().orElse(null);
-        }
-        if (this.lichId == null) {
-            this.raise(level, this.altarSpot(), prey);
-        }
-    }
-
-    /** The lich's soul has flown home; it re-forms after a while. */
-    public void onWispArrived(@Nullable UUID hunting) {
-        this.soulTicks = 0;
-        this.changed();
-        if (this.lichId != null || this.reformTicks >= 0) {
-            return;
-        }
-        this.reformHunting = hunting;
-        this.reformTicks = this.awake ? REFORM_TICKS_AWAKE : REFORM_TICKS;
-    }
-
-    /** The lich was struck down; its soul is on the way home. */
-    public void onLichDiscorporated(IceLich lich) {
-        if (lich.getUUID().equals(this.lichId)) {
-            this.lichId = null;
-            this.soulTicks = LichWisp.MAX_AGE;
-            this.changed();
-        }
-    }
-
-    /** The lich gave up its hunt and sank back into the phylactery. */
-    public void onLichRetreated(IceLich lich) {
-        if (lich.getUUID().equals(this.lichId)) {
-            this.lichId = null;
-            this.ambushCooldown = RETREAT_COOLDOWN;
-            this.changed();
-        }
-    }
-
     /**
-     * The phylactery is broken: its lich is mortal. If the lich has no body right now (its soul is in
-     * flight, or waiting to re-form), it takes one last form here, unbound. A body that's out of reach
-     * finds out it's mortal when it next checks on its phylactery.
+     * The phylactery is taken off its altar (mined once unwarded, or removed any other way): its soul
+     * goes with it, as a {@link PhylacteryItem} left where it stood.
      */
-    void shatter(ServerLevel level) {
+    void release(ServerLevel level) {
+        LichSouls.Soul soul = this.soul(level);
         Vec3 at = Vec3.atCenterOf(this.worldPosition);
-        level.sendParticles(ColdEffects.ICE_CHIPS, at.x, at.y, at.z, 60, 0.3, 0.4, 0.3, 0.2);
+        soul.moved(level, this.worldPosition, null);
+        ItemStack stack = PhylacteryItem.bound(soul.id);
+        net.minecraft.world.entity.item.ItemEntity item = new net.minecraft.world.entity.item.ItemEntity(level, at.x, at.y, at.z, stack);
+        item.setDefaultPickUpDelay();
+        level.addFreshEntity(item);
         level.sendParticles(ParticleTypes.SOUL, at.x, at.y, at.z, 30, 0.3, 0.5, 0.3, 0.05);
-        level.playSound(null, this.worldPosition, SoundEvents.GLASS_BREAK, SoundSource.BLOCKS, 2.0F, 0.5F);
-        level.playSound(null, this.worldPosition, SoundEvents.WITHER_HURT, SoundSource.HOSTILE, 1.5F, 0.5F);
-        ColdEffects.tellNearby(level, new AABB(this.worldPosition).inflate(48.0), Component.translatable("message.wildspellmobs.phylactery_shattered"));
-        IceLich lich = this.findLich(level);
-        if (lich != null) {
-            lich.loseAnchor();
-        } else if (this.lichId == null && canRaise(level)) {
-            Player prey = level.getNearestPlayer(at.x, at.y, at.z, 48.0, p -> p instanceof Player player && isPrey(player));
-            IceLich last = IceLich.summon(level, this.altarSpot(), null);
-            if (last != null && prey != null) {
-                last.setTarget(prey);
-            }
-        }
-        this.lichId = null;
-        this.reformTicks = -1;
+        level.playSound(null, this.worldPosition, SoundEvents.SOUL_ESCAPE.value(), SoundSource.BLOCKS, 2.0F, 0.5F);
+        level.playSound(null, this.worldPosition, SoundEvents.WITHER_AMBIENT, SoundSource.HOSTILE, 1.0F, 0.5F);
+        ColdEffects.tellNearby(level, new AABB(this.worldPosition).inflate(48.0), Component.translatable("message.wildspellmobs.phylactery_taken"));
     }
 
     /** Client: soul-light streams from each standing ward into the phylactery while someone's near. */
@@ -515,26 +424,17 @@ public class PhylacteryBlockEntity extends BlockEntity {
     @Override
     protected void saveAdditional(CompoundTag tag, HolderLookup.Provider registries) {
         super.saveAdditional(tag, registries);
-        if (this.lichId != null) {
-            tag.putUUID("Lich", this.lichId);
+        if (this.soulId != null) {
+            tag.putUUID("Soul", this.soulId);
         }
-        if (this.reformHunting != null) {
-            tag.putUUID("ReformHunting", this.reformHunting);
-        }
-        tag.putInt("ReformTicks", this.reformTicks);
-        tag.putInt("SoulTicks", this.soulTicks);
-        tag.putInt("AmbushCooldown", this.ambushCooldown);
         tag.putBoolean("Awake", this.awake);
     }
 
     @Override
     protected void loadAdditional(CompoundTag tag, HolderLookup.Provider registries) {
         super.loadAdditional(tag, registries);
-        this.lichId = tag.hasUUID("Lich") ? tag.getUUID("Lich") : null;
-        this.reformHunting = tag.hasUUID("ReformHunting") ? tag.getUUID("ReformHunting") : null;
-        this.reformTicks = tag.contains("ReformTicks", CompoundTag.TAG_INT) ? tag.getInt("ReformTicks") : -1;
-        this.soulTicks = tag.getInt("SoulTicks");
-        this.ambushCooldown = tag.getInt("AmbushCooldown");
+        this.soulId = tag.hasUUID("Soul") ? tag.getUUID("Soul") : null;
+        this.legacyLich = tag.hasUUID("Lich") ? tag.getUUID("Lich") : null;
         this.awake = tag.getBoolean("Awake");
         this.resumeIgnite = this.awake;
     }

@@ -51,6 +51,10 @@ SHAFT = [(70, 80, 112), (48, 56, 84), (60, 68, 98)]
 FROST_BAND = (180, 226, 250)
 CRYSTAL = [(150, 220, 255), (120, 200, 250), (90, 180, 240), (210, 245, 255)]
 
+FLESH = [(186, 160, 168), (174, 148, 160), (198, 174, 180)]                   # frozen gut: pale grey-pink
+FLESH_FOLD = (132, 100, 116)
+FLESH_DEEP = (84, 58, 78)
+
 FACE_SHADE = {"top": 14, "bottom": -26, "front": 0, "right": -8, "left": -8, "back": -14}
 
 lich = Image.new("RGBA", (128, 128), (0, 0, 0, 0))
@@ -181,6 +185,46 @@ def m_robe_chest(face, x, y, fw, fh, cube):
     if face == "top":
         return jitter(rng.choice(ROBE), 4, 4), False
     return robe_px(face, x, y, fw, fh, 0, 0.12), False
+
+
+def flesh_px(face, x, y, fw, fh, seg, phase=0):
+    """Frozen gut: rounded segments `seg` rows long with dark folds between them, a lit upper edge,
+    frost settling on top and a few rime flecks."""
+    s = FACE_SHADE[face]
+    if face == "top":
+        if rng.random() < 0.55:
+            return jitter(rng.choice(RIME), -12, 8)
+        return jitter(rng.choice(FLESH), s, 6)
+    if face == "bottom":
+        return jitter(FLESH_DEEP if (x + y) % 2 else FLESH_FOLD, -8, 4)
+    k = (y + phase) % seg
+    if k == seg - 1:
+        if fw > 2 and 0 < x < fw - 1:
+            return jitter(FLESH_FOLD, 8, 4)                                   # a shallow crease mid-face
+        return jitter(FLESH_DEEP if x == fw - 1 else FLESH_FOLD, 0, 4)        # the fold between segments
+    if k == 0:
+        s += 10                                                               # bulge catches the light
+    if fw > 1 and x == fw - 1:
+        s -= 16                                                               # rounding off the edge
+    if rng.random() < 0.12:
+        return jitter(rng.choice(RIME), s - 24, 6)
+    return jitter(rng.choice(FLESH), s - 3 * (k if seg > 2 else 0), 5)
+
+
+def m_gut(face, x, y, fw, fh, cube):
+    if face in ("front", "back", "left", "right") and y == 0 and rng.random() < 0.6:
+        return jitter(rng.choice(RIME), FACE_SHADE[face] - 6, 6), False       # rime on the upper lip
+    return flesh_px(face, x, y, fw, fh, 2, cube["uv"][0] % 2), False
+
+
+def m_gut_strand(face, x, y, fw, fh, cube):
+    if face in ("front", "back", "left", "right") and y >= fh - 2:
+        return jitter(rng.choice(RIME), FACE_SHADE[face] - 10 * (fh - 1 - y), 6), False   # frozen, frosted tip
+    return flesh_px(face, x, y, fw, fh, 3, cube["uv"][1] % 3), False
+
+
+def m_icicle(face, x, y, fw, fh, cube):
+    return ice_px(face, x, y, fw, fh, RIME, 10), False
 
 
 def m_belt(face, x, y, fw, fh, cube):

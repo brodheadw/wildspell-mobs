@@ -7,6 +7,8 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.context.BlockPlaceContext;
 import net.minecraft.world.level.BlockGetter;
@@ -30,8 +32,8 @@ import net.minecraft.world.phys.shapes.VoxelShape;
 /**
  * The Ice Lich's phylactery, the vessel its soul is bound to, kept on the altar of its crypt. While it
  * stands the lich can't truly die: struck down, its soul flies back here and it re-forms. It can't
- * be broken while any Rime Ward in the crypt still stands ({@link #WARDED}); shattered, it leaves
- * the lich mortal.
+ * be moved while any Rime Ward in the crypt still stands ({@link #WARDED}); unwarded, mining it takes
+ * it off the altar as a {@link PhylacteryItem}, and only burning that makes the lich mortal.
  *
  * <p>{@link #FACING} points from the altar into the crypt, so the block entity knows where the room is.
  */
@@ -93,11 +95,21 @@ public class PhylacteryBlock extends BaseEntityBlock {
         return !state.getValue(WARDED) && super.canEntityDestroy(state, level, pos, entity);
     }
 
+    /** Set down from an item, the phylactery makes this its altar, and its lich's soul comes with it. */
+    @Override
+    public void setPlacedBy(Level level, BlockPos pos, BlockState state, @Nullable LivingEntity placer, ItemStack stack) {
+        super.setPlacedBy(level, pos, state, placer, stack);
+        java.util.UUID soul = stack.get(WildspellMobs.SOUL.get());
+        if (soul != null && level instanceof ServerLevel server && level.getBlockEntity(pos) instanceof PhylacteryBlockEntity phylactery) {
+            phylactery.bindSoul(server, soul);
+        }
+    }
+
     @Override
     protected void onRemove(BlockState state, Level level, BlockPos pos, BlockState newState, boolean movedByPiston) {
         if (!state.is(newState.getBlock()) && level instanceof ServerLevel serverLevel
                 && level.getBlockEntity(pos) instanceof PhylacteryBlockEntity phylactery) {
-            phylactery.shatter(serverLevel);
+            phylactery.release(serverLevel);
         }
         super.onRemove(state, level, pos, newState, movedByPiston);
     }

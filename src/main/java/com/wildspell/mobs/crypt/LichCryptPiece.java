@@ -4,6 +4,9 @@ import com.wildspell.mobs.WildspellMobs;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.core.registries.Registries;
+import net.minecraft.tags.TagKey;
+import net.minecraft.world.level.block.Block;
 import net.minecraft.util.Mth;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.level.StructureManager;
@@ -25,7 +28,8 @@ import net.minecraft.world.level.levelgen.structure.pieces.StructurePieceSeriali
  * floor at y 1 and roof at y 11, four pillars to hide behind, the altar and phylactery against the
  * back wall (z 0-5), a Rime Ward on a plinth in each corner, eight unlit soul-fire braziers and twelve
  * clusters of unlit blue candles (on the dais and along the walls) around the
- * walls, and a short tunnel out of the front wall (z 25-30).
+ * walls, and a tunnel out of the front wall (from z 25), long enough to break into the cave the crypt
+ * was dug beside (see {@link LichCryptStructure}); its mouth is framed in chiseled deepslate.
  *
  * <p>No floor block is ice: Frozen Zombies raised on ice would freeze into it. The phylactery faces
  * local +z, into the hall. In a piece's local frame +z is NORTH (with a NORTH orientation, world z
@@ -36,7 +40,14 @@ import net.minecraft.world.level.levelgen.structure.pieces.StructurePieceSeriali
 public class LichCryptPiece extends StructurePiece {
     public static final int WIDTH = 25;
     public static final int HEIGHT = 12;
-    public static final int DEPTH = 31;
+    /** The tunnel can run this far; the bounding box always allows for the longest. */
+    public static final int MIN_TUNNEL = 2;
+    public static final int MAX_TUNNEL = 12;
+    /** How far past the tunnel the cave must open, and how far the mouth is dug out through cave ice. */
+    public static final int MOUTH_DEPTH = 3;
+    public static final int DEPTH = WIDTH + MAX_TUNNEL + MOUTH_DEPTH;
+    /** Pieces saved before tunnels varied had this one. */
+    private static final int LEGACY_TUNNEL = 6;
     /** The phylactery's local position; the hall's centre is (12, _, 12). */
     public static final int PHYLACTERY_X = 12;
     public static final int PHYLACTERY_Y = 4;
@@ -50,6 +61,8 @@ public class LichCryptPiece extends StructurePiece {
     private static final int[][] PILLARS = {{6, 6}, {18, 6}, {6, 18}, {18, 18}};
     private static final int FOUNDATION_DEPTH = 12;
 
+    /** What the tunnel's mouth is dug out through. */
+    private static final TagKey<Block> MOUTH_CLEARS = TagKey.create(Registries.BLOCK, WildspellMobs.id("crypt_mouth_clears"));
     private static final BlockState AIR = Blocks.CAVE_AIR.defaultBlockState();
     private static final BlockState BRICKS = Blocks.DEEPSLATE_BRICKS.defaultBlockState();
     private static final BlockState CRACKED = Blocks.CRACKED_DEEPSLATE_BRICKS.defaultBlockState();
@@ -57,17 +70,27 @@ public class LichCryptPiece extends StructurePiece {
     private static final BlockState POLISHED = Blocks.POLISHED_DEEPSLATE.defaultBlockState();
     private static final BlockState CHISELED = Blocks.CHISELED_DEEPSLATE.defaultBlockState();
 
-    public LichCryptPiece(BlockPos at, Direction facing) {
+    private final int tunnel;
+
+    public LichCryptPiece(BlockPos at, Direction facing, int tunnel) {
         super(WildspellMobs.LICH_CRYPT_PIECE.get(), 0, makeBoundingBox(at.getX(), at.getY(), at.getZ(), facing, WIDTH, HEIGHT, DEPTH));
         this.setOrientation(facing);
+        this.tunnel = Mth.clamp(tunnel, MIN_TUNNEL, MAX_TUNNEL);
     }
 
     public LichCryptPiece(CompoundTag tag) {
         super(WildspellMobs.LICH_CRYPT_PIECE.get(), tag);
+        this.tunnel = tag.contains("Tunnel", CompoundTag.TAG_INT) ? Mth.clamp(tag.getInt("Tunnel"), MIN_TUNNEL, MAX_TUNNEL) : LEGACY_TUNNEL;
     }
 
     @Override
     protected void addAdditionalSaveData(StructurePieceSerializationContext context, CompoundTag tag) {
+        tag.putInt("Tunnel", this.tunnel);
+    }
+
+    /** A local position in the world, e.g. to survey the ground before building. */
+    public BlockPos localToWorld(int x, int y, int z) {
+        return this.getWorldPos(x, y, z).immutable();
     }
 
     /** The phylactery's position in the world. */
@@ -131,16 +154,33 @@ public class LichCryptPiece extends StructurePiece {
         for (int[] c : new int[][] {{12, 9}, {9, 15}, {15, 15}, {12, 20}}) {
             this.generateBox(level, box, c[0], HEIGHT - 3, c[1], c[0], HEIGHT - 2, c[1], Blocks.CHAIN.defaultBlockState(), AIR, false);
         }
-        // The entrance: a doorway in the front wall and a short tunnel out.
+        // The entrance: a doorway in the front wall, a tunnel out through the rock, and a chiseled arch at its mouth.
+        int end = WIDTH + this.tunnel - 1;
         this.generateBox(level, box, 11, 2, WIDTH - 1, 13, 5, WIDTH - 1, AIR, AIR, false);
-        this.generateBox(level, box, 10, 1, WIDTH, 10, 6, DEPTH - 1, BRICKS, BRICKS, false);
-        this.generateBox(level, box, 14, 1, WIDTH, 14, 6, DEPTH - 1, BRICKS, BRICKS, false);
-        this.generateBox(level, box, 11, 6, WIDTH, 13, 6, DEPTH - 1, BRICKS, BRICKS, false);
-        this.generateBox(level, box, 11, 1, WIDTH, 13, 1, DEPTH - 1, TILES, TILES, false);
-        this.generateBox(level, box, 11, 2, WIDTH, 13, 5, DEPTH - 1, AIR, AIR, false);
-        for (int z = WIDTH; z < DEPTH; z += 2) {
+        this.generateBox(level, box, 10, 1, WIDTH, 10, 6, end, BRICKS, BRICKS, false);
+        this.generateBox(level, box, 14, 1, WIDTH, 14, 6, end, BRICKS, BRICKS, false);
+        this.generateBox(level, box, 11, 6, WIDTH, 13, 6, end, BRICKS, BRICKS, false);
+        this.generateBox(level, box, 11, 1, WIDTH, 13, 1, end, TILES, TILES, false);
+        this.generateBox(level, box, 11, 2, WIDTH, 13, 5, end, AIR, AIR, false);
+        this.generateBox(level, box, 10, 1, end, 10, 6, end, POLISHED, POLISHED, false);
+        this.generateBox(level, box, 14, 1, end, 14, 6, end, POLISHED, POLISHED, false);
+        this.generateBox(level, box, 10, 6, end, 14, 6, end, CHISELED, CHISELED, false);
+        for (int z = WIDTH; z <= end; z += 2) {
             this.foundation(level, 10, z, box);
             this.foundation(level, 14, z, box);
+        }
+        // The cave's own ice (icicles, an ice patch, frost) can grow across the mouth after the site was
+        // chosen: dig the way out through it (see the crypt_mouth_clears tag), never through rock.
+        for (int z = end + 1; z <= end + MOUTH_DEPTH; ++z) {
+            for (int x = 11; x <= 13; ++x) {
+                for (int y = 2; y <= 4; ++y) {
+                    BlockPos p = this.getWorldPos(x, y, z);
+                    BlockState state = box.isInside(p) ? level.getBlockState(p) : AIR;
+                    if (state.is(MOUTH_CLEARS)) {
+                        level.setBlock(p, AIR, 2);
+                    }
+                }
+            }
         }
     }
 

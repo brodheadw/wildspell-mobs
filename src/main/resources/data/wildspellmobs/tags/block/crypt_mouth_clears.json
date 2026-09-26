@@ -1,0 +1,8 @@
+{
+  "values": [
+    "#minecraft:ice",
+    "#minecraft:snow",
+    {"id": "yungscavebiomes:icicle", "required": false},
+    {"id": "yungscavebiomes:ice_sheet", "required": false}
+  ]
+}

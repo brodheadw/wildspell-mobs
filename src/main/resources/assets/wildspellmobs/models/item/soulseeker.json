@@ -1,0 +1,206 @@
+{
+ "parent": "minecraft:item/generated",
+ "textures": {
+  "layer0": "wildspellmobs:item/soulseeker_16"
+ },
+ "overrides": [
+  {
+   "predicate": {
+    "angle": 0.0
+   },
+   "model": "wildspellmobs:item/soulseeker"
+  },
+  {
+   "predicate": {
+    "angle": 0.015625
+   },
+   "model": "wildspellmobs:item/soulseeker_17"
+  },
+  {
+   "predicate": {
+    "angle": 0.046875
+   },
+   "model": "wildspellmobs:item/soulseeker_18"
+  },
+  {
+   "predicate": {
+    "angle": 0.078125
+   },
+   "model": "wildspellmobs:item/soulseeker_19"
+  },
+  {
+   "predicate": {
+    "angle": 0.109375
+   },
+   "model": "wildspellmobs:item/soulseeker_20"
+  },
+  {
+   "predicate": {
+    "angle": 0.140625
+   },
+   "model": "wildspellmobs:item/soulseeker_21"
+  },
+  {
+   "predicate": {
+    "angle": 0.171875
+   },
+   "model": "wildspellmobs:item/soulseeker_22"
+  },
+  {
+   "predicate": {
+    "angle": 0.203125
+   },
+   "model": "wildspellmobs:item/soulseeker_23"
+  },
+  {
+   "predicate": {
+    "angle": 0.234375
+   },
+   "model": "wildspellmobs:item/soulseeker_24"
+  },
+  {
+   "predicate": {
+    "angle": 0.265625
+   },
+   "model": "wildspellmobs:item/soulseeker_25"
+  },
+  {
+   "predicate": {
+    "angle": 0.296875
+   },
+   "model": "wildspellmobs:item/soulseeker_26"
+  },
+  {
+   "predicate": {
+    "angle": 0.328125
+   },
+   "model": "wildspellmobs:item/soulseeker_27"
+  },
+  {
+   "predicate": {
+    "angle": 0.359375
+   },
+   "model": "wildspellmobs:item/soulseeker_28"
+  },
+  {
+   "predicate": {
+    "angle": 0.390625
+   },
+   "model": "wildspellmobs:item/soulseeker_29"
+  },
+  {
+   "predicate": {
+    "angle": 0.421875
+   },
+   "model": "wildspellmobs:item/soulseeker_30"
+  },
+  {
+   "predicate": {
+    "angle": 0.453125
+   },
+   "model": "wildspellmobs:item/soulseeker_31"
+  },
+  {
+   "predicate": {
+    "angle": 0.484375
+   },
+   "model": "wildspellmobs:item/soulseeker_00"
+  },
+  {
+   "predicate": {
+    "angle": 0.515625
+   },
+   "model": "wildspellmobs:item/soulseeker_01"
+  },
+  {
+   "predicate": {
+    "angle": 0.546875
+   },
+   "model": "wildspellmobs:item/soulseeker_02"
+  },
+  {
+   "predicate": {
+    "angle": 0.578125
+   },
+   "model": "wildspellmobs:item/soulseeker_03"
+  },
+  {
+   "predicate": {
+    "angle": 0.609375
+   },
+   "model": "wildspellmobs:item/soulseeker_04"
+  },
+  {
+   "predicate": {
+    "angle": 0.640625
+   },
+   "model": "wildspellmobs:item/soulseeker_05"
+  },
+  {
+   "predicate": {
+    "angle": 0.671875
+   },
+   "model": "wildspellmobs:item/soulseeker_06"
+  },
+  {
+   "predicate": {
+    "angle": 0.703125
+   },
+   "model": "wildspellmobs:item/soulseeker_07"
+  },
+  {
+   "predicate": {
+    "angle": 0.734375
+   },
+   "model": "wildspellmobs:item/soulseeker_08"
+  },
+  {
+   "predicate": {
+    "angle": 0.765625
+   },
+   "model": "wildspellmobs:item/soulseeker_09"
+  },
+  {
+   "predicate": {
+    "angle": 0.796875
+   },
+   "model": "wildspellmobs:item/soulseeker_10"
+  },
+  {
+   "predicate": {
+    "angle": 0.828125
+   },
+   "model": "wildspellmobs:item/soulseeker_11"
+  },
+  {
+   "predicate": {
+    "angle": 0.859375
+   },
+   "model": "wildspellmobs:item/soulseeker_12"
+  },
+  {
+   "predicate": {
+    "angle": 0.890625
+   },
+   "model": "wildspellmobs:item/soulseeker_13"
+  },
+  {
+   "predicate": {
+    "angle": 0.921875
+   },
+   "model": "wildspellmobs:item/soulseeker_14"
+  },
+  {
+   "predicate": {
+    "angle": 0.953125
+   },
+   "model": "wildspellmobs:item/soulseeker_15"
+  },
+  {
+   "predicate": {
+    "angle": 0.984375
+   },
+   "model": "wildspellmobs:item/soulseeker"
+  }
+ ]
+}

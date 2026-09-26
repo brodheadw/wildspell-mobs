@@ -1,0 +1,150 @@
+{
+  "parent": "minecraft:block/block",
+  "render_type": "minecraft:translucent",
+  "textures": {
+    "soul": "wildspellmobs:block/frozen_soul",
+    "particle": "wildspellmobs:block/frozen_soul"
+  },
+  "elements": [
+    {
+      "from": [
+        5,
+        5,
+        5
+      ],
+      "to": [
+        11,
+        11,
+        11
+      ],
+      "shade": false,
+      "light_emission": 15,
+      "faces": {
+        "north": {
+          "uv": [
+            9,
+            1,
+            15,
+            7
+          ],
+          "texture": "#soul"
+        },
+        "south": {
+          "uv": [
+            9,
+            1,
+            15,
+            7
+          ],
+          "texture": "#soul"
+        },
+        "east": {
+          "uv": [
+            9,
+            1,
+            15,
+            7
+          ],
+          "texture": "#soul"
+        },
+        "west": {
+          "uv": [
+            9,
+            1,
+            15,
+            7
+          ],
+          "texture": "#soul"
+        },
+        "up": {
+          "uv": [
+            9,
+            1,
+            15,
+            7
+          ],
+          "texture": "#soul"
+        },
+        "down": {
+          "uv": [
+            9,
+            1,
+            15,
+            7
+          ],
+          "texture": "#soul"
+        }
+      }
+    },
+    {
+      "from": [
+        4,
+        4,
+        4
+      ],
+      "to": [
+        12,
+        12,
+        12
+      ],
+      "shade": false,
+      "light_emission": 15,
+      "faces": {
+        "north": {
+          "uv": [
+            0,
+            0,
+            8,
+            8
+          ],
+          "texture": "#soul"
+        },
+        "south": {
+          "uv": [
+            0,
+            0,
+            8,
+            8
+          ],
+          "texture": "#soul"
+        },
+        "east": {
+          "uv": [
+            0,
+            0,
+            8,
+            8
+          ],
+          "texture": "#soul"
+        },
+        "west": {
+          "uv": [
+            0,
+            0,
+            8,
+            8
+          ],
+          "texture": "#soul"
+        },
+        "up": {
+          "uv": [
+            0,
+            0,
+            8,
+            8
+          ],
+          "texture": "#soul"
+        },
+        "down": {
+          "uv": [
+            0,
+            0,
+            8,
+            8
+          ],
+          "texture": "#soul"
+        }
+      }
+    }
+  ]
+}

@@ -3,11 +3,11 @@
 Cold-cave monsters for **[YUNG's Cave Biomes](https://modrinth.com/mod/yungs-cave-biomes)**' Frosted Caves, for NeoForge 1.21.1.
 
 ## Rime Skull
-A floating, frost-rimed skull that haunts the Frosted Caves.
+A floating, frost-rimed skull that haunts the Frosted Caves, from the great caverns to the cramped ice-floored ones.
 - Bobs and darts around you, gnashing its teeth as it closes in, then lunges with its jaw open. The lunge locks on just before it flies, so you can sidestep it.
 - Spits ice shards from range. Hits frost you over and slow you down.
 - Sheds glowing ice motes as it floats, and comes in three subtle variants (tint, crack pattern, eye glow, icicle crown).
-- Takes double damage from fire.
+- Takes double damage from fire, and catches fire in sunlight.
 
 ## Frozen Zombie
 What a zombie becomes after lingering in the Frosted Caves, the way skeletons become strays in powder snow. After a few seconds it shivers and frosts over, then cracks into its frozen form.
@@ -15,14 +15,17 @@ What a zombie becomes after lingering in the Frosted Caves, the way skeletons be
 - Its hits frost and slow you.
 - Some lose an arm to the cold. Most have had half their brow torn away to the skull; a few kept a whole face.
 - One that freezes standing on an ice block sinks into it up to the hips. It's stuck there, straining against the ice and throwing snowballs at you. Break the ice and it pulls free.
+- It's afraid of fire, and backs away from flames and from anyone holding a torch. Sunlight thaws it back into an ordinary zombie, which then burns; set it alight and it melts even faster.
 
 ## The Ice Lich
 A frost lich in a tattered robe and a crown of ice, bound to a phylactery hidden in a crypt somewhere in the Frosted Caves.
+- **The Soulseeker:** strike the lich down and a shard of its ice crown breaks away, still bound to its soul. Bind the Crown Fragment in Rime Shards, an Enchanted Ice Crystal and Frost Lilies, and its pull points you to that lich's phylactery, telling you how far and whether it lies above or below.
 - **The hunt:** wander the Frosted Caves near its crypt and, very rarely, it rises behind you. Strike it down and it leaves nothing behind: its soul flees home through the rock, glowing through the walls, and a little later it comes hunting you again. Follow the soul to find the crypt.
-- **The crypt:** step inside and the soul-fire braziers flare up one by one as the lich is called home to face you. Its phylactery sits on the altar, warded by four Rime Wards; break the wards, then shatter the phylactery, and the lich is mortal.
-- **The fight:** it keeps its distance and fires frost-shard volleys, sweeps a frost beam you can duck behind the pillars from, and blinks after you when you run. When it raises its arms to call up the dead, hit it to break the spell. Below half health it calls up ice bursts under your feet: move when the frost gathers. In its crypt the braziers burn down as it weakens. Fire does extra damage.
+- **The crypt:** each one is dug into the rock with a single tunnel out onto the cave. Step inside and the soul-fire braziers flare up one by one as the lich is called home to face you. Its phylactery sits on the altar, warded by four Rime Wards. Break the wards and you can take it.
+- **The phylactery:** only fire can destroy it. While you carry it the lich comes after you, however far you run, and keeps re-forming beside you. Throw it into lava or fire and the lich's last form rises from the flames, mortal and enraged.
+- **The fight:** it keeps its distance and fires frost-shard volleys, sweeps a frost beam you can duck behind the pillars from, and blinks after you when you run. When it spins its staff overhead, a Frost Orb is coming: dodge it, or hit it back at the lich. When it raises its arms to call up the dead, hit it to break the spell. Below half health it calls up ice bursts under your feet: move when the frost gathers. In its crypt the braziers burn down as it weakens. Fire does extra damage.
 - **Frost:** frost hits build up a little at a time. Like powder snow, any piece of leather armour keeps it off.
-- **Reward:** only a mortal lich drops the **Frostbound Staff**, which fires frost shards of your own.
+- **Its fall:** only its last form drops the **Frostbound Staff**, which fires frost shards of your own. When it falls its hold on the caves breaks: the frozen dead around it crumble, the frost melts back from its crypt, its fires burn warm, its hoard waits on the altar, and the souls it held linger through the caves as glowing Frozen Souls. Break one and it serves as soul fuel: soul torches, soul lanterns, soul campfires. Zombies no longer freeze there, and Rime Skulls don't return.
 
 ## Drops
 - **Enchanted Ice Crystal:** YUNG's Enchanted Ice now drops one when mined normally, on top of its burst of experience. Silk Touch still gives the block.

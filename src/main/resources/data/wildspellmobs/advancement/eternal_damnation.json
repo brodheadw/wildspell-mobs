@@ -1,0 +1,45 @@
+{
+  "parent": "minecraft:end/root",
+  "display": {
+    "icon": {
+      "id": "wildspellmobs:frozen_phylactery"
+    },
+    "title": {
+      "translate": "advancements.wildspellmobs.eternal_damnation.title"
+    },
+    "description": {
+      "translate": "advancements.wildspellmobs.eternal_damnation.description"
+    },
+    "frame": "challenge",
+    "hidden": true,
+    "show_toast": true,
+    "announce_to_chat": true
+  },
+  "rewards": {
+    "experience": 500
+  },
+  "criteria": {
+    "sealed": {
+      "trigger": "minecraft:placed_block",
+      "conditions": {
+        "location": [
+          {
+            "condition": "minecraft:location_check",
+            "predicate": {
+              "dimension": "minecraft:the_end"
+            }
+          },
+          {
+            "condition": "minecraft:block_state_property",
+            "block": "wildspellmobs:frozen_phylactery"
+          }
+        ]
+      }
+    }
+  },
+  "requirements": [
+    [
+      "sealed"
+    ]
+  ]
+}

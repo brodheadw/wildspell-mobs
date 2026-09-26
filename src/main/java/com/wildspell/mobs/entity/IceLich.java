@@ -1,6 +1,7 @@
 package com.wildspell.mobs.entity;
 
 import com.wildspell.mobs.WildspellMobs;
+import com.wildspell.mobs.crypt.LichSouls;
 import com.wildspell.mobs.crypt.PhylacteryBlockEntity;
 import java.util.EnumSet;
 import java.util.List;
@@ -41,6 +42,7 @@ import net.minecraft.world.entity.ai.goal.target.NearestAttackableTargetGoal;
 import net.minecraft.world.entity.monster.Monster;
 import net.minecraft.world.entity.monster.RangedAttackMob;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.ClipContext;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.state.BlockState;
@@ -62,7 +64,9 @@ import software.bernie.geckolib.util.GeckoLibUtil;
  * bursts under its target.
  *
  * <p>While its phylactery stands, it can't truly die: struck down, it leaves no loot and its soul
- * flies home ({@link LichWisp}) to re-form, then hunts again. A lich with no phylactery (spawned
+ * flies home ({@link LichWisp}) to re-form, then hunts again. Its phylactery can be carried off, and
+ * then it re-forms beside it and hunts whoever bears it; burned, its last form rises from the flames,
+ * and when that falls its hold on the caves breaks ({@link LichSouls.Soul#fall}). A lich with no phylactery (spawned
  * by egg, or its phylactery shattered) dies for good and drops its staff.
  */
 public class IceLich extends Monster implements RangedAttackMob, GeoEntity {
@@ -78,6 +82,16 @@ public class IceLich extends Monster implements RangedAttackMob, GeoEntity {
     public static final int ACTION_BURST = 4;
     /** The beam's wind-up: a faint guide line, before it does damage. */
     public static final int ACTION_BEAM_CHARGE = 5;
+    /** A flourish: the staff tossed from hand to hand and back. Purely for show; an opening to hit him. */
+    public static final int ACTION_TOSS = 6;
+    /** The staff spun overhead, then thrust to loose a frost orb. */
+    public static final int ACTION_SPIN = 7;
+    public static final int TOSS_TICKS = 30;
+    public static final int SPIN_TICKS = 30;
+    /** The tick of the spin whose thrust looses the orb (the animation's thrust peaks at 1.25s). */
+    public static final int SPIN_RELEASE = 25;
+    /** One in this many idle moments he tosses his staff about. */
+    private static final int TOSS_CHANCE = 300;
     public static final int MAX_MINIONS = 3;
     public static final int SUMMON_CHANNEL = 30;
     public static final int BEAM_WINDUP = 20;
@@ -103,6 +117,8 @@ public class IceLich extends Monster implements RangedAttackMob, GeoEntity {
     private static final RawAnimation SUMMON = RawAnimation.begin().thenLoop("animation.ice_lich.summon");
     private static final RawAnimation BEAM = RawAnimation.begin().thenLoop("animation.ice_lich.beam");
     private static final RawAnimation BURST = RawAnimation.begin().thenPlay("animation.ice_lich.burst");
+    private static final RawAnimation TOSS = RawAnimation.begin().thenPlay("animation.ice_lich.toss");
+    private static final RawAnimation SPIN = RawAnimation.begin().thenPlay("animation.ice_lich.spin");
 
     private final ServerBossEvent bossEvent = (ServerBossEvent) new ServerBossEvent(this.getDisplayName(),
             BossEvent.BossBarColor.BLUE, BossEvent.BossBarOverlay.NOTCHED_10);
@@ -111,6 +127,7 @@ public class IceLich extends Monster implements RangedAttackMob, GeoEntity {
     private int summonCooldown = 100;
     private int beamCooldown = 160;
     private int burstCooldown = 100;
+    private int spinCooldown = 120;
     private int blinkCooldown;
     private int actionTicks;
     private int burstTicks;
@@ -118,9 +135,14 @@ public class IceLich extends Monster implements RangedAttackMob, GeoEntity {
     private int idleSeconds;
     private Vec3 burstAt = Vec3.ZERO;
     private Vec3 beamDir = Vec3.ZERO;
-    /** The phylactery this lich is bound to, or null if it's mortal. */
+    /** The soul (see {@link LichSouls}) this lich is a form of, or null if it's an unbound, mortal lich. */
     @Nullable
-    private BlockPos home;
+    private UUID soulId;
+    /** A lich saved before souls: its phylactery's position, to find its soul from. */
+    @Nullable
+    private BlockPos legacyHome;
+    /** Its last form, risen from its burning phylactery: mortal, and enraged from the start. */
+    private boolean lastForm;
     /** The player this lich is hunting through the caves. */
     @Nullable
     private UUID hunted;
@@ -135,7 +157,7 @@ public class IceLich extends Monster implements RangedAttackMob, GeoEntity {
 
     public static AttributeSupplier.Builder createAttributes() {
         return Monster.createMonsterAttributes()
-                .add(Attributes.MAX_HEALTH, 180.0)
+                .add(Attributes.MAX_HEALTH, 120.0)
                 .add(Attributes.ARMOR, 6.0)
                 .add(Attributes.ATTACK_DAMAGE, 6.0)
                 .add(Attributes.FOLLOW_RANGE, 40.0)
@@ -144,26 +166,36 @@ public class IceLich extends Monster implements RangedAttackMob, GeoEntity {
     }
 
     /**
-     * Spawns a lich at {@code at} with a burst of frost, bound to the phylactery at {@code home} if
-     * given. Null on Peaceful (it would despawn at once) or if the spawn is refused.
+     * Spawns a lich at {@code at} with a burst of frost, a form of {@code soul} if given. Null on
+     * Peaceful (it would despawn at once) or if the spawn is refused.
      */
     @Nullable
-    public static IceLich summon(ServerLevel level, Vec3 at, @Nullable BlockPos home) {
+    public static IceLich summon(ServerLevel level, Vec3 at, @Nullable UUID soul) {
         IceLich lich = level.getDifficulty() == Difficulty.PEACEFUL ? null : WildspellMobs.ICE_LICH.get().create(level);
         if (lich == null) {
             return null;
         }
         lich.moveTo(at.x, at.y, at.z, level.random.nextFloat() * 360.0F, 0.0F);
         lich.finalizeSpawn(level, level.getCurrentDifficultyAt(BlockPos.containing(at)), MobSpawnType.EVENT, null);
-        if (home != null) {
-            lich.home = home.immutable();
-        }
+        lich.soulId = soul;
         if (!level.addFreshEntity(lich)) {
             return null;
         }
         ColdEffects.soulBurst(level, at.add(0.0, 1.0, 0.0), 0.8, 1.2);
         level.playSound(null, at.x, at.y, at.z, SoundEvents.WITHER_SPAWN, SoundSource.HOSTILE, 1.0F, 1.6F);
         level.playSound(null, at.x, at.y, at.z, WildspellMobs.FROZEN_ZOMBIE_SHATTER.get(), SoundSource.HOSTILE, 1.5F, 0.7F);
+        return lich;
+    }
+
+    /** Its last form, rising from its burning phylactery: mortal and enraged. */
+    @Nullable
+    public static IceLich summonLastForm(ServerLevel level, Vec3 at, UUID soul) {
+        IceLich lich = summon(level, at, soul);
+        if (lich != null) {
+            lich.lastForm = true;
+            level.sendParticles(net.minecraft.core.particles.ParticleTypes.FLAME, at.x, at.y + 1.0, at.z, 60, 0.6, 1.0, 0.6, 0.05);
+            level.playSound(null, at.x, at.y, at.z, SoundEvents.BLAZE_SHOOT, SoundSource.HOSTILE, 2.0F, 0.5F);
+        }
         return lich;
     }
 
@@ -186,12 +218,22 @@ public class IceLich extends Monster implements RangedAttackMob, GeoEntity {
 
     /** Below half health the lich fights harder: faster volleys and summons, plus ice bursts. */
     public boolean isEnraged() {
-        return this.getHealth() < this.getMaxHealth() / 2.0F;
+        return this.lastForm || this.getHealth() < this.getMaxHealth() / 2.0F;
     }
 
-    /** True while the lich is bound to a phylactery, and so can't truly die. */
+    /** True while the lich is bound to an unburned phylactery, and so can't truly die. */
     public boolean isBound() {
-        return this.home != null;
+        LichSouls.Soul soul = this.soul();
+        return soul != null && !soul.burned();
+    }
+
+    public boolean isLastForm() {
+        return this.lastForm;
+    }
+
+    @Nullable
+    public UUID soulId() {
+        return this.soulId;
     }
 
     public void hunt(Player player) {
@@ -204,16 +246,18 @@ public class IceLich extends Monster implements RangedAttackMob, GeoEntity {
         return entity.getTags().contains(MINION_TAG);
     }
 
+    /** True for a minion this lich raised. */
+    public boolean isOwnMinion(Entity entity) {
+        return entity.getTags().contains(this.ownerTag());
+    }
+
     private String ownerTag() {
         return MINION_TAG + "." + this.getStringUUID();
     }
 
     @Nullable
-    private PhylacteryBlockEntity phylactery() {
-        if (this.home != null && this.level().isLoaded(this.home) && this.level().getBlockEntity(this.home) instanceof PhylacteryBlockEntity phylactery) {
-            return phylactery;
-        }
-        return null;
+    private LichSouls.Soul soul() {
+        return this.soulId != null && this.level() instanceof ServerLevel level ? LichSouls.get(level).soul(this.soulId) : null;
     }
 
     @Override
@@ -250,6 +294,7 @@ public class IceLich extends Monster implements RangedAttackMob, GeoEntity {
         this.summonCooldown--;
         this.beamCooldown--;
         this.burstCooldown--;
+        this.spinCooldown--;
         this.blinkCooldown--;
         LivingEntity target = this.getTarget();
         boolean hasTarget = target != null && target.isAlive();
@@ -260,6 +305,8 @@ public class IceLich extends Monster implements RangedAttackMob, GeoEntity {
             this.tickAction(hasTarget ? target : null);
         } else if (hasTarget) {
             this.chooseAction(target, canSee);
+        } else if (this.random.nextInt(TOSS_CHANCE * 2) == 0) {
+            this.startAction(ACTION_TOSS, TOSS_TICKS);
         }
         if (this.burstTicks > 0) {
             this.tickBurst((ServerLevel) this.level());
@@ -279,6 +326,11 @@ public class IceLich extends Monster implements RangedAttackMob, GeoEntity {
         } else if (this.summonCooldown <= 0) {
             // At the cap: look again in a while rather than counting minions every tick.
             this.summonCooldown = FULL_CAP_RECHECK;
+        } else if (this.spinCooldown <= 0 && canSee && distance > 5.0 && distance < 28.0) {
+            this.holdStill();
+            this.startAction(ACTION_SPIN, SPIN_TICKS);
+            this.spinCooldown = enraged ? 180 : 260;
+            this.playSound(SoundEvents.TRIDENT_RIPTIDE_1.value(), 1.2F, 0.7F);
         } else if (this.beamCooldown <= 0 && canSee && distance < BEAM_RANGE - 2.0) {
             this.holdStill();
             this.setBeamDir(this.aimAt(target));
@@ -294,6 +346,8 @@ public class IceLich extends Monster implements RangedAttackMob, GeoEntity {
             this.performRangedAttack(target, 1.0F);
             this.boltCooldown = enraged ? 30 : 50;
             this.startAction(ACTION_CAST, 15);
+        } else if (this.random.nextInt(TOSS_CHANCE) == 0) {
+            this.startAction(ACTION_TOSS, TOSS_TICKS);
         }
     }
 
@@ -311,6 +365,8 @@ public class IceLich extends Monster implements RangedAttackMob, GeoEntity {
             }
         } else if (action == ACTION_BEAM_CHARGE || action == ACTION_BEAM) {
             this.tickBeam(target);
+        } else if (action == ACTION_SPIN) {
+            this.tickSpin(target);
         }
         if (this.actionTicks <= 0) {
             if (action == ACTION_SUMMON) {
@@ -462,6 +518,41 @@ public class IceLich extends Monster implements RangedAttackMob, GeoEntity {
         }
     }
 
+    /**
+     * The spin: the staff whirls overhead, whistling and shedding frost, and on the thrust
+     * ({@link #SPIN_RELEASE}) looses a frost orb at the target.
+     */
+    private void tickSpin(@Nullable LivingEntity target) {
+        ServerLevel level = (ServerLevel) this.level();
+        int elapsed = SPIN_TICKS - this.actionTicks;
+        if (elapsed < SPIN_RELEASE) {
+            double angle = elapsed * 0.9;
+            Vec3 tip = this.position().add(Math.cos(angle) * 0.9, this.getBbHeight() + 0.6, Math.sin(angle) * 0.9);
+            level.sendParticles(WildspellMobs.FROST_MOTE.get(), tip.x, tip.y, tip.z, 2, 0.05, 0.05, 0.05, 0.0);
+            if (elapsed % 6 == 0) {
+                this.playSound(SoundEvents.PLAYER_ATTACK_SWEEP, 0.8F, 1.6F);
+            }
+        } else if (elapsed == SPIN_RELEASE && target != null) {
+            Vec3 from = this.staffTip();
+            Vec3 to = target.getEyePosition().subtract(from);
+            FrostOrb orb = new FrostOrb(level, this, to.normalize());
+            orb.setPos(from);
+            level.addFreshEntity(orb);
+            this.playSound(SoundEvents.EVOKER_CAST_SPELL, 1.5F, 0.5F);
+            this.playSound(SoundEvents.AMETHYST_BLOCK_CHIME, 2.0F, 0.6F);
+        }
+    }
+
+    /**
+     * Where the orb leaves the staff at the spin's thrust: the crystal ends up about 3.5 blocks out, 1.7
+     * up and 0.45 to his right, so loose it 2 blocks out along that line, short of any wall it's reaching into.
+     */
+    private Vec3 staffTip() {
+        Vec3 forward = Vec3.directionFromRotation(0.0F, this.yBodyRot);
+        Vec3 right = Vec3.directionFromRotation(0.0F, this.yBodyRot + 90.0F);
+        return this.position().add(forward.scale(2.0)).add(right.scale(0.45)).add(0.0, 1.7, 0.0);
+    }
+
     /** Rotates unit vector {@code from} toward {@code to} by at most {@code maxAngle} radians. */
     static Vec3 turnToward(Vec3 from, Vec3 to, double maxAngle) {
         double angle = Math.acos(Mth.clamp(from.dot(to), -1.0, 1.0));
@@ -531,34 +622,48 @@ public class IceLich extends Monster implements RangedAttackMob, GeoEntity {
     }
 
     /**
-     * Checks in with its phylactery: gone means the lich is mortal; still there but holding a different
+     * Checks in with its soul: a burned phylactery means the lich is mortal; a soul holding a different
      * lich means this body is a stale copy (it was forgotten and replaced), and it fades away.
      */
     private void checkAnchor() {
-        if (this.home == null || !this.level().isLoaded(this.home)) {
+        ServerLevel level = (ServerLevel) this.level();
+        if (this.legacyHome != null && level.isLoaded(this.legacyHome)) {
+            // Saved before souls: find its soul from its phylactery's altar.
+            this.soulId = level.getBlockEntity(this.legacyHome) instanceof PhylacteryBlockEntity phylactery ? phylactery.soul(level).id : null;
+            this.legacyHome = null;
+        }
+        LichSouls.Soul soul = this.soul();
+        if (this.soulId == null || this.lastForm) {
             return;
         }
-        PhylacteryBlockEntity phylactery = this.phylactery();
-        if (phylactery == null) {
+        if (soul == null) {
             this.loseAnchor();
-        } else if (!phylactery.claim(this)) {
-            this.vanish((ServerLevel) this.level());
+        } else if (soul.burned() || !soul.claim(this)) {
+            // Its phylactery burned while this body was away (its last form rose at the fire), or it
+            // was forgotten and replaced: either way this body is a stale copy.
+            this.vanish(level);
         }
     }
 
-    /** Its phylactery is shattered: from now on it dies for good. */
+    /** Its soul is gone from the world's records: from now on it dies for good. */
     public void loseAnchor() {
-        if (this.home == null) {
+        if (this.soulId == null) {
             return;
         }
-        this.home = null;
+        this.soulId = null;
         this.playSound(SoundEvents.WITHER_HURT, 2.0F, 0.5F);
         ColdEffects.soulBurst((ServerLevel) this.level(), this.position().add(0.0, this.getBbHeight() * 0.6, 0.0), 0.4, 0.8);
     }
 
+    /** Torn away to where its phylactery is burning: this body goes, and its last form rises there. */
+    public void vanishInto(Vec3 flames) {
+        this.vanish((ServerLevel) this.level());
+    }
+
     /**
-     * Keep after the hunted player. A bound lich won't follow them far from its phylactery, and one with
-     * nobody to fight for a while sinks back into it; either way it can rise again later.
+     * Keep after the hunted player. On its altar, a bound lich won't follow them far from its phylactery,
+     * and one with nobody to fight for a while sinks back into it; either way it can rise again later.
+     * With its phylactery carried off, it hunts whoever bears it, however far.
      */
     private void updateHunt() {
         Player prey = this.hunted != null && ((ServerLevel) this.level()).getEntity(this.hunted) instanceof Player player ? player : null;
@@ -568,8 +673,14 @@ public class IceLich extends Monster implements RangedAttackMob, GeoEntity {
         if (prey == null) {
             this.hunted = null;
         }
-        if (this.home != null) {
-            if (prey != null && prey.distanceToSqr(Vec3.atCenterOf(this.home)) > PhylacteryBlockEntity.LEASH * PhylacteryBlockEntity.LEASH) {
+        LichSouls.Soul soul = this.lastForm ? null : this.soul();
+        if (soul != null && !soul.inAltar() && soul.carrier() != null
+                && ((ServerLevel) this.level()).getEntity(soul.carrier()) instanceof Player bearer && PhylacteryBlockEntity.isPrey(bearer)) {
+            prey = bearer;
+            this.hunted = bearer.getUUID();
+        }
+        if (soul != null && soul.inAltar()) {
+            if (prey != null && prey.distanceToSqr(Vec3.atCenterOf(soul.anchor())) > PhylacteryBlockEntity.LEASH * PhylacteryBlockEntity.LEASH) {
                 this.retreat();
                 return;
             }
@@ -589,9 +700,9 @@ public class IceLich extends Monster implements RangedAttackMob, GeoEntity {
 
     /** Sink back into the phylactery, to rise again another time. */
     private void retreat() {
-        PhylacteryBlockEntity phylactery = this.phylactery();
-        if (phylactery != null) {
-            phylactery.onLichRetreated(this);
+        LichSouls.Soul soul = this.soul();
+        if (soul != null) {
+            soul.onLichRetreated(this);
         }
         this.vanish((ServerLevel) this.level());
     }
@@ -605,31 +716,38 @@ public class IceLich extends Monster implements RangedAttackMob, GeoEntity {
     }
 
     /**
-     * Bound to a phylactery it's struck down but not killed: no loot, and its soul flies home. That
-     * holds even when the phylactery's chunk isn't loaded: the soul finds it when it gets there.
+     * Bound to an unburned phylactery it's struck down but not killed: no loot, and its soul flies home.
+     * Its last form, or any lich whose phylactery has burned, dies for good, and its fall breaks its hold
+     * on the caves.
      */
     @Override
     public void die(DamageSource source) {
-        if (this.level() instanceof ServerLevel level && this.home != null
-                && (!level.isLoaded(this.home) || this.phylactery() != null)) {
-            this.discorporate(level, source);
+        LichSouls.Soul soul = this.soul();
+        if (this.level() instanceof ServerLevel level && soul != null && !soul.burned() && !this.lastForm) {
+            this.discorporate(level, soul, source);
             return;
         }
         super.die(source);
         if (this.level() instanceof ServerLevel level) {
             this.shatterMinions(level);
+            if (soul != null) {
+                soul.fall(level, this.position());
+            }
         }
     }
 
-    private void discorporate(ServerLevel level, DamageSource source) {
+    /** Also leaves a Crown Fragment, bound to its soul, for the player who struck it down. */
+    private void discorporate(ServerLevel level, LichSouls.Soul soul, DamageSource source) {
         UUID next = source.getEntity() instanceof Player player ? player.getUUID() : this.hunted;
+        if (source.getEntity() instanceof Player) {
+            ItemStack fragment = new ItemStack(WildspellMobs.CROWN_FRAGMENT.get());
+            fragment.set(WildspellMobs.SOUL.get(), soul.id);
+            this.spawnAtLocation(fragment);
+        }
         level.sendParticles(ColdEffects.ICE_CHIPS, this.getX(), this.getY(0.5), this.getZ(), 60, 0.4, 1.0, 0.4, 0.2);
         ColdEffects.tellNearby(level, this.getBoundingBox().inflate(32.0), Component.translatable("message.wildspellmobs.lich_soul_flees"));
-        level.addFreshEntity(new LichWisp(level, this.position().add(0.0, this.getBbHeight() * 0.6, 0.0), this.home, next));
-        PhylacteryBlockEntity phylactery = this.phylactery();
-        if (phylactery != null) {
-            phylactery.onLichDiscorporated(this);
-        }
+        level.addFreshEntity(new LichWisp(level, this.position().add(0.0, this.getBbHeight() * 0.6, 0.0), soul.id, next));
+        soul.onLichDiscorporated(this);
         this.vanish(level);
     }
 
@@ -704,9 +822,13 @@ public class IceLich extends Monster implements RangedAttackMob, GeoEntity {
     @Override
     public void addAdditionalSaveData(CompoundTag tag) {
         super.addAdditionalSaveData(tag);
-        if (this.home != null) {
-            tag.putLong("Phylactery", this.home.asLong());
+        if (this.soulId != null) {
+            tag.putUUID("Soul", this.soulId);
         }
+        if (this.legacyHome != null) {
+            tag.putLong("Phylactery", this.legacyHome.asLong());
+        }
+        tag.putBoolean("LastForm", this.lastForm);
         if (this.hunted != null) {
             tag.putUUID("Hunting", this.hunted);
         }
@@ -715,7 +837,9 @@ public class IceLich extends Monster implements RangedAttackMob, GeoEntity {
     @Override
     public void readAdditionalSaveData(CompoundTag tag) {
         super.readAdditionalSaveData(tag);
-        this.home = tag.contains("Phylactery", CompoundTag.TAG_LONG) ? BlockPos.of(tag.getLong("Phylactery")) : null;
+        this.soulId = tag.hasUUID("Soul") ? tag.getUUID("Soul") : null;
+        this.legacyHome = tag.contains("Phylactery", CompoundTag.TAG_LONG) ? BlockPos.of(tag.getLong("Phylactery")) : null;
+        this.lastForm = tag.getBoolean("LastForm");
         this.hunted = tag.hasUUID("Hunting") ? tag.getUUID("Hunting") : null;
         if (this.hasCustomName()) {
             this.bossEvent.setName(this.getDisplayName());
@@ -749,6 +873,8 @@ public class IceLich extends Monster implements RangedAttackMob, GeoEntity {
             case ACTION_SUMMON -> SUMMON;
             case ACTION_BEAM, ACTION_BEAM_CHARGE -> BEAM;
             case ACTION_BURST -> BURST;
+            case ACTION_TOSS -> TOSS;
+            case ACTION_SPIN -> SPIN;
             default -> IDLE;
         })));
     }
@@ -812,7 +938,7 @@ public class IceLich extends Monster implements RangedAttackMob, GeoEntity {
             }
             IceLich.this.getLookControl().setLookAt(target, 30.0F, 30.0F);
             int action = IceLich.this.getAction();
-            if (--this.repickTicks > 0 || action == ACTION_SUMMON || action == ACTION_BEAM_CHARGE || action == ACTION_BEAM) {
+            if (--this.repickTicks > 0 || action == ACTION_SUMMON || action == ACTION_BEAM_CHARGE || action == ACTION_BEAM || action == ACTION_SPIN) {
                 return;
             }
             this.repickTicks = 40 + IceLich.this.random.nextInt(40);

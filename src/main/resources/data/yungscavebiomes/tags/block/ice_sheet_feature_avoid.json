@@ -1,0 +1,12 @@
+{
+  "replace": false,
+  "values": [
+    "#wildspellmobs:crypt_masonry",
+    "wildspellmobs:rime_ward",
+    "wildspellmobs:frozen_phylactery",
+    "minecraft:soul_campfire",
+    "minecraft:blue_candle",
+    "minecraft:chain",
+    "minecraft:skeleton_skull"
+  ]
+}
