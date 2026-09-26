@@ -21,10 +21,12 @@ public class MossbackModel extends HierarchicalModel<Mossback> {
     private final ModelPart[] legs = new ModelPart[4];
     private final ModelPart[] plants = new ModelPart[5];
     private final ModelPart[] gardenBlocks = new ModelPart[3];
+    private final ModelPart[] whiskers = new ModelPart[2];
 
     public MossbackModel(ModelPart root) {
         this.root = root;
         this.head = root.getChild("head");
+        for (int i = 0; i < whiskers.length; i++) whiskers[i] = head.getChild("whisker" + i);
         ModelPart shell = root.getChild("shell");
         for (int i = 0; i < legs.length; i++) legs[i] = root.getChild("leg" + i);
         for (int i = 0; i < plants.length; i++) plants[i] = shell.getChild("plant" + i);
@@ -52,11 +54,25 @@ public class MossbackModel extends HierarchicalModel<Mossback> {
                     .texOffs(20, 82).addBox(-3.25F, -6.5F, -3.25F, 6.5F, 6.5F, 6.5F),
                     PartPose.offset(garden[i][0], -17, garden[i][1]));
         }
-        root.addOrReplaceChild("head", CubeListBuilder.create()
-                .texOffs(158, 0).addBox(-6, -6, -11, 12, 9, 13)
-                .texOffs(215, 0).addBox(-6.1F, -2, -9, 1, 2, 2)
-                .texOffs(215, 0).addBox(5.1F, -2, -9, 1, 2, 2),
+        // A long, angular sea-stone face rather than a vanilla turtle's square beak.
+        PartDefinition head = root.addOrReplaceChild("head", CubeListBuilder.create()
+                .texOffs(144, 0).addBox(-7.5F, -7.0F, -12.0F, 15.0F, 10.0F, 15.0F)
+                .texOffs(144, 27).addBox(-6.0F, -4.0F, -16.0F, 12.0F, 5.0F, 7.0F)
+                .texOffs(144, 42).addBox(-5.0F, 0.0F, -17.0F, 10.0F, 2.0F, 5.0F),
                 PartPose.offset(0, 14, -20));
+        // Deep brow plates frame two vertical crystal slits. No round pupils or googly eyes.
+        head.addOrReplaceChild("brow_left", CubeListBuilder.create()
+                .texOffs(191, 0).addBox(-7.8F, -6.5F, -13.0F, 5.0F, 2.5F, 5.0F), PartPose.ZERO);
+        head.addOrReplaceChild("brow_right", CubeListBuilder.create()
+                .texOffs(191, 0).addBox(2.8F, -6.5F, -13.0F, 5.0F, 2.5F, 5.0F), PartPose.ZERO);
+        head.addOrReplaceChild("eye_left", CubeListBuilder.create()
+                .texOffs(220, 0).addBox(-5.6F, -4.5F, -12.15F, 1.7F, 3.0F, 0.4F), PartPose.ZERO);
+        head.addOrReplaceChild("eye_right", CubeListBuilder.create()
+                .texOffs(220, 0).addBox(3.9F, -4.5F, -12.15F, 1.7F, 3.0F, 0.4F), PartPose.ZERO);
+        head.addOrReplaceChild("whisker0", CubeListBuilder.create()
+                .texOffs(192, 12).addBox(-8.0F, -1.0F, -13.0F, 3.0F, 1.0F, 9.0F), PartPose.ZERO);
+        head.addOrReplaceChild("whisker1", CubeListBuilder.create()
+                .texOffs(192, 12).addBox(5.0F, -1.0F, -13.0F, 3.0F, 1.0F, 9.0F), PartPose.ZERO);
         float[][] positions = {{-13, -16}, {13, -16}, {-13, 16}, {13, 16}};
         for (int i = 0; i < positions.length; i++) {
             root.addOrReplaceChild("leg" + i, CubeListBuilder.create()
@@ -75,6 +91,7 @@ public class MossbackModel extends HierarchicalModel<Mossback> {
         root.getAllParts().forEach(ModelPart::resetPose);
         head.yRot = Mth.clamp(netHeadYaw, -25, 25) * Mth.DEG_TO_RAD;
         head.xRot = Mth.clamp(headPitch, -20, 20) * Mth.DEG_TO_RAD;
+        for (ModelPart whisker : whiskers) whisker.visible = mossback.lifeStage() >= MossbackGrowth.MATURE;
         for (int i = 0; i < legs.length; i++) {
             legs[i].xRot = Mth.cos(limbSwing * 0.48F + (i == 0 || i == 3 ? 0 : Mth.PI))
                     * 0.32F * limbSwingAmount;
