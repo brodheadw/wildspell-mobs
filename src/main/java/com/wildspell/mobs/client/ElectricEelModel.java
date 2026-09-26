@@ -83,9 +83,10 @@ public class ElectricEelModel extends HierarchicalModel<ElectricEel> {
     public void setupAnim(ElectricEel eel, float limbSwing, float limbSwingAmount, float ageInTicks, float netHeadYaw, float headPitch) {
         this.root.getAllParts().forEach(ModelPart::resetPose);
         // A wave runs down the body from head to tail, growing as it goes: slow and shallow at rest,
-        // quicker and wider under way.
+        // quicker and wider under way. The phase is summed, never a product of time and speed, so it
+        // stays continuous as the speed changes (limbSwing is the distance swum so far).
         float swim = Math.min(1.0F, limbSwingAmount * 2.0F);
-        float phase = ageInTicks * (0.12F + 0.35F * swim) + eel.getId();
+        float phase = ageInTicks * 0.12F + limbSwing * 0.6F + eel.getId();
         float amplitude = 0.1F + 0.3F * swim;
         for (int i = 0; i < this.segments.length; ++i) {
             this.segments[i].yRot = Mth.sin(phase - i * 1.1F) * amplitude * (0.3F + 0.28F * i);
