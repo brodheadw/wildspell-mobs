@@ -1,6 +1,6 @@
 # Wildspell Mobs
 
-Cold-cave monsters for YUNG's Cave Biomes' Frosted Caves, NeoForge 1.21.1. MIT licensed.
+Cold-cave monsters for YUNG's Cave Biomes' Frosted Caves, and a glowing moth for the Lush Caves, NeoForge 1.21.1. MIT licensed.
 The player-facing description is [publish/DESCRIPTION.md](publish/DESCRIPTION.md); Modrinth project
 `wildspell-mobs` (id `EAr8sZ9J`).
 

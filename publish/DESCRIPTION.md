@@ -1,6 +1,6 @@
 # Wildspell Mobs
 
-Cold-cave monsters for **[YUNG's Cave Biomes](https://modrinth.com/mod/yungs-cave-biomes)**' Frosted Caves, for NeoForge 1.21.1.
+Cold-cave monsters for **[YUNG's Cave Biomes](https://modrinth.com/mod/yungs-cave-biomes)**' Frosted Caves, and a glowing moth for the Lush Caves, for NeoForge 1.21.1.
 
 ## Rime Skull
 A floating, frost-rimed skull that haunts the Frosted Caves, from the great caverns to the cramped ice-floored ones.
@@ -44,7 +44,7 @@ Creepers and other monsters are thinned out underground, including a local cap s
 ## Requirements
 - NeoForge 1.21.1
 - **GeckoLib** (the Ice Lich's model and animations)
-- **YUNG's Cave Biomes** (optional, but it's where everything spawns and where the lich's crypts generate). Without it you only get the spawn eggs and the cave spawn balancing.
+- **YUNG's Cave Biomes** (optional, but it's where the cold-cave mobs spawn and where the lich's crypts generate). Without it you still get the Luminous Moth, the spawn eggs and the cave spawn balancing.
 - **Creeper Overhaul** (optional): Snowy Creepers in the Frosted Caves.
 
 Credit to YUNG for the Frosted Caves these were made for.
