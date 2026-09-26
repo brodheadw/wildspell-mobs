@@ -24,7 +24,8 @@ The player-facing description is [publish/DESCRIPTION.md](publish/DESCRIPTION.md
 - **Electric Eel**: an underground water creature in flooded caves anywhere in the Overworld
   (`#wildspellmobs:electric_eel_spawns`; the glow squid's spawn rules: deep, dark water). It takes a
   crevice near its spawn as its den and lies in it. Swimmers within 6 blocks of the den are hunted
-  (it senses them, no line of sight needed); it also hunts fish. It winds up a discharge (1.5 s of
+  (it senses them, no line of sight needed), and so is anything that hurts it. It hunts fish only when
+  hungry: a kill keeps it fed for 3-4.5 minutes. It winds up a discharge (1.5 s of
   crackle and brightening glow), then shocks everything in the water within 5 blocks (4 damage plus
   heavy Slowness, `wildspellmobs:eel_shock`, no knockback) except other eels, and bites in between.
   Someone on the bank within 4 blocks gets a leap and a 6-damage contact shock. Stranded, it flops
@@ -74,7 +75,7 @@ Gametests cover the mobs' spawning, AI and variants, zombie freezing, the spawn 
 (volleys, minions, the interruptible summon, enraged bursts, re-forming at its phylactery, wards,
 shattering, the crypt waking, ambushes, and the crypt built right in every orientation), frost and
 leather, the staff, the new drops, and the Electric Eel (a discharge hits everything in the water
-but nothing ashore, only swimmers in its territory are hunted, leaping at someone on the bank, taking
+but nothing ashore, only swimmers in its territory are hunted, fish only when hungry, leaping at someone on the bank, taking
 a crevice as its den). They need YUNG's Cave Biomes and its
 dependencies at dev runtime: put `YungsCaveBiomes`, `YungsApi`, `geckolib` and `TerraBlender` jars
 for NeoForge 1.21.1 in `libs/` (GeckoLib is also a compile dependency) (gitignored, never shipped). Add `CreeperOverhaul`, `resourcefulconfig`

@@ -10,6 +10,7 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.MobCategory;
+import net.minecraft.world.entity.animal.Cod;
 import net.minecraft.world.entity.animal.Pig;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.GameType;
@@ -53,6 +54,35 @@ public class ElectricEelTests {
             helper.assertTrue(bystander.getHealth() < bystander.getMaxHealth(), "bystander in the water was spared");
             helper.assertTrue(ashore.getHealth() == ashore.getMaxHealth(), "pig on the bank was shocked");
             helper.assertTrue(eel.getHealth() == eel.getMaxHealth(), "eel shocked itself");
+        });
+    }
+
+    @GameTest(template = ARENA, timeoutTicks = 300, batch = "eelFed")
+    public static void fedEelLeavesFishAlone(GameTestHelper helper) {
+        pool(helper);
+        ElectricEel eel = helper.spawn(WildspellMobs.ELECTRIC_EEL.get(), 4.5F, 1.2F, 4.5F);
+        eel.setFedTicks(ElectricEel.FED_TICKS);
+        Cod cod = helper.spawn(EntityType.COD, 3.5F, 2.0F, 4.5F);
+        helper.onEachTick(() -> {
+            helper.assertTrue(eel.getCharge() == 0, "a fed eel wound up a discharge; target=" + eel.getTarget());
+            helper.assertTrue(eel.getTarget() == null, "a fed eel went for " + eel.getTarget());
+        });
+        helper.runAtTickTime(280, () -> {
+            helper.assertTrue(cod.getHealth() == cod.getMaxHealth(), "a fed eel hurt the cod");
+            helper.succeed();
+        });
+    }
+
+    @GameTest(template = ARENA, timeoutTicks = 400, batch = "eelHungry")
+    public static void hungryEelHuntsAFishAndIsFed(GameTestHelper helper) {
+        pool(helper);
+        ElectricEel eel = helper.spawn(WildspellMobs.ELECTRIC_EEL.get(), 4.5F, 1.2F, 4.5F);
+        eel.setFedTicks(0);
+        Cod cod = helper.spawn(EntityType.COD, 3.5F, 2.0F, 4.5F);
+        helper.succeedWhen(() -> {
+            helper.assertTrue(!cod.isAlive(), "hungry eel hasn't caught the cod; target=" + eel.getTarget() + " charge=" + eel.getCharge());
+            helper.assertTrue(!eel.isHungry(), "eel killed the cod but is still hungry");
+            helper.assertTrue(eel.getTarget() == null, "fed eel still after " + eel.getTarget());
         });
     }
 

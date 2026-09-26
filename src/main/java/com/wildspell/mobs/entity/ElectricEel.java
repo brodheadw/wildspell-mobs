@@ -15,11 +15,13 @@ import net.minecraft.resources.ResourceKey;
 import net.minecraft.sounds.SoundEvent;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.tags.FluidTags;
+import net.minecraft.util.Mth;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.damagesource.DamageType;
 import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.effect.MobEffects;
+import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.Mob;
@@ -52,7 +54,8 @@ import net.minecraft.world.phys.Vec3;
  * <p>Its weapon is the discharge. It stops, winds up for {@link #CHARGE_TICKS} (crackling and
  * glowing brighter, fair warning to get out of the water), then lets go: everything in the water
  * within {@link #SHOCK_RADIUS} is hurt and seized (slowed hard) as its muscles clench, whoever the
- * eel was after or not. Other eels are unharmed. Between discharges it bites. Like real electric
+ * eel was after or not. Other eels are unharmed. Between discharges it bites. It only hunts fish
+ * when it's hungry: a meal keeps it fed for {@link #FED_TICKS} or so, and a fed eel leaves fish be. Like real electric
  * eels, it also leaps: someone standing at the water's edge within reach gets a leap and a stronger
  * contact shock. Stranded, it flops toward the nearest water.
  *
@@ -82,6 +85,8 @@ public class ElectricEel extends WaterAnimal {
     private static final int DEN_SEARCH = 6;
     /** How long a target can stay out of reach (out of the water, beyond a leap) before it's let go. */
     private static final int GIVE_UP_TICKS = 60;
+    /** How long a meal keeps it from hunting fish (give or take half again). */
+    public static final int FED_TICKS = 3600;
     private static final byte DISCHARGE_EVENT = 71;
 
     @Nullable
@@ -90,6 +95,8 @@ public class ElectricEel extends WaterAnimal {
     private int rechargeTicks;
     private int strandedTicks;
     private int lurkCooldown = 100;
+    // Ticks until it's hungry again; eels start part-way through a meal so they don't all hunt at once.
+    private int fedTicks = (int) (Math.random() * FED_TICKS);
     private boolean lurking;
     // Client: ticks left of the discharge's flash.
     private int flashTicks;
@@ -143,6 +150,14 @@ public class ElectricEel extends WaterAnimal {
         }
     }
 
+    public boolean isHungry() {
+        return this.fedTicks <= 0;
+    }
+
+    public void setFedTicks(int fedTicks) {
+        this.fedTicks = fedTicks;
+    }
+
     /** True while the eel lies still in its den. */
     public boolean isLurking() {
         return this.lurking;
@@ -154,12 +169,14 @@ public class ElectricEel extends WaterAnimal {
         if (this.den != null) {
             tag.putLong("Den", this.den.asLong());
         }
+        tag.putInt("FedTicks", this.fedTicks);
     }
 
     @Override
     public void readAdditionalSaveData(CompoundTag tag) {
         super.readAdditionalSaveData(tag);
         this.setDen(tag.contains("Den") ? BlockPos.of(tag.getLong("Den")) : null);
+        this.fedTicks = tag.getInt("FedTicks");
     }
 
     @Override
@@ -178,7 +195,8 @@ public class ElectricEel extends WaterAnimal {
         // It senses a swimmer's field rather than seeing it, so it needn't see them.
         this.targetSelector.addGoal(2, new NearestAttackableTargetGoal<>(this, Player.class, 10, false, false,
                 this::isIntruder));
-        this.targetSelector.addGoal(3, new NearestAttackableTargetGoal<>(this, AbstractFish.class, 40, false, false, this::inTerritory));
+        this.targetSelector.addGoal(3, new NearestAttackableTargetGoal<>(this, AbstractFish.class, 40, false, false,
+                fish -> this.isHungry() && this.inTerritory(fish)));
     }
 
     /** True for someone swimming in the eel's territory, which it will go for. */
@@ -229,6 +247,9 @@ public class ElectricEel extends WaterAnimal {
         }
         if (this.lurkCooldown > 0) {
             --this.lurkCooldown;
+        }
+        if (this.fedTicks > 0) {
+            --this.fedTicks;
         }
         if (this.den == null && this.isInWater() && --this.denSearchTicks <= 0) {
             this.denSearchTicks = 40;
@@ -308,6 +329,7 @@ public class ElectricEel extends WaterAnimal {
                 e -> e.isAlive() && !(e instanceof ElectricEel) && e.isInWater() && this.distanceTo(e) <= SHOCK_RADIUS)) {
             if (victim.hurt(this.shock(), SHOCK_DAMAGE)) {
                 seize(victim);
+                this.ateIfKilled(victim);
             }
         }
     }
@@ -349,6 +371,26 @@ public class ElectricEel extends WaterAnimal {
             this.lurking = false;
         }
         return hurt;
+    }
+
+    @Override
+    public boolean doHurtTarget(Entity target) {
+        boolean hit = super.doHurtTarget(target);
+        if (hit && target instanceof LivingEntity victim) {
+            this.ateIfKilled(victim);
+        }
+        return hit;
+    }
+
+    /** A fish it killed is a meal: it's fed for a while and stops hunting fish. */
+    private void ateIfKilled(LivingEntity victim) {
+        if (!(victim instanceof AbstractFish) || victim.isAlive()) {
+            return;
+        }
+        this.fedTicks = FED_TICKS + this.random.nextInt(FED_TICKS / 2);
+        if (this.getTarget() instanceof AbstractFish) {
+            this.setTarget(null);
+        }
     }
 
     @Override
@@ -513,6 +555,8 @@ public class ElectricEel extends WaterAnimal {
     private class LurkGoal extends Goal {
         private int ticks;
         private int stayTicks;
+        // Lined up at the den's open side: from here it swims straight in, clear of the walls.
+        private boolean atMouth;
 
         LurkGoal() {
             this.setFlags(EnumSet.of(Goal.Flag.MOVE));
@@ -533,8 +577,9 @@ public class ElectricEel extends WaterAnimal {
         public void start() {
             this.ticks = 0;
             this.stayTicks = 400;
-            BlockPos den = ElectricEel.this.den;
-            ElectricEel.this.getNavigation().moveTo(den.getX() + 0.5, den.getY() + 0.3, den.getZ() + 0.5, 0.8);
+            this.atMouth = false;
+            Vec3 mouth = spot(this.mouth());
+            ElectricEel.this.getNavigation().moveTo(mouth.x, mouth.y, mouth.z, 0.8);
         }
 
         @Override
@@ -553,24 +598,59 @@ public class ElectricEel extends WaterAnimal {
         public void tick() {
             ++this.ticks;
             ElectricEel eel = ElectricEel.this;
-            Vec3 den = Vec3.atCenterOf(eel.den);
             if (eel.lurking) {
-                // Lie still in it.
+                // Lie still in it, head out toward the open water.
                 eel.setDeltaMovement(eel.getDeltaMovement().scale(0.5));
                 return;
             }
-            if (eel.position().distanceToSqr(den) < 1.0) {
+            Vec3 den = spot(eel.den);
+            Vec3 mouth = spot(this.mouth());
+            if (eel.position().distanceToSqr(den) < 0.1) {
                 eel.getNavigation().stop();
                 eel.lurking = true;
+                face(eel, mouth.subtract(den));
                 this.stayTicks = this.ticks + 600 + eel.random.nextInt(1200);
-            } else if (eel.getNavigation().isDone()) {
-                if (eel.position().distanceToSqr(den) < 9.0) {
-                    eel.getMoveControl().setWantedPosition(den.x, den.y, den.z, 0.6);
-                } else if (this.ticks > 100) {
-                    // Can't get back: give up on the den and find another.
-                    eel.setDen(null);
+                return;
+            }
+            // Squarely in front of the opening, so its body clears the rock either side going in.
+            this.atMouth |= eel.position().distanceToSqr(mouth) < 0.03;
+            if (!eel.getNavigation().isDone()) {
+                return;
+            }
+            if (eel.position().distanceToSqr(den) < 9.0) {
+                // The swimming move control only follows a path, so steer the last stretch by hand.
+                Vec3 step = (this.atMouth ? den : mouth).subtract(eel.position());
+                eel.setDeltaMovement(eel.getDeltaMovement().add(step.normalize().scale(Math.min(0.02, step.length() * 0.1))));
+                face(eel, step);
+            } else if (this.ticks > 100) {
+                // Can't get back: give up on the den and find another.
+                eel.setDen(null);
+            }
+        }
+
+        private static void face(ElectricEel eel, Vec3 direction) {
+            float yaw = (float) (Mth.atan2(direction.z, direction.x) * Mth.RAD_TO_DEG) - 90.0F;
+            eel.setYRot(yaw);
+            eel.setYBodyRot(yaw);
+            eel.setYHeadRot(yaw);
+        }
+
+        /** The open water in front of the den: the first side of it that isn't rock. */
+        private BlockPos mouth() {
+            Level level = ElectricEel.this.level();
+            BlockPos den = ElectricEel.this.den;
+            for (Direction direction : Direction.values()) {
+                BlockPos side = den.relative(direction);
+                if (level.getFluidState(side).is(FluidTags.WATER) && !level.getBlockState(side).isFaceSturdy(level, side, direction.getOpposite())) {
+                    return side;
                 }
             }
+            return den;
+        }
+
+        /** Where the eel lies to be in {@code pos}: centred, just off the bottom. */
+        private static Vec3 spot(BlockPos pos) {
+            return new Vec3(pos.getX() + 0.5, pos.getY() + 0.2, pos.getZ() + 0.5);
         }
     }
 }
