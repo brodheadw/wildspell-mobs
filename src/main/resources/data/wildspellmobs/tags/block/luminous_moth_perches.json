@@ -1,0 +1,13 @@
+{
+  "values": [
+    "minecraft:azalea",
+    "minecraft:flowering_azalea",
+    "minecraft:azalea_leaves",
+    "minecraft:flowering_azalea_leaves",
+    "minecraft:moss_carpet",
+    "wildspellmobs:luminous_moss_carpet",
+    "minecraft:big_dripleaf",
+    "minecraft:small_dripleaf",
+    "#minecraft:small_flowers"
+  ]
+}

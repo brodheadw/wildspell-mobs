@@ -1,0 +1,10 @@
+{
+  "type": "neoforge:add_spawns",
+  "biomes": "#wildspellmobs:luminous_moth_spawns",
+  "spawners": {
+    "type": "wildspellmobs:luminous_moth",
+    "weight": 20,
+    "minCount": 1,
+    "maxCount": 3
+  }
+}
