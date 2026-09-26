@@ -2,6 +2,7 @@ package com.wildspell.mobs.client;
 
 import com.wildspell.mobs.WildspellMobs;
 import com.wildspell.mobs.entity.Mossback;
+import com.wildspell.mobs.entity.MossbackGrowth;
 import net.minecraft.client.model.HierarchicalModel;
 import net.minecraft.client.model.geom.ModelLayerLocation;
 import net.minecraft.client.model.geom.ModelPart;
@@ -12,17 +13,22 @@ import net.minecraft.client.model.geom.builders.MeshDefinition;
 import net.minecraft.client.model.geom.builders.PartDefinition;
 import net.minecraft.util.Mth;
 
-/** Prototype tortoise silhouette, tiered shell and little plants growing from its back. */
+/** Progressive vegetation; the oldest shell becomes a miniature, block-sized garden. */
 public class MossbackModel extends HierarchicalModel<Mossback> {
     public static final ModelLayerLocation LAYER = new ModelLayerLocation(WildspellMobs.id("mossback"), "main");
     private final ModelPart root;
     private final ModelPart head;
     private final ModelPart[] legs = new ModelPart[4];
+    private final ModelPart[] plants = new ModelPart[5];
+    private final ModelPart[] gardenBlocks = new ModelPart[3];
 
     public MossbackModel(ModelPart root) {
         this.root = root;
         this.head = root.getChild("head");
+        ModelPart shell = root.getChild("shell");
         for (int i = 0; i < legs.length; i++) legs[i] = root.getChild("leg" + i);
+        for (int i = 0; i < plants.length; i++) plants[i] = shell.getChild("plant" + i);
+        for (int i = 0; i < gardenBlocks.length; i++) gardenBlocks[i] = shell.getChild("garden" + i);
     }
 
     public static LayerDefinition createBodyLayer() {
@@ -33,12 +39,18 @@ public class MossbackModel extends HierarchicalModel<Mossback> {
         PartDefinition shell = root.addOrReplaceChild("shell", CubeListBuilder.create()
                 .texOffs(0, 0).addBox(-17, -14, -22, 34, 12, 44)
                 .texOffs(0, 0).addBox(-14, -17, -19, 28, 3, 38), PartPose.offset(0, 12, 0));
-        float[][] plants = {{-9, -10, 4}, {8, -8, 5}, {-3, 8, 5}, {11, 9, 3}, {3, -17, 4}};
-        for (int i = 0; i < plants.length; i++) {
-            float[] p = plants[i];
+        float[][] p = {{-9, -10, 4}, {8, -8, 5}, {-3, 8, 5}, {11, 9, 3}, {3, -17, 4}};
+        for (int i = 0; i < p.length; i++) {
             shell.addOrReplaceChild("plant" + i, CubeListBuilder.create()
-                    .texOffs(210, 12).addBox(-1, -p[2], -1, 2, p[2], 2),
-                    PartPose.offset(p[0], -17, p[1]));
+                    .texOffs(210, 12).addBox(-1, -p[i][2], -1, 2, p[i][2], 2),
+                    PartPose.offset(p[i][0], -17, p[i][1]));
+        }
+        // 6.5 model pixels scale into approximately one full Minecraft block at final size (2.46x).
+        float[][] garden = {{-6, -9}, {6, 1}, {-4, 10}};
+        for (int i = 0; i < garden.length; i++) {
+            shell.addOrReplaceChild("garden" + i, CubeListBuilder.create()
+                    .texOffs(20, 82).addBox(-3.25F, -6.5F, -3.25F, 6.5F, 6.5F, 6.5F),
+                    PartPose.offset(garden[i][0], -17, garden[i][1]));
         }
         root.addOrReplaceChild("head", CubeListBuilder.create()
                 .texOffs(158, 0).addBox(-6, -6, -11, 12, 9, 13)
@@ -67,5 +79,9 @@ public class MossbackModel extends HierarchicalModel<Mossback> {
             legs[i].xRot = Mth.cos(limbSwing * 0.48F + (i == 0 || i == 3 ? 0 : Mth.PI))
                     * 0.32F * limbSwingAmount;
         }
+        int stage = mossback.lifeStage();
+        for (int i = 0; i < plants.length; i++) plants[i].visible =
+                stage >= MossbackGrowth.MATURE || (stage == MossbackGrowth.JUVENILE && i < 2);
+        for (ModelPart part : gardenBlocks) part.visible = stage == MossbackGrowth.ANCIENT;
     }
 }
