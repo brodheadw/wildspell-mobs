@@ -1,6 +1,5 @@
 package com.wildspell.mobs.client;
 
-import com.mojang.blaze3d.vertex.PoseStack;
 import com.wildspell.mobs.WildspellMobs;
 import com.wildspell.mobs.entity.Mossback;
 import net.minecraft.client.renderer.entity.EntityRendererProvider;
@@ -12,12 +11,6 @@ public class MossbackRenderer extends MobRenderer<Mossback, MossbackModel> {
 
     public MossbackRenderer(EntityRendererProvider.Context context) {
         super(context, new MossbackModel(context.bakeLayer(MossbackModel.LAYER)), 1.2F);
-    }
-
-    @Override
-    protected void scale(Mossback mossback, PoseStack poseStack, float partialTick) {
-        float scale = mossback.growthScale();
-        poseStack.scale(scale, scale, scale);
     }
 
     @Override
