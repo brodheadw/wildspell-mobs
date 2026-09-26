@@ -49,9 +49,10 @@ public final class SpawnBalance {
             .comment("Radius in blocks used by the two underground caps.")
             .defineInRange("undergroundCapRadius", 32, 8, 128);
 
-    static final ModConfigSpec.DoubleValue ENCHANTED_ICE_LICH_CHANCE = BUILDER
-            .comment("Chance (0-1) that mining Enchanted Ice without Silk Touch wakes an Ice Lich. 0 = never.")
-            .defineInRange("enchantedIceLichChance", 0.03, 0.0, 1.0);
+    public static final ModConfigSpec.DoubleValue LICH_AMBUSH_CHANCE = BUILDER
+            .comment("Chance (0-1), each second, that an Ice Lich rises behind a player in the Frosted Caves within 64",
+                    "blocks of its crypt. The default averages about 17 minutes spent near a crypt. 0 = never.")
+            .defineInRange("lichAmbushChance", 0.001, 0.0, 1.0);
 
     static final ModConfigSpec SPEC = BUILDER.build();
 

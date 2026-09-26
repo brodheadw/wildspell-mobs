@@ -1,5 +1,9 @@
 package com.wildspell.mobs;
 
+import com.wildspell.mobs.crypt.PhylacteryBlock;
+import com.wildspell.mobs.crypt.PhylacteryBlockEntity;
+import com.wildspell.mobs.entity.Frost;
+import com.wildspell.mobs.entity.FrostShard;
 import com.wildspell.mobs.entity.FrozenZombie;
 import com.wildspell.mobs.entity.IceLich;
 import com.wildspell.mobs.entity.RimeSkull;
@@ -30,6 +34,8 @@ import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
 @PrefixGameTestTemplate(false)
 public class WildspellMobsTests {
     private static final String ARENA = "arena";
+    private static final ResourceKey<Biome> FROSTED_CAVES = ResourceKey.create(Registries.BIOME,
+            net.minecraft.resources.ResourceLocation.fromNamespaceAndPath("yungscavebiomes", "frosted_caves"));
 
     @GameTest(template = ARENA, timeoutTicks = 100)
     public static void skullHoversWithoutFalling(GameTestHelper helper) {
@@ -72,8 +78,7 @@ public class WildspellMobsTests {
 
     @GameTest(template = ARENA)
     public static void frostedCavesSpawnSkulls(GameTestHelper helper) {
-        ResourceKey<Biome> frosted = ResourceKey.create(Registries.BIOME, net.minecraft.resources.ResourceLocation.fromNamespaceAndPath("yungscavebiomes", "frosted_caves"));
-        Biome biome = helper.getLevel().registryAccess().registryOrThrow(Registries.BIOME).get(frosted);
+        Biome biome = helper.getLevel().registryAccess().registryOrThrow(Registries.BIOME).get(FROSTED_CAVES);
         helper.assertTrue(biome != null, "yungscavebiomes:frosted_caves is not loaded");
         boolean listed = biome.getMobSettings().getMobs(MobCategory.MONSTER).unwrap().stream()
                 .anyMatch(data -> data.type == WildspellMobs.RIME_SKULL.get());
@@ -84,17 +89,7 @@ public class WildspellMobsTests {
     // Runs alone so the painted biome can't reach into a neighbouring test's arena.
     @GameTest(template = ARENA, timeoutTicks = 300, batch = "freezing")
     public static void zombieFreezesInFrostedCaves(GameTestHelper helper) {
-        // getBiome (like F3) samples a jittered position that can fall in a neighbouring 4x4x4 biome cell,
-        // and the arena isn't aligned to that grid, so paint a margin of cells around the zombie. The
-        // command can also fail on the first ticks before the chunks are ready, so keep applying it.
-        BlockPos from = helper.absolutePos(new BlockPos(-2, -2, -2));
-        BlockPos to = helper.absolutePos(new BlockPos(10, 6, 10));
-        String fill = "fillbiome " + from.getX() + " " + from.getY() + " " + from.getZ() + " " + to.getX() + " " + to.getY() + " " + to.getZ() + " yungscavebiomes:frosted_caves";
-        helper.onEachTick(() -> {
-            if (!helper.getLevel().getBiome(helper.absolutePos(new BlockPos(4, 1, 4))).is(ZombieFreezing.FREEZES_ZOMBIES)) {
-                helper.getLevel().getServer().getCommands().performPrefixedCommand(helper.getLevel().getServer().createCommandSourceStack().withSuppressedOutput(), fill);
-            }
-        });
+        paintFrostedCaves(helper);
         helper.setBlock(4, 0, 4, Blocks.ICE);
         Zombie zombie = helper.spawn(EntityType.ZOMBIE, 4.5F, 1.0F, 4.5F);
         zombie.setNoAi(true);
@@ -134,10 +129,12 @@ public class WildspellMobsTests {
         helper.setBlock(6, 0, 6, Blocks.PACKED_ICE);
         int[] offIce = new int[3];
         int[] onIce = new int[3];
+        int[] wholeFaces = {0};
         for (int i = 0; i < 200; ++i) {
-            ++offIce[pickVariantAt(helper, new BlockPos(2, 1, 2))];
-            ++onIce[pickVariantAt(helper, new BlockPos(6, 1, 6))];
+            ++offIce[pickVariantAt(helper, new BlockPos(2, 1, 2), wholeFaces)];
+            ++onIce[pickVariantAt(helper, new BlockPos(6, 1, 6), wholeFaces)];
         }
+        helper.assertTrue(wholeFaces[0] > 80 && wholeFaces[0] < 190, "whole faces out of about one in three: " + wholeFaces[0] + " of 400");
         String mix = "off ice " + java.util.Arrays.toString(offIce) + ", on ice " + java.util.Arrays.toString(onIce);
         helper.assertTrue(onIce[FrozenZombie.ICEBOUND] == 200, "not always ice-bound on ice: " + mix);
         helper.assertTrue(offIce[FrozenZombie.ICEBOUND] == 0 && offIce[FrozenZombie.NORMAL] > offIce[FrozenZombie.ONE_ARMED]
@@ -146,10 +143,12 @@ public class WildspellMobsTests {
         BlockPos iceTop = helper.absolutePos(new BlockPos(6, 1, 6));
         zombie.moveTo(iceTop.getX() + 0.5, iceTop.getY(), iceTop.getZ() + 0.5);
         zombie.pickVariant();
+        zombie.setWholeFace(true);
         helper.assertTrue(Math.abs(zombie.getY() - (iceTop.getY() - 0.75)) < 1.0E-6, "not sunk into the ice: y=" + zombie.getY());
         FrozenZombie reloaded = WildspellMobs.FROZEN_ZOMBIE.get().create(helper.getLevel());
         reloaded.load(zombie.saveWithoutId(new net.minecraft.nbt.CompoundTag()));
         helper.assertTrue(reloaded.isIcebound() && reloaded.getY() == zombie.getY(), "ice-bound state not saved");
+        helper.assertTrue(reloaded.hasWholeFace(), "whole face not saved");
         helper.assertTrue(reloaded.getAttributeValue(net.minecraft.world.entity.ai.attributes.Attributes.MOVEMENT_SPEED) == 0.0,
                 "reloaded ice-bound zombie can still walk");
         helper.succeed();
@@ -178,11 +177,13 @@ public class WildspellMobsTests {
         });
     }
 
-    private static int pickVariantAt(GameTestHelper helper, BlockPos relative) {
+    /** Spawns a Frozen Zombie at {@code relative} and returns its variant, counting whole faces in {@code wholeFaces[0]}. */
+    private static int pickVariantAt(GameTestHelper helper, BlockPos relative, int[] wholeFaces) {
         FrozenZombie zombie = WildspellMobs.FROZEN_ZOMBIE.get().create(helper.getLevel());
         BlockPos pos = helper.absolutePos(relative);
         zombie.moveTo(pos.getX() + 0.5, pos.getY(), pos.getZ() + 0.5);
         zombie.finalizeSpawn(helper.getLevel(), helper.getLevel().getCurrentDifficultyAt(pos), MobSpawnType.NATURAL, null);
+        wholeFaces[0] += zombie.hasWholeFace() ? 1 : 0;
         return zombie.getVariant();
     }
 
@@ -225,28 +226,6 @@ public class WildspellMobsTests {
     }
 
     @GameTest(template = ARENA)
-    public static void phylacteryRecipeIsSymmetric(GameTestHelper helper) {
-        var holder = helper.getLevel().getRecipeManager().byKey(WildspellMobs.id("frozen_phylactery"));
-        helper.assertTrue(holder.isPresent(), "frozen phylactery recipe missing");
-        helper.assertTrue(holder.get().value() instanceof net.minecraft.world.item.crafting.ShapedRecipe, "recipe is not shaped");
-        var recipe = (net.minecraft.world.item.crafting.ShapedRecipe) holder.get().value();
-        java.util.List<net.minecraft.world.item.crafting.Ingredient> grid = recipe.getIngredients();
-        helper.assertTrue(recipe.getWidth() == 3 && recipe.getHeight() == 3, "not a full 3x3 grid");
-        for (int slot : new int[] {0, 2, 6, 8}) {
-            helper.assertTrue(grid.get(slot).test(new ItemStack(WildspellMobs.RIME_SHARD.get())), "corner " + slot + " is not a Rime Shard");
-        }
-        for (int slot = 0; slot < 9; ++slot) {
-            ItemStack[] here = grid.get(slot).getItems();
-            ItemStack[] mirror = grid.get(slot / 3 * 3 + (2 - slot % 3)).getItems();
-            ItemStack[] flipped = grid.get((2 - slot / 3) * 3 + slot % 3).getItems();
-            helper.assertTrue(here[0].is(mirror[0].getItem()) && here[0].is(flipped[0].getItem()), "grid not symmetric at slot " + slot);
-        }
-        helper.assertTrue(grid.get(3).test(new ItemStack(Items.ICE)) && grid.get(4).test(new ItemStack(WildspellMobs.ENCHANTED_ICE_CRYSTAL.get())),
-                "middle row should be ice, crystal, ice");
-        helper.succeed();
-    }
-
-    @GameTest(template = ARENA)
     public static void iceCubesDropIce(GameTestHelper helper) {
         EntityType<?> iceCubeType = net.minecraft.core.registries.BuiltInRegistries.ENTITY_TYPE.get(
                 net.minecraft.resources.ResourceLocation.fromNamespaceAndPath("yungscavebiomes", "ice_cube"));
@@ -265,43 +244,255 @@ public class WildspellMobsTests {
         helper.succeed();
     }
 
-    @GameTest(template = ARENA, timeoutTicks = 100, batch = "lichRitual")
-    public static void phylacteryInIcyWaterSummonsTheLich(GameTestHelper helper) {
-        helper.setBlock(4, 0, 4, Blocks.WATER);
-        helper.setBlock(5, 0, 4, Blocks.PACKED_ICE);
-        net.minecraft.world.entity.item.ItemEntity phylactery = helper.spawnItem(WildspellMobs.FROZEN_PHYLACTERY.get(), 4.5F, 1.0F, 4.5F);
-        helper.succeedWhen(() -> {
-            helper.assertEntityPresent(WildspellMobs.ICE_LICH.get());
-            helper.assertTrue(!phylactery.isAlive(), "phylactery not consumed");
-            helper.assertBlockPresent(Blocks.ICE, new BlockPos(4, 0, 4));
-        });
-    }
-
-    @GameTest(template = ARENA, timeoutTicks = 100)
-    public static void phylacteryInPlainWaterDoesNothing(GameTestHelper helper) {
-        helper.setBlock(4, 0, 4, Blocks.WATER);
-        helper.spawnItem(WildspellMobs.FROZEN_PHYLACTERY.get(), 4.5F, 1.0F, 4.5F);
-        helper.runAfterDelay(80, () -> {
-            helper.assertEntityNotPresent(WildspellMobs.ICE_LICH.get());
-            helper.succeed();
-        });
+    @GameTest(template = ARENA)
+    public static void leatherShrugsOffFrostAndShardsBuildIt(GameTestHelper helper) {
+        Pig pig = helper.spawn(EntityType.PIG, 2.5F, 1.0F, 2.5F);
+        pig.setNoAi(true);
+        Zombie zombie = helper.spawn(EntityType.ZOMBIE, 6.5F, 1.0F, 6.5F);
+        zombie.setNoAi(true);
+        zombie.setItemSlot(EquipmentSlot.FEET, new ItemStack(Items.LEATHER_BOOTS));
+        Frost.add(pig, FrostShard.SHARD_FROST, 20);
+        Frost.add(zombie, FrostShard.SHARD_FROST, 20);
+        helper.assertTrue(pig.getTicksFrozen() == FrostShard.SHARD_FROST, "one shard should add frost, not freeze solid: " + pig.getTicksFrozen());
+        helper.assertTrue(zombie.getTicksFrozen() == 0, "leather boots should keep frost off");
+        for (int i = 0; i < 5; ++i) {
+            Frost.add(pig, FrostShard.SHARD_FROST, 20);
+        }
+        helper.assertTrue(pig.getTicksFrozen() == pig.getTicksRequiredToFreeze() + 20, "frost not capped: " + pig.getTicksFrozen());
+        Frost.freezeSolid(zombie, 60);
+        helper.assertTrue(zombie.getTicksFrozen() == 0, "leather boots should keep a freezing hit off too");
+        helper.succeed();
     }
 
     @GameTest(template = ARENA)
-    public static void miningEnchantedIceCanWakeALich(GameTestHelper helper) {
-        net.minecraft.world.level.block.Block rareIce = net.minecraft.core.registries.BuiltInRegistries.BLOCK.get(
-                net.minecraft.resources.ResourceLocation.fromNamespaceAndPath("yungscavebiomes", "rare_ice"));
-        BlockPos pos = helper.absolutePos(new BlockPos(4, 1, 4));
-        helper.getLevel().setBlockAndUpdate(pos, rareIce.defaultBlockState());
-        net.minecraft.world.entity.player.Player miner = net.neoforged.neoforge.common.util.FakePlayerFactory.getMinecraft(helper.getLevel());
-        double chance = SpawnBalance.ENCHANTED_ICE_LICH_CHANCE.get();
-        SpawnBalance.ENCHANTED_ICE_LICH_CHANCE.set(1.0);
-        try {
-            NeoForge.EVENT_BUS.post(new net.neoforged.neoforge.event.level.BlockEvent.BreakEvent(helper.getLevel(), pos, rareIce.defaultBlockState(), miner));
-        } finally {
-            SpawnBalance.ENCHANTED_ICE_LICH_CHANCE.set(chance);
+    public static void summonedFrozenZombieIsNeverIcebound(GameTestHelper helper) {
+        helper.setBlock(4, 0, 4, Blocks.ICE);
+        FrozenZombie raised = WildspellMobs.FROZEN_ZOMBIE.get().create(helper.getLevel());
+        BlockPos on = helper.absolutePos(new BlockPos(4, 1, 4));
+        raised.moveTo(on.getX() + 0.5, on.getY(), on.getZ() + 0.5, 0.0F, 0.0F);
+        raised.finalizeSpawn(helper.getLevel(), helper.getLevel().getCurrentDifficultyAt(on), MobSpawnType.MOB_SUMMONED, null);
+        helper.assertTrue(!raised.isIcebound(), "a zombie the lich raised on ice froze into it");
+        helper.succeed();
+    }
+
+    @GameTest(template = ARENA, timeoutTicks = 400, batch = "lichChannel")
+    public static void hittingTheLichBreaksItsSummon(GameTestHelper helper) {
+        Pig pig = helper.spawn(EntityType.PIG, 4.5F, 1.0F, 4.5F);
+        pig.setNoAi(true);
+        pig.setInvulnerable(true);
+        IceLich lich = helper.spawn(WildspellMobs.ICE_LICH.get(), 4.5F, 4.0F, 1.5F);
+        lich.setTarget(pig);
+        long[] hitAt = {-1};
+        boolean[] minions = {false};
+        helper.onEachTick(() -> {
+            if (hitAt[0] < 0 && lich.getAction() == IceLich.ACTION_SUMMON) {
+                lich.hurt(helper.getLevel().damageSources().mobAttack(pig), 1.0F);
+                hitAt[0] = helper.getTick();
+            }
+            minions[0] |= !helper.getLevel().getEntitiesOfClass(Mob.class, lich.getBoundingBox().inflate(32), IceLich::isMinion).isEmpty();
+        });
+        helper.succeedWhen(() -> {
+            helper.assertTrue(hitAt[0] >= 0, "lich never began a summon");
+            helper.assertTrue(helper.getTick() > hitAt[0] + IceLich.SUMMON_CHANNEL + 5, "waiting out the channel");
+            helper.assertTrue(!minions[0], "the summon went through despite the hit");
+            helper.assertTrue(lich.getAction() != IceLich.ACTION_SUMMON, "still channelling");
+        });
+    }
+
+    @GameTest(template = ARENA, timeoutTicks = 700, batch = "lichReform")
+    public static void boundLichReformsAtItsPhylactery(GameTestHelper helper) {
+        PhylacteryBlockEntity phylactery = placePhylactery(helper, new BlockPos(4, 1, 4), net.minecraft.core.Direction.SOUTH);
+        IceLich lich = phylactery.raise(helper.getLevel(), helper.absoluteVec(new net.minecraft.world.phys.Vec3(4.5, 3.0, 7.5)), null);
+        java.util.UUID first = lich.getUUID();
+        lich.hurt(helper.getLevel().damageSources().genericKill(), Float.MAX_VALUE);
+        helper.assertTrue(lich.isRemoved(), "a bound lich stayed after being struck down");
+        helper.assertEntityPresent(WildspellMobs.LICH_WISP.get());
+        helper.assertItemEntityNotPresent(WildspellMobs.FROSTBOUND_STAFF.get());
+        helper.succeedWhen(() -> {
+            java.util.List<IceLich> liches = helper.getEntities(WildspellMobs.ICE_LICH.get());
+            helper.assertTrue(liches.size() == 1, "expected the lich to re-form, found " + liches.size());
+            helper.assertTrue(helper.getTick() >= PhylacteryBlockEntity.REFORM_TICKS, "re-formed too soon, at tick " + helper.getTick());
+            IceLich reformed = liches.getFirst();
+            helper.assertTrue(!reformed.getUUID().equals(first) && reformed.isBound(), "re-formed lich isn't a fresh, bound one");
+            helper.assertTrue(reformed.getUUID().equals(phylactery.lichId()), "phylactery lost track of its lich");
+            helper.assertEntityNotPresent(WildspellMobs.LICH_WISP.get());
+        });
+    }
+
+    @GameTest(template = ARENA, timeoutTicks = 400, batch = "lichSoul")
+    public static void inAnAwakeCryptTheLichWaitsForItsSoul(GameTestHelper helper) {
+        placePhylactery(helper, new BlockPos(4, 1, 1), net.minecraft.core.Direction.SOUTH);
+        net.minecraft.world.entity.player.Player intruder = addMockPlayer(helper, new net.minecraft.world.phys.Vec3(4.5, 1.0, 6.5));
+        long[] killedAt = {-1};
+        long[] arrivedAt = {-1};
+        boolean[] early = {false};
+        java.util.UUID[] first = {null};
+        helper.onEachTick(() -> {
+            java.util.List<IceLich> liches = helper.getEntities(WildspellMobs.ICE_LICH.get());
+            boolean wisp = !helper.getEntities(WildspellMobs.LICH_WISP.get()).isEmpty();
+            if (killedAt[0] < 0 && liches.size() == 1) {
+                // Strike it down across the crypt, so its soul has a way to fly home.
+                IceLich lich = liches.getFirst();
+                first[0] = lich.getUUID();
+                net.minecraft.world.phys.Vec3 far = helper.absoluteVec(new net.minecraft.world.phys.Vec3(4.5, 3.0, 8.5));
+                lich.teleportTo(far.x, far.y, far.z);
+                lich.hurt(helper.getLevel().damageSources().genericKill(), Float.MAX_VALUE);
+                killedAt[0] = helper.getTick();
+            } else if (killedAt[0] >= 0) {
+                early[0] |= wisp && !liches.isEmpty();
+                if (arrivedAt[0] < 0 && !wisp) {
+                    arrivedAt[0] = helper.getTick();
+                }
+            }
+        });
+        helper.succeedWhen(() -> {
+            helper.assertTrue(!early[0], "the lich re-formed while its soul was still flying home");
+            java.util.List<IceLich> liches = helper.getEntities(WildspellMobs.ICE_LICH.get());
+            helper.assertTrue(arrivedAt[0] >= 0 && liches.size() == 1 && !liches.getFirst().getUUID().equals(first[0]), "not re-formed yet");
+            helper.assertTrue(helper.getTick() - arrivedAt[0] >= PhylacteryBlockEntity.REFORM_TICKS_AWAKE - 1,
+                    "re-formed " + (helper.getTick() - arrivedAt[0]) + " ticks after its soul arrived");
+            intruder.discard();
+        });
+    }
+
+    @GameTest(template = ARENA, timeoutTicks = 100, batch = "lichStale")
+    public static void aStaleCopyOfTheLichFadesAway(GameTestHelper helper) {
+        PhylacteryBlockEntity phylactery = placePhylactery(helper, new BlockPos(4, 1, 4), net.minecraft.core.Direction.SOUTH);
+        IceLich stale = phylactery.raise(helper.getLevel(), helper.absoluteVec(new net.minecraft.world.phys.Vec3(2.5, 3.0, 7.5)), null);
+        IceLich current = phylactery.raise(helper.getLevel(), helper.absoluteVec(new net.minecraft.world.phys.Vec3(6.5, 3.0, 7.5)), null);
+        helper.succeedWhen(() -> {
+            helper.assertTrue(stale.isRemoved(), "the replaced lich is still around");
+            helper.assertTrue(current.isAlive() && current.getUUID().equals(phylactery.lichId()), "the phylactery's own lich went too");
+        });
+    }
+
+    @GameTest(template = ARENA, timeoutTicks = 100, batch = "lichShatter")
+    public static void shatteredPhylacteryLeavesTheLichMortal(GameTestHelper helper) {
+        PhylacteryBlockEntity phylactery = placePhylactery(helper, new BlockPos(4, 1, 4), net.minecraft.core.Direction.SOUTH);
+        IceLich lich = phylactery.raise(helper.getLevel(), helper.absoluteVec(new net.minecraft.world.phys.Vec3(4.5, 3.0, 7.5)), null);
+        helper.destroyBlock(new BlockPos(4, 1, 4));
+        helper.assertTrue(!lich.isBound(), "lich still bound to a shattered phylactery");
+        lich.hurt(helper.getLevel().damageSources().genericKill(), Float.MAX_VALUE);
+        helper.succeedWhen(() -> {
+            helper.assertTrue(lich.isDeadOrDying(), "lich survived");
+            helper.assertEntityNotPresent(WildspellMobs.LICH_WISP.get());
+            helper.assertItemEntityPresent(WildspellMobs.FROSTBOUND_STAFF.get());
+        });
+    }
+
+    @GameTest(template = ARENA, timeoutTicks = 100, batch = "lichLastForm")
+    public static void shatteringAnEmptyPhylacteryRaisesTheLichOneLastTime(GameTestHelper helper) {
+        placePhylactery(helper, new BlockPos(4, 1, 4), net.minecraft.core.Direction.SOUTH);
+        helper.destroyBlock(new BlockPos(4, 1, 4));
+        java.util.List<IceLich> liches = helper.getEntities(WildspellMobs.ICE_LICH.get());
+        helper.assertTrue(liches.size() == 1 && !liches.getFirst().isBound(), "expected one last, mortal lich");
+        helper.succeed();
+    }
+
+    @GameTest(template = ARENA, timeoutTicks = 100, batch = "lichWards")
+    public static void wardsKeepThePhylacteryWhole(GameTestHelper helper) {
+        BlockPos at = new BlockPos(4, 1, 4);
+        placePhylactery(helper, at, net.minecraft.core.Direction.SOUTH);
+        helper.setBlock(new BlockPos(6, 1, 6), WildspellMobs.RIME_WARD.get());
+        // Just behind the phylactery, outside its crypt: it only bothers checking its wards with someone near.
+        net.minecraft.world.entity.player.Player miner = addMockPlayer(helper, new net.minecraft.world.phys.Vec3(4.5, 1.0, 1.5));
+        boolean[] wasWarded = {false};
+        helper.onEachTick(() -> {
+            net.minecraft.world.level.block.state.BlockState state = helper.getBlockState(at);
+            if (!wasWarded[0] && state.getValue(PhylacteryBlock.WARDED)) {
+                wasWarded[0] = true;
+                helper.assertTrue(state.getDestroyProgress(miner, helper.getLevel(), helper.absolutePos(at)) == 0.0F, "a warded phylactery can be mined");
+                helper.setBlock(new BlockPos(6, 1, 6), Blocks.AIR);
+            }
+        });
+        helper.succeedWhen(() -> {
+            helper.assertTrue(wasWarded[0], "phylactery never noticed its ward");
+            net.minecraft.world.level.block.state.BlockState state = helper.getBlockState(at);
+            helper.assertTrue(!state.getValue(PhylacteryBlock.WARDED), "still warded with its ward broken");
+            helper.assertTrue(state.getDestroyProgress(miner, helper.getLevel(), helper.absolutePos(at)) > 0.0F, "unwarded phylactery can't be mined");
+            miner.discard();
+        });
+    }
+
+    @GameTest(template = ARENA, timeoutTicks = 200, batch = "cryptWakes")
+    public static void cryptWakesForAnIntruder(GameTestHelper helper) {
+        placePhylactery(helper, new BlockPos(4, 1, 1), net.minecraft.core.Direction.SOUTH);
+        BlockPos[] braziers = {new BlockPos(1, 1, 7), new BlockPos(7, 1, 7)};
+        for (BlockPos b : braziers) {
+            helper.setBlock(b, Blocks.SOUL_CAMPFIRE.defaultBlockState().setValue(net.minecraft.world.level.block.CampfireBlock.LIT, false));
         }
-        helper.assertEntityPresent(WildspellMobs.ICE_LICH.get());
+        BlockPos candle = new BlockPos(4, 1, 8);
+        helper.setBlock(candle, Blocks.BLUE_CANDLE.defaultBlockState().setValue(net.minecraft.world.level.block.CandleBlock.CANDLES, 4));
+        net.minecraft.world.entity.player.Player intruder = addMockPlayer(helper, new net.minecraft.world.phys.Vec3(4.5, 1.0, 6.5));
+        helper.succeedWhen(() -> {
+            for (BlockPos b : braziers) {
+                helper.assertTrue(helper.getBlockState(b).getValue(net.minecraft.world.level.block.CampfireBlock.LIT), "brazier at " + b + " not lit");
+            }
+            helper.assertTrue(helper.getBlockState(candle).getValue(net.minecraft.world.level.block.CandleBlock.LIT), "candle not lit");
+            java.util.List<IceLich> liches = helper.getEntities(WildspellMobs.ICE_LICH.get());
+            helper.assertTrue(liches.size() == 1, "the lich didn't rise to meet the intruder");
+            helper.assertTrue(liches.getFirst().isBound() && liches.getFirst().getTarget() == intruder, "risen lich isn't bound and after the intruder");
+            intruder.discard();
+        });
+    }
+
+    // Runs alone: the painted biome, the player and a 64-block ambush range would reach other tests.
+    @GameTest(template = ARENA, timeoutTicks = 200, batch = "lichAmbush")
+    public static void lichAmbushesAPlayerNearItsCrypt(GameTestHelper helper) {
+        paintFrostedCaves(helper);
+        // Facing north, the crypt lies away from the arena, so the player stands outside it.
+        PhylacteryBlockEntity phylactery = placePhylactery(helper, new BlockPos(4, 1, 0), net.minecraft.core.Direction.NORTH);
+        net.minecraft.world.entity.player.Player player = addMockPlayer(helper, new net.minecraft.world.phys.Vec3(4.5, 1.0, 6.5));
+        double chance = SpawnBalance.LICH_AMBUSH_CHANCE.get();
+        SpawnBalance.LICH_AMBUSH_CHANCE.set(1.0);
+        // There's no teardown hook, so put the config back before the timeout whether or not it passes.
+        helper.runAtTickTime(150, () -> SpawnBalance.LICH_AMBUSH_CHANCE.set(chance));
+        helper.succeedWhen(() -> {
+            java.util.List<IceLich> liches = helper.getLevel().getEntitiesOfClass(IceLich.class, player.getBoundingBox().inflate(24.0));
+            helper.assertTrue(liches.size() == 1, "no ambush yet");
+            IceLich lich = liches.getFirst();
+            helper.assertTrue(lich.isBound() && lich.getTarget() == player && lich.getUUID().equals(phylactery.lichId()), "ambusher isn't the phylactery's lich hunting the player");
+            helper.assertTrue(lich.distanceTo(player) >= 9.0, "rose right on top of the player: " + lich.distanceTo(player));
+            SpawnBalance.LICH_AMBUSH_CHANCE.set(chance);
+            player.discard();
+        });
+    }
+
+    // Built 40 blocks above the test grid, so the 25x31 crypt can't reach another test's arena.
+    @GameTest(template = ARENA, timeoutTicks = 100, batch = "cryptGen")
+    public static void cryptBuildsTheSameWayRoundInEveryOrientation(GameTestHelper helper) {
+        int i = 0;
+        for (net.minecraft.core.Direction facing : net.minecraft.core.Direction.Plane.HORIZONTAL) {
+            BlockPos origin = helper.absolutePos(new BlockPos(40 * i++, 40, 0));
+            com.wildspell.mobs.crypt.LichCryptPiece piece = new com.wildspell.mobs.crypt.LichCryptPiece(origin, facing);
+            piece.postProcess(helper.getLevel(), helper.getLevel().structureManager(), helper.getLevel().getChunkSource().getGenerator(),
+                    helper.getLevel().random, piece.getBoundingBox(), new net.minecraft.world.level.ChunkPos(origin), origin);
+            BlockPos at = piece.phylacteryPos();
+            helper.assertTrue(helper.getLevel().getBlockEntity(at) instanceof PhylacteryBlockEntity, facing + ": no phylactery at " + at);
+            PhylacteryBlockEntity phylactery = (PhylacteryBlockEntity) helper.getLevel().getBlockEntity(at);
+            net.minecraft.world.phys.AABB crypt = phylactery.cryptBounds();
+            int wards = 0, braziers = 0, candles = 0, iceFloor = 0;
+            for (BlockPos p : BlockPos.betweenClosed(BlockPos.containing(crypt.minX, crypt.minY, crypt.minZ), BlockPos.containing(crypt.maxX - 1, crypt.maxY - 1, crypt.maxZ - 1))) {
+                net.minecraft.world.level.block.state.BlockState state = helper.getLevel().getBlockState(p);
+                wards += state.is(WildspellMobs.RIME_WARD.get()) ? 1 : 0;
+                braziers += state.is(Blocks.SOUL_CAMPFIRE) && !state.getValue(net.minecraft.world.level.block.CampfireBlock.LIT) ? 1 : 0;
+                candles += state.is(Blocks.BLUE_CANDLE) && !state.getValue(net.minecraft.world.level.block.CandleBlock.LIT) ? 1 : 0;
+                iceFloor += p.getY() == at.getY() - PhylacteryBlockEntity.CRYPT_BELOW && state.is(net.minecraft.tags.BlockTags.ICE) ? 1 : 0;
+            }
+            helper.assertTrue(wards == 4 && braziers == 8 && candles == 12,
+                    facing + ": crypt bounds hold " + wards + " wards, " + braziers + " unlit braziers and " + candles + " unlit candles");
+            helper.assertTrue(iceFloor == 0, facing + ": " + iceFloor + " ice blocks in the floor");
+            helper.assertTrue(helper.getLevel().isEmptyBlock(at.above()) && helper.getLevel().isEmptyBlock(at.above(3)), facing + ": no room for the lich over the altar");
+        }
+        helper.succeed();
+    }
+
+    @GameTest(template = ARENA, timeoutTicks = 100)
+    public static void cryptStructureIsRegistered(GameTestHelper helper) {
+        var structures = helper.getLevel().registryAccess().registryOrThrow(Registries.STRUCTURE);
+        helper.assertTrue(structures.containsKey(WildspellMobs.id("lich_crypt")), "lich_crypt structure missing");
+        var sets = helper.getLevel().registryAccess().registryOrThrow(Registries.STRUCTURE_SET);
+        helper.assertTrue(sets.containsKey(WildspellMobs.id("lich_crypt")), "lich_crypt structure set missing");
         helper.succeed();
     }
 
@@ -321,7 +512,7 @@ public class WildspellMobsTests {
             }
             saw[0] |= !helper.getEntities(WildspellMobs.FROST_SHARD.get()).isEmpty();
             saw[1] |= helper.getLevel().getEntitiesOfClass(net.minecraft.world.entity.Mob.class, lich.getBoundingBox().inflate(32),
-                    m -> m.getTags().contains(IceLich.MINION_TAG)).size() > 0;
+                    IceLich::isMinion).size() > 0;
         });
         helper.succeedWhen(() -> {
             helper.assertTrue(saw[0], "lich never fired a volley");
@@ -340,7 +531,7 @@ public class WildspellMobsTests {
         lich.setTarget(pig);
         helper.succeedWhen(() -> {
             java.util.List<net.minecraft.world.entity.Mob> minions = helper.getLevel().getEntitiesOfClass(net.minecraft.world.entity.Mob.class,
-                    lich.getBoundingBox().inflate(48), m -> m.getTags().contains(IceLich.MINION_TAG));
+                    lich.getBoundingBox().inflate(48), IceLich::isMinion);
             helper.assertTrue(!minions.isEmpty(), "no minions yet");
             lich.hurt(helper.getLevel().damageSources().genericKill(), Float.MAX_VALUE);
             helper.assertTrue(!lich.isAlive(), "lich survived");
@@ -423,8 +614,7 @@ public class WildspellMobsTests {
 
     @GameTest(template = ARENA)
     public static void creepersAreRareInFrostedCaves(GameTestHelper helper) {
-        ResourceKey<Biome> key = ResourceKey.create(Registries.BIOME, net.minecraft.resources.ResourceLocation.fromNamespaceAndPath("yungscavebiomes", "frosted_caves"));
-        Biome biome = helper.getLevel().registryAccess().registryOrThrow(Registries.BIOME).get(key);
+        Biome biome = helper.getLevel().registryAccess().registryOrThrow(Registries.BIOME).get(FROSTED_CAVES);
         helper.assertTrue(biome != null, "yungscavebiomes:frosted_caves is not loaded");
         java.util.List<net.minecraft.world.level.biome.MobSpawnSettings.SpawnerData> monsters = biome.getMobSettings().getMobs(MobCategory.MONSTER).unwrap();
         java.util.List<String> creepers = monsters.stream()
@@ -508,6 +698,41 @@ public class WildspellMobsTests {
             helper.assertTrue(creeperPass == 0.0, "creeper pass rate with the creeper cap full " + creeperPass);
             helper.assertTrue(Math.abs(zombiePass - SpawnBalance.UNDERGROUND_MONSTER_CHANCE.get()) < 0.05, "zombie pass rate " + zombiePass);
             helper.succeed();
+        });
+    }
+
+    /**
+     * A survival-mode mock player standing in the world. Not a ServerPlayer: those need a network
+     * connection, and the pack's mods (YUNG's, FTB) crash sending payloads down the mock one.
+     */
+    private static net.minecraft.world.entity.player.Player addMockPlayer(GameTestHelper helper, net.minecraft.world.phys.Vec3 at) {
+        net.minecraft.world.entity.player.Player player = helper.makeMockPlayer(net.minecraft.world.level.GameType.SURVIVAL);
+        net.minecraft.world.phys.Vec3 pos = helper.absoluteVec(at);
+        player.moveTo(pos.x, pos.y, pos.z, 0.0F, 0.0F);
+        player.setInvulnerable(true);
+        helper.getLevel().addFreshEntity(player);
+        return player;
+    }
+
+    private static PhylacteryBlockEntity placePhylactery(GameTestHelper helper, BlockPos pos, net.minecraft.core.Direction facing) {
+        helper.setBlock(pos, WildspellMobs.FROZEN_PHYLACTERY_BLOCK.get().defaultBlockState().setValue(PhylacteryBlock.FACING, facing));
+        return (PhylacteryBlockEntity) helper.getLevel().getBlockEntity(helper.absolutePos(pos));
+    }
+
+    /**
+     * Paints the arena as Frosted Caves. getBiome (like F3) samples a jittered position that can fall
+     * in a neighbouring 4x4x4 biome cell, and the arena isn't aligned to that grid, so paint a margin of
+     * cells around it. The command can also fail on the first ticks before the chunks are ready, so
+     * keep applying it.
+     */
+    private static void paintFrostedCaves(GameTestHelper helper) {
+        BlockPos from = helper.absolutePos(new BlockPos(-2, -2, -2));
+        BlockPos to = helper.absolutePos(new BlockPos(10, 6, 10));
+        String fill = "fillbiome " + from.getX() + " " + from.getY() + " " + from.getZ() + " " + to.getX() + " " + to.getY() + " " + to.getZ() + " " + FROSTED_CAVES.location();
+        helper.onEachTick(() -> {
+            if (!helper.getLevel().getBiome(helper.absolutePos(new BlockPos(4, 1, 4))).is(ZombieFreezing.FREEZES_ZOMBIES)) {
+                helper.getLevel().getServer().getCommands().performPrefixedCommand(helper.getLevel().getServer().createCommandSourceStack().withSuppressedOutput(), fill);
+            }
         });
     }
 

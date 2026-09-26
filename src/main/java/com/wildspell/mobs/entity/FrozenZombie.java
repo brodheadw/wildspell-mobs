@@ -3,7 +3,6 @@ package com.wildspell.mobs.entity;
 import com.wildspell.mobs.WildspellMobs;
 import javax.annotation.Nullable;
 import net.minecraft.core.BlockPos;
-import net.minecraft.core.particles.BlockParticleOption;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.syncher.EntityDataAccessor;
@@ -35,7 +34,6 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.ServerLevelAccessor;
-import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.phys.Vec3;
 
 /**
@@ -45,11 +43,13 @@ import net.minecraft.world.phys.Vec3;
  *
  * <p>Variants: some have lost an arm to the cold, and one that froze over standing on an ice block has
  * sunk into it up to the hips. That one is stuck fast, straining against the ice and throwing snowballs;
- * break the ice around it and it pulls free as an ordinary Frozen Zombie.
+ * break the ice around it and it pulls free as an ordinary Frozen Zombie. Separately, most have the
+ * upper right of the face torn away to the skull, with a glowing socket; one in three kept a whole face.
  */
 public class FrozenZombie extends Zombie implements RangedAttackMob {
     private static final EntityDataAccessor<Boolean> DATA_SEIZED = SynchedEntityData.defineId(FrozenZombie.class, EntityDataSerializers.BOOLEAN);
     private static final EntityDataAccessor<Integer> DATA_VARIANT = SynchedEntityData.defineId(FrozenZombie.class, EntityDataSerializers.INT);
+    private static final EntityDataAccessor<Boolean> DATA_WHOLE_FACE = SynchedEntityData.defineId(FrozenZombie.class, EntityDataSerializers.BOOLEAN);
     private static final ResourceLocation SEIZED_SLOWDOWN = WildspellMobs.id("seized");
     private static final ResourceLocation ICEBOUND_STUCK = WildspellMobs.id("icebound");
     /** How deep an ice-bound zombie sits in its block: its legs are 12 of its 32 pixels, 0.75 blocks. */
@@ -60,7 +60,6 @@ public class FrozenZombie extends Zombie implements RangedAttackMob {
     public static final int NORMAL = 0;
     public static final int ONE_ARMED = 1;
     public static final int ICEBOUND = 2;
-    private static final BlockParticleOption ICE_CHIPS = new BlockParticleOption(ParticleTypes.BLOCK, Blocks.ICE.defaultBlockState());
 
     private int phaseTicks;
     // Ice-bound only: the ice block it's frozen into, and the spot it's held at.
@@ -91,10 +90,20 @@ public class FrozenZombie extends Zombie implements RangedAttackMob {
         super.defineSynchedData(builder);
         builder.define(DATA_SEIZED, false);
         builder.define(DATA_VARIANT, NORMAL);
+        builder.define(DATA_WHOLE_FACE, false);
     }
 
     public int getVariant() {
         return this.entityData.get(DATA_VARIANT);
+    }
+
+    /** True if its face is whole, rather than torn away to the skull. */
+    public boolean hasWholeFace() {
+        return this.entityData.get(DATA_WHOLE_FACE);
+    }
+
+    public void setWholeFace(boolean whole) {
+        this.entityData.set(DATA_WHOLE_FACE, whole);
     }
 
     public boolean isIcebound() {
@@ -116,11 +125,16 @@ public class FrozenZombie extends Zombie implements RangedAttackMob {
 
     /**
      * Frozen standing on ice, its legs are locked into it. Otherwise six in ten come through whole and
-     * the rest lose an arm.
+     * the rest lose an arm. Either way, one in three keeps a whole face.
      */
     public void pickVariant() {
+        this.pickVariant(true);
+    }
+
+    private void pickVariant(boolean canBeIcebound) {
+        this.setWholeFace(this.random.nextInt(3) == 0);
         BlockPos below = this.blockPosition().below();
-        if (this.level().getBlockState(below).is(BlockTags.ICE)) {
+        if (canBeIcebound && this.level().getBlockState(below).is(BlockTags.ICE)) {
             this.setVariant(ICEBOUND);
             this.iceBlock = below;
             this.heldAt = new Vec3(this.getX(), below.getY() + 1.0 - SUBMERGED, this.getZ());
@@ -132,7 +146,8 @@ public class FrozenZombie extends Zombie implements RangedAttackMob {
 
     @Override
     public SpawnGroupData finalizeSpawn(ServerLevelAccessor level, DifficultyInstance difficulty, MobSpawnType spawnType, @Nullable SpawnGroupData spawnGroupData) {
-        this.pickVariant();
+        // Raised by a lich, it comes up out of the ground already free; it never froze standing there.
+        this.pickVariant(spawnType != MobSpawnType.MOB_SUMMONED);
         return super.finalizeSpawn(level, difficulty, spawnType, spawnGroupData);
     }
 
@@ -140,6 +155,7 @@ public class FrozenZombie extends Zombie implements RangedAttackMob {
     public void addAdditionalSaveData(CompoundTag tag) {
         super.addAdditionalSaveData(tag);
         tag.putInt("Variant", this.getVariant());
+        tag.putBoolean("WholeFace", this.hasWholeFace());
         if (this.iceBlock != null && this.heldAt != null) {
             tag.putLong("IceBlock", this.iceBlock.asLong());
             tag.putDouble("HeldX", this.heldAt.x);
@@ -152,6 +168,7 @@ public class FrozenZombie extends Zombie implements RangedAttackMob {
     public void readAdditionalSaveData(CompoundTag tag) {
         super.readAdditionalSaveData(tag);
         this.setVariant(tag.getInt("Variant"));
+        this.setWholeFace(tag.getBoolean("WholeFace"));
         if (tag.contains("IceBlock")) {
             this.iceBlock = BlockPos.of(tag.getLong("IceBlock"));
             this.heldAt = new Vec3(tag.getDouble("HeldX"), tag.getDouble("HeldY"), tag.getDouble("HeldZ"));
@@ -211,7 +228,7 @@ public class FrozenZombie extends Zombie implements RangedAttackMob {
             speed.removeModifier(SEIZED_SLOWDOWN);
             if (walking) {
                 this.playSound(WildspellMobs.FROZEN_ZOMBIE_CRUNCH.get(), 0.7F, 0.85F + this.random.nextFloat() * 0.25F);
-                ((ServerLevel) this.level()).sendParticles(ICE_CHIPS, this.getX(), this.getY(0.4), this.getZ(), 8, 0.25, 0.4, 0.25, 0.08);
+                ((ServerLevel) this.level()).sendParticles(ColdEffects.ICE_CHIPS, this.getX(), this.getY(0.4), this.getZ(), 8, 0.25, 0.4, 0.25, 0.08);
             }
         } else {
             // Seize up mid-stride.
@@ -227,7 +244,7 @@ public class FrozenZombie extends Zombie implements RangedAttackMob {
             this.setVariant(NORMAL);
             this.entityData.set(DATA_SEIZED, false);
             this.playSound(WildspellMobs.FROZEN_ZOMBIE_SHATTER.get(), 0.8F, 1.3F);
-            ((ServerLevel) this.level()).sendParticles(ICE_CHIPS, this.getX(), this.getY(0.2), this.getZ(), 20, 0.3, 0.3, 0.3, 0.12);
+            ((ServerLevel) this.level()).sendParticles(ColdEffects.ICE_CHIPS, this.getX(), this.getY(0.2), this.getZ(), 20, 0.3, 0.3, 0.3, 0.12);
             return;
         }
         this.entityData.set(DATA_SEIZED, true);
@@ -238,7 +255,7 @@ public class FrozenZombie extends Zombie implements RangedAttackMob {
         if (--this.phaseTicks <= 0) {
             this.phaseTicks = 40 + this.random.nextInt(60);
             this.playSound(WildspellMobs.FROZEN_ZOMBIE_CRUNCH.get(), 0.6F, 0.7F + this.random.nextFloat() * 0.2F);
-            ((ServerLevel) this.level()).sendParticles(ICE_CHIPS, this.getX(), this.heldAt.y + SUBMERGED, this.getZ(), 6, 0.3, 0.05, 0.3, 0.06);
+            ((ServerLevel) this.level()).sendParticles(ColdEffects.ICE_CHIPS, this.getX(), this.heldAt.y + SUBMERGED, this.getZ(), 6, 0.3, 0.05, 0.3, 0.06);
         }
     }
 
@@ -246,7 +263,7 @@ public class FrozenZombie extends Zombie implements RangedAttackMob {
     public boolean doHurtTarget(Entity target) {
         boolean hit = super.doHurtTarget(target);
         if (hit && target instanceof LivingEntity living) {
-            living.setTicksFrozen(Math.max(living.getTicksFrozen(), living.getTicksRequiredToFreeze() + 60));
+            Frost.freezeSolid(living, 60);
             living.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, 40, 0), this);
         }
         return hit;

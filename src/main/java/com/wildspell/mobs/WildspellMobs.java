@@ -1,9 +1,14 @@
 package com.wildspell.mobs;
 
 import com.mojang.serialization.MapCodec;
+import com.wildspell.mobs.crypt.LichCryptPiece;
+import com.wildspell.mobs.crypt.LichCryptStructure;
+import com.wildspell.mobs.crypt.PhylacteryBlock;
+import com.wildspell.mobs.crypt.PhylacteryBlockEntity;
 import com.wildspell.mobs.entity.FrostShard;
 import com.wildspell.mobs.entity.FrozenZombie;
 import com.wildspell.mobs.entity.IceLich;
+import com.wildspell.mobs.entity.LichWisp;
 import com.wildspell.mobs.entity.RimeSkull;
 import com.wildspell.mobs.item.FrostboundStaffItem;
 import net.minecraft.core.component.DataComponents;
@@ -16,10 +21,19 @@ import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.MobCategory;
 import net.minecraft.world.entity.SpawnPlacementTypes;
 import net.minecraft.world.entity.monster.Monster;
+import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.CreativeModeTabs;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.Rarity;
+import net.minecraft.world.level.block.AmethystClusterBlock;
+import net.minecraft.world.level.block.SoundType;
+import net.minecraft.world.level.block.entity.BlockEntityType;
+import net.minecraft.world.level.block.state.BlockBehaviour;
 import net.minecraft.world.level.levelgen.Heightmap;
+import net.minecraft.world.level.levelgen.structure.StructureType;
+import net.minecraft.world.level.levelgen.structure.pieces.StructurePieceType;
+import net.minecraft.world.level.material.MapColor;
+import net.minecraft.world.level.material.PushReaction;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.fml.ModContainer;
 import net.neoforged.fml.common.Mod;
@@ -41,6 +55,10 @@ public class WildspellMobs {
 
     public static final DeferredRegister<EntityType<?>> ENTITY_TYPES = DeferredRegister.create(Registries.ENTITY_TYPE, MODID);
     public static final DeferredRegister.Items ITEMS = DeferredRegister.createItems(MODID);
+    public static final DeferredRegister.Blocks BLOCKS = DeferredRegister.createBlocks(MODID);
+    public static final DeferredRegister<BlockEntityType<?>> BLOCK_ENTITY_TYPES = DeferredRegister.create(Registries.BLOCK_ENTITY_TYPE, MODID);
+    public static final DeferredRegister<StructureType<?>> STRUCTURE_TYPES = DeferredRegister.create(Registries.STRUCTURE_TYPE, MODID);
+    public static final DeferredRegister<StructurePieceType> STRUCTURE_PIECES = DeferredRegister.create(Registries.STRUCTURE_PIECE, MODID);
     public static final DeferredRegister<SoundEvent> SOUND_EVENTS = DeferredRegister.create(Registries.SOUND_EVENT, MODID);
     public static final DeferredRegister<ParticleType<?>> PARTICLE_TYPES = DeferredRegister.create(Registries.PARTICLE_TYPE, MODID);
     public static final DeferredRegister<MapCodec<? extends BiomeModifier>> BIOME_MODIFIER_SERIALIZERS =
@@ -52,7 +70,7 @@ public class WildspellMobs {
     public static final DeferredHolder<SoundEvent, SoundEvent> FROZEN_ZOMBIE_CRUNCH = sound("entity.frozen_zombie.crunch");
     public static final DeferredHolder<SoundEvent, SoundEvent> FROZEN_ZOMBIE_SHATTER = sound("entity.frozen_zombie.shatter");
 
-    /** Light-blue ice mote that pours down off the Rime Skull. */
+    /** Light-blue ice mote: pours off the Rime Skull and the lich, and traces the lich's beam and wards. */
     public static final DeferredHolder<ParticleType<?>, SimpleParticleType> FROST_MOTE = PARTICLE_TYPES.register("frost_mote",
             () -> new SimpleParticleType(false));
 
@@ -85,6 +103,44 @@ public class WildspellMobs {
                     .clientTrackingRange(10)
                     .build("ice_lich"));
 
+    /** A struck-down lich's soul, flying home to its phylactery. */
+    public static final DeferredHolder<EntityType<?>, EntityType<LichWisp>> LICH_WISP = ENTITY_TYPES.register("lich_wisp",
+            () -> EntityType.Builder.<LichWisp>of(LichWisp::new, MobCategory.MISC)
+                    .sized(0.5F, 0.5F)
+                    .clientTrackingRange(10)
+                    .updateInterval(2)
+                    .fireImmune()
+                    .build("lich_wisp"));
+
+    /** The lich's phylactery, on the altar of its crypt (see PhylacteryBlockEntity). */
+    public static final DeferredHolder<net.minecraft.world.level.block.Block, PhylacteryBlock> FROZEN_PHYLACTERY_BLOCK = BLOCKS.register("frozen_phylactery",
+            () -> new PhylacteryBlock(BlockBehaviour.Properties.of()
+                    .mapColor(MapColor.ICE)
+                    .strength(2.0F, 1200.0F)
+                    .sound(SoundType.GLASS)
+                    .lightLevel(state -> 10)
+                    .noOcclusion()
+                    .pushReaction(PushReaction.BLOCK)));
+
+    /** Wards the phylactery while it stands; four stand in each crypt. */
+    public static final DeferredHolder<net.minecraft.world.level.block.Block, AmethystClusterBlock> RIME_WARD = BLOCKS.register("rime_ward",
+            () -> new AmethystClusterBlock(7.0F, 3.0F, BlockBehaviour.Properties.of()
+                    .mapColor(MapColor.ICE)
+                    .strength(3.0F, 1200.0F)
+                    .sound(SoundType.AMETHYST_CLUSTER)
+                    .lightLevel(state -> 7)
+                    .noOcclusion()
+                    .pushReaction(PushReaction.BLOCK)));
+
+    public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<PhylacteryBlockEntity>> PHYLACTERY = BLOCK_ENTITY_TYPES.register("phylactery",
+            () -> BlockEntityType.Builder.of(PhylacteryBlockEntity::new, FROZEN_PHYLACTERY_BLOCK.get()).build(null));
+
+    public static final DeferredHolder<StructureType<?>, StructureType<LichCryptStructure>> LICH_CRYPT = STRUCTURE_TYPES.register("lich_crypt",
+            () -> () -> LichCryptStructure.CODEC);
+
+    public static final DeferredHolder<StructurePieceType, StructurePieceType> LICH_CRYPT_PIECE = STRUCTURE_PIECES.register("lich_crypt",
+            () -> (StructurePieceType.ContextlessType) LichCryptPiece::new);
+
     public static final DeferredItem<Item> RIME_SHARD = ITEMS.registerSimpleItem("rime_shard");
 
     /** Drops from YUNG's Enchanted Ice when mined without Silk Touch (see loot_modifiers/). */
@@ -94,9 +150,11 @@ public class WildspellMobs {
     public static final DeferredItem<DeferredSpawnEggItem> RIME_SKULL_SPAWN_EGG = ITEMS.register("rime_skull_spawn_egg",
             () -> new DeferredSpawnEggItem(RIME_SKULL, 0xD6F1FF, 0x4FA8D8, new Item.Properties()));
 
-    /** Thrown into icy water, summons an Ice Lich (see LichSummoning). */
-    public static final DeferredItem<Item> FROZEN_PHYLACTERY = ITEMS.registerSimpleItem("frozen_phylactery",
-            new Item.Properties().rarity(Rarity.RARE).stacksTo(16));
+    /** The phylactery's item; creative-only, for building crypts or testing. */
+    public static final DeferredItem<BlockItem> FROZEN_PHYLACTERY = ITEMS.registerSimpleBlockItem(FROZEN_PHYLACTERY_BLOCK,
+            new Item.Properties().rarity(Rarity.RARE));
+
+    public static final DeferredItem<BlockItem> RIME_WARD_ITEM = ITEMS.registerSimpleBlockItem(RIME_WARD, new Item.Properties().rarity(Rarity.UNCOMMON));
 
     public static final DeferredItem<FrostboundStaffItem> FROSTBOUND_STAFF = ITEMS.register("frostbound_staff",
             () -> new FrostboundStaffItem(new Item.Properties().rarity(Rarity.EPIC).durability(250)));
@@ -110,6 +168,10 @@ public class WildspellMobs {
     public WildspellMobs(IEventBus modBus, ModContainer container) {
         ENTITY_TYPES.register(modBus);
         ITEMS.register(modBus);
+        BLOCKS.register(modBus);
+        BLOCK_ENTITY_TYPES.register(modBus);
+        STRUCTURE_TYPES.register(modBus);
+        STRUCTURE_PIECES.register(modBus);
         SOUND_EVENTS.register(modBus);
         PARTICLE_TYPES.register(modBus);
         BIOME_MODIFIER_SERIALIZERS.register(modBus);
@@ -119,8 +181,6 @@ public class WildspellMobs {
         container.registerConfig(ModConfig.Type.COMMON, SpawnBalance.SPEC);
         NeoForge.EVENT_BUS.addListener(SpawnBalance::onPositionCheck);
         NeoForge.EVENT_BUS.addListener(ZombieFreezing::onEntityTick);
-        NeoForge.EVENT_BUS.addListener(LichSummoning::onEntityTick);
-        NeoForge.EVENT_BUS.addListener(LichSummoning::onBlockBreak);
     }
 
     public static ResourceLocation id(String path) {
@@ -152,7 +212,9 @@ public class WildspellMobs {
         } else if (event.getTabKey() == CreativeModeTabs.INGREDIENTS) {
             event.accept(RIME_SHARD);
             event.accept(ENCHANTED_ICE_CRYSTAL);
+        } else if (event.getTabKey() == CreativeModeTabs.FUNCTIONAL_BLOCKS) {
             event.accept(FROZEN_PHYLACTERY);
+            event.accept(RIME_WARD_ITEM);
         } else if (event.getTabKey() == CreativeModeTabs.COMBAT) {
             event.accept(FROSTBOUND_STAFF);
         }

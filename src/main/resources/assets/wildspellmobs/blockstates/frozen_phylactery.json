@@ -1,0 +1,36 @@
+{
+  "variants": {
+    "facing=north,warded=true": {
+      "model": "wildspellmobs:block/frozen_phylactery_warded",
+      "y": 0
+    },
+    "facing=north,warded=false": {
+      "model": "wildspellmobs:block/frozen_phylactery",
+      "y": 0
+    },
+    "facing=east,warded=true": {
+      "model": "wildspellmobs:block/frozen_phylactery_warded",
+      "y": 90
+    },
+    "facing=east,warded=false": {
+      "model": "wildspellmobs:block/frozen_phylactery",
+      "y": 90
+    },
+    "facing=south,warded=true": {
+      "model": "wildspellmobs:block/frozen_phylactery_warded",
+      "y": 180
+    },
+    "facing=south,warded=false": {
+      "model": "wildspellmobs:block/frozen_phylactery",
+      "y": 180
+    },
+    "facing=west,warded=true": {
+      "model": "wildspellmobs:block/frozen_phylactery_warded",
+      "y": 270
+    },
+    "facing=west,warded=false": {
+      "model": "wildspellmobs:block/frozen_phylactery",
+      "y": 270
+    }
+  }
+}

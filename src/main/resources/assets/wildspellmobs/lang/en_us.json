@@ -18,5 +18,10 @@
   "item.wildspellmobs.ice_lich_spawn_egg": "Ice Lich Spawn Egg",
   "item.wildspellmobs.frozen_phylactery": "Frozen Phylactery",
   "item.wildspellmobs.frostbound_staff": "Frostbound Staff",
-  "wildspellmobs.configuration.enchantedIceLichChance": "Enchanted Ice Lich Chance"
+  "wildspellmobs.configuration.lichAmbushChance": "Lich Ambush Chance",
+  "block.wildspellmobs.frozen_phylactery": "Frozen Phylactery",
+  "block.wildspellmobs.rime_ward": "Rime Ward",
+  "entity.wildspellmobs.lich_wisp": "Lich Soul",
+  "message.wildspellmobs.lich_soul_flees": "The lich's soul flees to its phylactery. It will not stay dead.",
+  "message.wildspellmobs.phylactery_shattered": "The phylactery shatters. The lich is mortal."
 }

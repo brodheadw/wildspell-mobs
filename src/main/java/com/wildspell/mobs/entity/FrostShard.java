@@ -6,6 +6,7 @@ import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.effect.MobEffects;
+import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.projectile.ThrowableItemProjectile;
@@ -16,12 +17,14 @@ import net.minecraft.world.phys.HitResult;
 
 /**
  * Frost projectile: the Rime Skull's spit, an ice-bound Frozen Zombie's snowball, the Ice Lich's volleys and the
- * Frostbound Staff's shot. Light damage, a short slow, and a flash of frost.
+ * Frostbound Staff's shot. Light damage, a short slow, and some frost.
  */
 public class FrostShard extends ThrowableItemProjectile {
     private static final byte EVENT_SHATTER = 3;
     /** Blocks per tick squared; public so throwers can aim for the drop. */
     public static final double GRAVITY = 0.03;
+    /** Frost ticks per hit; fully frozen is 140, and frost thaws by 2 a tick. */
+    public static final int SHARD_FROST = 45;
 
     public FrostShard(EntityType<? extends FrostShard> type, Level level) {
         super(type, level);
@@ -54,18 +57,21 @@ public class FrostShard extends ThrowableItemProjectile {
         }
     }
 
+    /** A lich's shards pass straight through liches and the minions they raised. */
+    @Override
+    protected boolean canHitEntity(Entity target) {
+        return super.canHitEntity(target) && !(this.getOwner() instanceof IceLich && (target instanceof IceLich || IceLich.isMinion(target)));
+    }
+
     @Override
     protected void onHitEntity(EntityHitResult result) {
         super.onHitEntity(result);
         if (!(result.getEntity() instanceof LivingEntity target)) {
             return;
         }
-        // A lich's shards don't hurt the minions it raised.
-        if (this.getOwner() instanceof IceLich && (target instanceof IceLich || target.getTags().contains(IceLich.MINION_TAG))) {
-            return;
-        }
         target.hurt(this.damageSources().thrown(this, this.getOwner()), 3.0F);
-        target.setTicksFrozen(Math.max(target.getTicksFrozen(), target.getTicksRequiredToFreeze() + 40));
+        // Frost builds a shard at a time: it takes a few hits in quick succession to freeze solid.
+        Frost.add(target, SHARD_FROST, 20);
         target.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, 60, 0), this);
     }
 

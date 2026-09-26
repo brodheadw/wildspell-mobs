@@ -1,7 +1,7 @@
 package com.wildspell.mobs;
 
+import com.wildspell.mobs.entity.ColdEffects;
 import com.wildspell.mobs.entity.FrozenZombie;
-import net.minecraft.core.particles.BlockParticleOption;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.server.level.ServerLevel;
@@ -10,7 +10,6 @@ import net.minecraft.core.registries.Registries;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.monster.Zombie;
 import net.minecraft.world.level.biome.Biome;
-import net.minecraft.world.level.block.Blocks;
 import net.neoforged.neoforge.event.EventHooks;
 import net.neoforged.neoforge.event.tick.EntityTickEvent;
 
@@ -22,14 +21,13 @@ import net.neoforged.neoforge.event.tick.EntityTickEvent;
  * <p>Zombies are checked every {@link #CHECK_INTERVAL} ticks (staggered by entity id) rather than
  * every tick, so a crowd of zombies costs a tenth of the biome lookups and save-data writes.
  */
-final class ZombieFreezing {
-    static final TagKey<Biome> FREEZES_ZOMBIES = TagKey.create(Registries.BIOME, WildspellMobs.id("freezes_zombies"));
+public final class ZombieFreezing {
+    public static final TagKey<Biome> FREEZES_ZOMBIES = TagKey.create(Registries.BIOME, WildspellMobs.id("freezes_zombies"));
     static final int SHIVER_AT = 60;
     static final int CONVERT_AT = 140;
     static final int CHECK_INTERVAL = 10;
 
     private static final String CHILL = WildspellMobs.MODID + ":chill";
-    private static final BlockParticleOption ICE_CHIPS = new BlockParticleOption(ParticleTypes.BLOCK, Blocks.ICE.defaultBlockState());
 
     private ZombieFreezing() {
     }
@@ -69,7 +67,7 @@ final class ZombieFreezing {
                 frozen.pickVariant();
                 frozen.getPersistentData().remove(CHILL);
                 frozen.playSound(WildspellMobs.FROZEN_ZOMBIE_SHATTER.get(), 0.8F, 1.2F);
-                level.sendParticles(ICE_CHIPS, frozen.getX(), frozen.getY(0.5), frozen.getZ(), 30, 0.3, 0.7, 0.3, 0.15);
+                level.sendParticles(ColdEffects.ICE_CHIPS, frozen.getX(), frozen.getY(0.5), frozen.getZ(), 30, 0.3, 0.7, 0.3, 0.15);
                 EventHooks.onLivingConvert(zombie, frozen);
             }
         }

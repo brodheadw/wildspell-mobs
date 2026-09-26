@@ -1,0 +1,7 @@
+{
+  "parent": "minecraft:block/cross",
+  "textures": {
+    "cross": "wildspellmobs:block/rime_ward"
+  },
+  "render_type": "minecraft:cutout"
+}

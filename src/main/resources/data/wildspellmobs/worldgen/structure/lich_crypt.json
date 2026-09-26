@@ -1,0 +1,7 @@
+{
+  "type": "wildspellmobs:lich_crypt",
+  "biomes": "#wildspellmobs:has_structure/lich_crypt",
+  "step": "underground_structures",
+  "spawn_overrides": {},
+  "terrain_adaptation": "none"
+}

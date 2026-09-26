@@ -13,26 +13,28 @@ A floating, frost-rimed skull that haunts the Frosted Caves.
 What a zombie becomes after lingering in the Frosted Caves, the way skeletons become strays in powder snow. After a few seconds it shivers and frosts over, then cracks into its frozen form.
 - Moves slowly and with effort: it drags itself forward with a crunch of frozen joints, then seizes up mid-stride.
 - Its hits frost and slow you.
-- Some lose an arm to the cold.
+- Some lose an arm to the cold. Most have had half their brow torn away to the skull; a few kept a whole face.
 - One that freezes standing on an ice block sinks into it up to the hips. It's stuck there, straining against the ice and throwing snowballs at you. Break the ice and it pulls free.
 
 ## The Ice Lich
-A floating skeletal boss in an ice crown, raised from the Frosted Caves' Enchanted Ice.
-- **Summoning:** craft a **Frozen Phylactery** and throw it into icy water (in the Frosted Caves, or touching ice). The water freezes over and the lich rises. Mining Enchanted Ice without Silk Touch can wake one too (3% by default).
-- **The fight:** it hangs back and fires volleys of frost shards, and raises Frozen Zombies and Rime Skulls around itself. Below half health it fights faster and calls up ice bursts under your feet: move when the frost gathers. Fire does extra damage, and its servants shatter when it dies.
-- **Reward:** the **Frostbound Staff**, which fires frost shards of your own.
+A frost lich in a tattered robe and a crown of ice, bound to a phylactery hidden in a crypt somewhere in the Frosted Caves.
+- **The hunt:** wander the Frosted Caves near its crypt and, very rarely, it rises behind you. Strike it down and it leaves nothing behind: its soul flees home through the rock, glowing through the walls, and a little later it comes hunting you again. Follow the soul to find the crypt.
+- **The crypt:** step inside and the soul-fire braziers flare up one by one as the lich is called home to face you. Its phylactery sits on the altar, warded by four Rime Wards; break the wards, then shatter the phylactery, and the lich is mortal.
+- **The fight:** it keeps its distance and fires frost-shard volleys, sweeps a frost beam you can duck behind the pillars from, and blinks after you when you run. When it raises its arms to call up the dead, hit it to break the spell. Below half health it calls up ice bursts under your feet: move when the frost gathers. In its crypt the braziers burn down as it weakens. Fire does extra damage.
+- **Frost:** frost hits build up a little at a time. Like powder snow, any piece of leather armour keeps it off.
+- **Reward:** only a mortal lich drops the **Frostbound Staff**, which fires frost shards of your own.
 
-## Crafting
+## Drops
 - **Enchanted Ice Crystal:** YUNG's Enchanted Ice now drops one when mined normally, on top of its burst of experience. Silk Touch still gives the block.
 - **Ice:** YUNG's Ice Cubes now shatter into Ice when killed.
-- **Frozen Phylactery:** Rime Shards in the four corners, Frost Lilies above and below, Ice on either side, and an Enchanted Ice Crystal in the middle.
 
 ## Quieter caves
 Creepers and other monsters are thinned out underground, including a local cap so caves don't fill up around you, and creepers are made super rare in the Frosted Caves. With **Creeper Overhaul** installed, the only creepers there are its Snowy Creepers. Everything is adjustable in the config (`config/wildspellmobs-common.toml`, or the in-game config screen).
 
 ## Requirements
 - NeoForge 1.21.1
-- **YUNG's Cave Biomes** (optional, but it's where everything spawns and where the lich's ingredients come from). Without it you only get the spawn eggs and the cave spawn balancing.
+- **GeckoLib** (the Ice Lich's model and animations)
+- **YUNG's Cave Biomes** (optional, but it's where everything spawns and where the lich's crypts generate). Without it you only get the spawn eggs and the cave spawn balancing.
 - **Creeper Overhaul** (optional): Snowy Creepers in the Frosted Caves.
 
 Credit to YUNG for the Frosted Caves these were made for.

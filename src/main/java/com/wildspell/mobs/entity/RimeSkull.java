@@ -31,11 +31,9 @@ import net.minecraft.world.entity.ai.goal.target.HurtByTargetGoal;
 import net.minecraft.world.entity.ai.goal.target.NearestAttackableTargetGoal;
 import net.minecraft.world.entity.monster.Monster;
 import net.minecraft.world.entity.player.Player;
-import net.minecraft.world.level.ClipContext;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.ServerLevelAccessor;
 import net.minecraft.world.level.block.state.BlockState;
-import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
 
 /**
@@ -198,7 +196,7 @@ public class RimeSkull extends Monster {
     public boolean doHurtTarget(Entity target) {
         boolean hit = super.doHurtTarget(target);
         if (hit && target instanceof LivingEntity living) {
-            living.setTicksFrozen(Math.max(living.getTicksFrozen(), living.getTicksRequiredToFreeze() + 60));
+            Frost.freezeSolid(living, 60);
             this.playSound(SoundEvents.PLAYER_HURT_FREEZE, 1.0F, 1.2F);
         }
         return hit;
@@ -416,25 +414,20 @@ public class RimeSkull extends Monster {
                         target.getY() + 1.2 + RimeSkull.this.random.nextDouble() * 2.0,
                         target.getZ() + Math.sin(angle) * radius);
                 // Steering is a straight line, so only take spots it can actually fly to and see from.
-                if (RimeSkull.this.level().isEmptyBlock(BlockPos.containing(spot))
-                        && this.clearPath(RimeSkull.this.getEyePosition(), spot)
-                        && this.clearPath(spot, targetEye)) {
+                if (ColdEffects.isOpen(RimeSkull.this.level(), BlockPos.containing(spot), 1)
+                        && ColdEffects.clearPath(RimeSkull.this, RimeSkull.this.getEyePosition(), spot)
+                        && ColdEffects.clearPath(RimeSkull.this, spot, targetEye)) {
                     RimeSkull.this.getMoveControl().setWantedPosition(spot.x, spot.y, spot.z, 0.55);
                     return;
                 }
             }
             // Boxed in (usually tucked under a ledge): rise to get a new view, else close in.
             BlockPos above = RimeSkull.this.blockPosition().above(2);
-            if (RimeSkull.this.level().isEmptyBlock(above) && RimeSkull.this.level().isEmptyBlock(above.below())) {
+            if (ColdEffects.isOpen(RimeSkull.this.level(), above.below(), 2)) {
                 RimeSkull.this.getMoveControl().setWantedPosition(RimeSkull.this.getX(), RimeSkull.this.getY() + 2.0, RimeSkull.this.getZ(), 0.55);
             } else {
                 RimeSkull.this.getMoveControl().setWantedPosition(targetEye.x, targetEye.y, targetEye.z, 0.55);
             }
-        }
-
-        private boolean clearPath(Vec3 from, Vec3 to) {
-            return RimeSkull.this.level().clip(new ClipContext(from, to, ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, RimeSkull.this))
-                    .getType() == HitResult.Type.MISS;
         }
     }
 
@@ -460,7 +453,7 @@ public class RimeSkull extends Monster {
             BlockPos origin = RimeSkull.this.blockPosition();
             for (int attempt = 0; attempt < 3; ++attempt) {
                 BlockPos pos = origin.offset(RimeSkull.this.random.nextInt(9) - 4, RimeSkull.this.random.nextInt(5) - 2, RimeSkull.this.random.nextInt(9) - 4);
-                if (RimeSkull.this.level().isEmptyBlock(pos)) {
+                if (ColdEffects.isOpen(RimeSkull.this.level(), pos, 1)) {
                     RimeSkull.this.getMoveControl().setWantedPosition(pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5, 0.25);
                     return;
                 }

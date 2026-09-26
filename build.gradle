@@ -125,6 +125,8 @@ dependencies {
     // YUNG's Cave Biomes (+ its API) at dev runtime only, so gametests can check the Frosted Caves spawn list.
     // Drop the jars into ./libs; they are not shipped or declared as dependencies.
     localRuntime fileTree(dir: 'libs', include: '*.jar')
+    // The Ice Lich's model and animations. GeckoLib ships in the pack (YUNG's Cave Biomes needs it too).
+    compileOnly files('libs/geckolib-neoforge-1.21.1-4.9.3.jar')
 
     // Example optional mod dependency with JEI
     // The JEI API is declared for compile time use, while the full JEI artifact is used at runtime
