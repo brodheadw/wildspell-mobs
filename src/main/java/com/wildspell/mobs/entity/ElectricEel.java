@@ -17,6 +17,8 @@ import net.minecraft.sounds.SoundEvents;
 import net.minecraft.tags.FluidTags;
 import net.minecraft.util.Mth;
 import net.minecraft.util.RandomSource;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.InteractionHand;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.damagesource.DamageType;
 import net.minecraft.world.effect.MobEffectInstance;
@@ -54,8 +56,9 @@ import net.minecraft.world.phys.Vec3;
  * <p>Its weapon is the discharge. It stops, winds up for {@link #CHARGE_TICKS} (crackling and
  * glowing brighter, fair warning to get out of the water), then lets go: everything in the water
  * within {@link #SHOCK_RADIUS} is hurt and seized (slowed hard) as its muscles clench, whoever the
- * eel was after or not. Other eels are unharmed. Between discharges it bites. It only hunts fish
- * when it's hungry: a meal keeps it fed for {@link #FED_TICKS} or so, and a fed eel leaves fish be. Like real electric
+ * eel was after or not. Other eels are unharmed. Between discharges it bites. The discharge is only
+ * for threats: it hunts fish, and only when hungry, by catching one and swallowing it (a small stunning
+ * pulse, no discharge). A meal keeps it fed for {@link #FED_TICKS} or so, and a fed eel leaves fish be. Like real electric
  * eels, it also leaps: someone standing at the water's edge within reach gets a leap and a stronger
  * contact shock. Stranded, it flops toward the nearest water.
  *
@@ -331,7 +334,6 @@ public class ElectricEel extends WaterAnimal {
                 e -> e.isAlive() && !(e instanceof ElectricEel) && e.isInWater() && this.distanceTo(e) <= SHOCK_RADIUS)) {
             if (victim.hurt(this.shock(), SHOCK_DAMAGE)) {
                 seize(victim);
-                this.ateIfKilled(victim);
             }
         }
     }
@@ -375,24 +377,21 @@ public class ElectricEel extends WaterAnimal {
         return hurt;
     }
 
+    /** A fish it catches it stuns with a small pulse and swallows whole; anything else it bites. */
     @Override
     public boolean doHurtTarget(Entity target) {
-        boolean hit = super.doHurtTarget(target);
-        if (hit && target instanceof LivingEntity victim) {
-            this.ateIfKilled(victim);
+        if (!(target instanceof AbstractFish fish)) {
+            return super.doHurtTarget(target);
         }
-        return hit;
-    }
-
-    /** A fish it killed is a meal: it's fed for a while and stops hunting fish. */
-    private void ateIfKilled(LivingEntity victim) {
-        if (!(victim instanceof AbstractFish) || victim.isAlive()) {
-            return;
-        }
+        this.swing(InteractionHand.MAIN_HAND);
+        this.playSound(SoundEvents.GENERIC_EAT, 0.6F, 0.8F);
+        fish.discard();
         this.fedTicks = FED_TICKS + this.random.nextInt(FED_TICKS / 2);
-        if (this.getTarget() instanceof AbstractFish) {
-            this.setTarget(null);
+        this.setTarget(null);
+        if (this.level() instanceof ServerLevel level) {
+            level.sendParticles(ParticleTypes.ELECTRIC_SPARK, fish.getX(), fish.getY(0.5), fish.getZ(), 6, 0.2, 0.2, 0.2, 0.0);
         }
+        return true;
     }
 
     @Override
@@ -431,7 +430,7 @@ public class ElectricEel extends WaterAnimal {
         public boolean canUse() {
             LivingEntity target = ElectricEel.this.getTarget();
             return ElectricEel.this.rechargeTicks <= 0 && ElectricEel.this.isInWater() && target != null && target.isAlive()
-                    && target.isInWater() && ElectricEel.this.distanceTo(target) <= SHOCK_RADIUS - 1.0;
+                    && !(target instanceof AbstractFish) && target.isInWater() && ElectricEel.this.distanceTo(target) <= SHOCK_RADIUS - 1.0;
         }
 
         /** Once it starts winding up it's committed: the discharge comes whoever is still around. */

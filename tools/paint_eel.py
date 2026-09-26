@@ -13,7 +13,7 @@ BACK = [(58, 64, 52), (52, 58, 47), (64, 70, 56)]
 FLANK = [(74, 78, 62), (68, 72, 57), (80, 84, 66)]
 BELLY = [(214, 146, 58), (224, 160, 68), (202, 134, 52)]
 BELLY_REAR = [(112, 96, 70), (104, 88, 64)]
-PIT = (182, 188, 160)
+PIT = (118, 122, 100)
 EYE = (20, 22, 18)
 MOUTH = (150, 70, 70)
 FIN = [(46, 50, 42), (52, 56, 46)]
@@ -45,8 +45,8 @@ def paint_box(skin, u, v, w, h, d, front=False, pits=False):
         for x in range(d):
             for y in range(h):
                 skin.putpixel((side_u + x, v + d + y), side_color(y, h, front))
-            if pits and h > 1 and x % 2 == 0:
-                skin.putpixel((side_u + x, v + d), jitter(PIT, 8))
+            if pits and x % 2 == 1:
+                skin.putpixel((side_u + x, v + d), jitter(PIT, 6))
     for end_u in (u + d, u + 2 * d + w):
         for x in range(w):
             for y in range(h):
@@ -76,7 +76,7 @@ skin = Image.new("RGBA", (64, 32), (0, 0, 0, 0))
 glow = Image.new("RGBA", (64, 32), (0, 0, 0, 0))
 
 # Forebody, head and jaw: the orange throat, pits along the head.
-paint_box(skin, 0, 0, 3, 3, 5, front=True, pits=True)
+paint_box(skin, 0, 0, 3, 3, 5, front=True)
 paint_box(skin, 0, 8, 3, 2, 5, front=False, pits=True)
 paint_box(skin, 0, 15, 3, 1, 5, front=True)
 for x in range(3):                             # inside of the mouth (the jaw's top face)
@@ -88,7 +88,7 @@ for x in (3, 9):
     glow.putpixel((x, 13), GLOW_SOFT + (255,))
 
 # Body segments back to the tail; the organ runs the length of all of them.
-for u, v, w, h, d in ((16, 0, 3, 3, 5), (32, 0, 2, 3, 5), (16, 8, 2, 2, 5), (32, 8, 1, 2, 4)):
+for u, v, w, h, d in ((16, 0, 3, 3, 5), (32, 0, 2, 3, 5), (46, 0, 2, 3, 5), (16, 8, 2, 2, 5), (32, 8, 1, 2, 4)):
     paint_box(skin, u, v, w, h, d)
     paint_organ(glow, u, v, w, h, d)
 paint_organ(glow, 0, 0, 3, 3, 5)
@@ -97,6 +97,7 @@ paint_organ(glow, 0, 0, 3, 3, 5)
 paint_fin(skin, glow, 16, 15, 2, 5)
 paint_fin(skin, glow, 26, 15, 2, 5)
 paint_fin(skin, glow, 36, 15, 2, 5)
+paint_fin(skin, glow, 54, 15, 2, 5)
 paint_fin(skin, glow, 46, 15, 4, 4)
 
 skin.save(f"{OUT}/electric_eel.png")

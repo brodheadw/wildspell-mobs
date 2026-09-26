@@ -29,7 +29,7 @@ A long, dark eel of the flooded caves, orange at the throat. Leave its water alo
 - It lies in a crevice in the rock with its head out. Swim near its den and it comes for you. It senses you by its electric field, so it doesn't need to see you.
 - Before it strikes it goes still, crackling, and its flanks light up brighter and brighter. That's your warning to get out of the water: the discharge shocks everything swimming nearby and locks up your muscles for a moment.
 - Standing at the water's edge isn't safe either. Like real electric eels, it leaps out at you and shocks you on contact.
-- When it's hungry it hunts fish, so the odd flash in the dark water means it's feeding. Once it has eaten, it leaves them alone for a few minutes.
+- When it's hungry it hunts fish: it chases one down, stuns it with a small pulse and swallows it whole. Once it has eaten, it leaves them alone for a few minutes.
 
 ## Drops
 - **Enchanted Ice Crystal:** YUNG's Enchanted Ice now drops one when mined normally, on top of its burst of experience. Silk Touch still gives the block.

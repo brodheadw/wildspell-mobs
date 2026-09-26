@@ -25,7 +25,8 @@ The player-facing description is [publish/DESCRIPTION.md](publish/DESCRIPTION.md
   (`#wildspellmobs:electric_eel_spawns`; the glow squid's spawn rules: deep, dark water). It takes a
   crevice near its spawn as its den and lies in it. Swimmers within 6 blocks of the den are hunted
   (it senses them, no line of sight needed), and so is anything that hurts it. It hunts fish only when
-  hungry: a kill keeps it fed for 3-4.5 minutes. It winds up a discharge (1.5 s of
+  hungry, catching one and swallowing it whole; a meal keeps it fed for 3-4.5 minutes. Against
+  threats (never fish) it winds up a discharge (1.5 s of
   crackle and brightening glow), then shocks everything in the water within 5 blocks (4 damage plus
   heavy Slowness, `wildspellmobs:eel_shock`, no knockback) except other eels, and bites in between.
   Someone on the bank within 4 blocks gets a leap and a 6-damage contact shock. Stranded, it flops

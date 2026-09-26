@@ -13,7 +13,7 @@ import net.minecraft.client.model.geom.builders.PartDefinition;
 import net.minecraft.util.Mth;
 
 /**
- * A long eel: a blunt head with a hinged jaw, then four body segments tapering to the tail, each
+ * A long eel: a blunt head with a hinged jaw, then five body segments tapering to the tail, each
  * hung off the one before so a wave can run down them. Like a real electric eel it has no dorsal
  * fin, just a long ribbon fin under the back half of the body.
  */
@@ -23,7 +23,7 @@ public class ElectricEelModel extends HierarchicalModel<ElectricEel> {
     private final ModelPart root;
     private final ModelPart head;
     private final ModelPart jaw;
-    /** Front to back: the forebody (which carries the head), three more segments, the tail. */
+    /** Front to back: the forebody (which carries the head), four more segments, the tail. */
     private final ModelPart[] segments;
 
     public ElectricEelModel(ModelPart root) {
@@ -33,9 +33,10 @@ public class ElectricEelModel extends HierarchicalModel<ElectricEel> {
         this.jaw = this.head.getChild("jaw");
         ModelPart mid = body.getChild("mid");
         ModelPart hind = mid.getChild("hind");
-        ModelPart rear = hind.getChild("rear");
+        ModelPart aft = hind.getChild("aft");
+        ModelPart rear = aft.getChild("rear");
         ModelPart tail = rear.getChild("tail");
-        this.segments = new ModelPart[] {body, mid, hind, rear, tail};
+        this.segments = new ModelPart[] {body, mid, hind, aft, rear, tail};
     }
 
     public static LayerDefinition createBodyLayer() {
@@ -43,7 +44,7 @@ public class ElectricEelModel extends HierarchicalModel<ElectricEel> {
         PartDefinition parts = mesh.getRoot();
         PartDefinition body = parts.addOrReplaceChild("body", CubeListBuilder.create()
                         .texOffs(0, 0).addBox(-1.5F, -1.5F, 0.0F, 3.0F, 3.0F, 5.0F),
-                PartPose.offset(0.0F, 22.5F, -7.0F));
+                PartPose.offset(0.0F, 22.5F, -9.0F));
         PartDefinition head = body.addOrReplaceChild("head", CubeListBuilder.create()
                         .texOffs(0, 8).addBox(-1.5F, -1.5F, -5.0F, 3.0F, 2.0F, 5.0F),
                 PartPose.ZERO);
@@ -58,7 +59,11 @@ public class ElectricEelModel extends HierarchicalModel<ElectricEel> {
                         .texOffs(32, 0).addBox(-1.0F, -1.5F, 0.0F, 2.0F, 3.0F, 5.0F)
                         .texOffs(26, 15).addBox(0.0F, 1.5F, 0.0F, 0.0F, 2.0F, 5.0F),
                 PartPose.offset(0.0F, 0.0F, 5.0F));
-        PartDefinition rear = hind.addOrReplaceChild("rear", CubeListBuilder.create()
+        PartDefinition aft = hind.addOrReplaceChild("aft", CubeListBuilder.create()
+                        .texOffs(46, 0).addBox(-1.0F, -1.5F, 0.0F, 2.0F, 3.0F, 5.0F)
+                        .texOffs(54, 15).addBox(0.0F, 1.5F, 0.0F, 0.0F, 2.0F, 5.0F),
+                PartPose.offset(0.0F, 0.0F, 5.0F));
+        PartDefinition rear = aft.addOrReplaceChild("rear", CubeListBuilder.create()
                         .texOffs(16, 8).addBox(-1.0F, -1.0F, 0.0F, 2.0F, 2.0F, 5.0F)
                         .texOffs(36, 15).addBox(0.0F, 1.0F, 0.0F, 0.0F, 2.0F, 5.0F),
                 PartPose.offset(0.0F, 0.0F, 5.0F));
@@ -83,7 +88,7 @@ public class ElectricEelModel extends HierarchicalModel<ElectricEel> {
         float phase = ageInTicks * (0.12F + 0.35F * swim) + eel.getId();
         float amplitude = 0.1F + 0.3F * swim;
         for (int i = 0; i < this.segments.length; ++i) {
-            this.segments[i].yRot = Mth.sin(phase - i * 1.1F) * amplitude * (0.3F + 0.35F * i);
+            this.segments[i].yRot = Mth.sin(phase - i * 1.1F) * amplitude * (0.3F + 0.28F * i);
         }
         // The head holds its line against the wave, and follows where the eel is looking.
         this.head.yRot = -this.segments[0].yRot * 0.7F + netHeadYaw * Mth.DEG_TO_RAD * 0.3F;

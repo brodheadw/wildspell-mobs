@@ -74,15 +74,18 @@ public class ElectricEelTests {
     }
 
     @GameTest(template = ARENA, timeoutTicks = 400, batch = "eelHungry")
-    public static void hungryEelHuntsAFishAndIsFed(GameTestHelper helper) {
+    public static void hungryEelCatchesAndSwallowsAFish(GameTestHelper helper) {
         pool(helper);
         ElectricEel eel = helper.spawn(WildspellMobs.ELECTRIC_EEL.get(), 4.5F, 1.2F, 4.5F);
         eel.setFedTicks(0);
         Cod cod = helper.spawn(EntityType.COD, 3.5F, 2.0F, 4.5F);
+        // It catches fish and swallows them; the discharge is for threats.
+        helper.onEachTick(() -> helper.assertTrue(eel.getCharge() == 0, "eel wound up a discharge at a fish"));
         helper.succeedWhen(() -> {
-            helper.assertTrue(!cod.isAlive(), "hungry eel hasn't caught the cod; target=" + eel.getTarget() + " charge=" + eel.getCharge());
-            helper.assertTrue(!eel.isHungry(), "eel killed the cod but is still hungry");
+            helper.assertTrue(!cod.isAlive(), "hungry eel hasn't caught the cod; target=" + eel.getTarget());
+            helper.assertTrue(!eel.isHungry(), "eel caught the cod but is still hungry");
             helper.assertTrue(eel.getTarget() == null, "fed eel still after " + eel.getTarget());
+            helper.assertTrue(helper.getEntities(EntityType.ITEM).isEmpty(), "the cod was left behind as a drop, not eaten");
         });
     }
 
