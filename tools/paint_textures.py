@@ -282,3 +282,72 @@ for (x, y), c in {(12, 3): (150, 220, 255), (13, 2): (210, 245, 255), (11, 2): (
     staff.putpixel((x, y), c + (255,))
 staff.save(f"{OUT}/item/frostbound_staff.png")
 print("textures written")
+
+
+# --- Item: Soulseeker, 32 needle frames (soulseeker_00..31) --------------------------------------
+# A frosted-ice ring around a dark scrying face; the needle is the Crown Fragment bound inside it, its
+# glowing tip pulling toward the crypt, its tail bone.
+# Frames follow the vanilla compass: frame 16 points straight up, and frame k is turned (k - 16) / 32
+# of a full turn clockwise from there (the item model's "angle" overrides pick the frame).
+compass_rng = random.Random(23)
+RIM = [(214, 238, 250), (182, 220, 242), (150, 198, 232), (236, 248, 255)]
+FACE = [(22, 30, 52), (28, 38, 64), (18, 24, 44)]
+TIP = [(150, 245, 255), (210, 255, 255)]
+TAIL = (170, 176, 190)
+
+
+def compass_base():
+    img = Image.new("RGBA", (16, 16), (0, 0, 0, 0))
+    for x in range(16):
+        for y in range(16):
+            r = math.hypot(x - 7.5, y - 7.5)
+            if r <= 7.0:
+                if r > 5.6:
+                    # Lit from the top left: the rim is paler there.
+                    shade = 3 if (x + y) < 12 else (0 if (x + y) < 18 else 2)
+                    c = RIM[shade] if compass_rng.random() > 0.15 else RIM[1]
+                else:
+                    c = compass_rng.choice(FACE)
+                img.putpixel((x, y), c + (255,))
+    for tx, ty in ((7, 2), (8, 2), (13, 7), (13, 8), (7, 13), (8, 13), (2, 7), (2, 8)):
+        img.putpixel((tx, ty), (96, 132, 176, 255))  # tick marks at the four points
+    return img
+
+
+for k in range(32):
+    frame = compass_base()
+    theta = (k - 16) / 32.0 * 2.0 * math.pi
+    dx, dy = math.sin(theta), -math.cos(theta)
+    steps = 12
+    for i in range(-steps, steps + 1):
+        t = i / steps * 4.2  # the needle reaches 4.2 px each way from the centre
+        x, y = 7.5 + dx * t, 7.5 + dy * t
+        px, py = int(math.floor(x)), int(math.floor(y))
+        if 0 <= px < 16 and 0 <= py < 16:
+            frame.putpixel((px, py), (TIP[1] if t > 3.0 else TIP[0]) + (255,) if t > 0 else TAIL + (255,))
+    frame.putpixel((7, 7), (60, 80, 110, 255))  # the pivot
+    frame.save(f"{OUT}/item/soulseeker_{k:02d}.png")
+print("rime compass painted")
+
+# --- Item: Crown Fragment, a spike broken off the lich's ice crown --------------------------------
+# A jagged spike on the diagonal, pale ice lit from the upper left, a band of the crown's dark metal at
+# its broken base, and the soul-glow still caught in its core.
+crown_rng = random.Random(31)
+fragment = Image.new("RGBA", (16, 16), (0, 0, 0, 0))
+SPIKE = [(232, 248, 255), (196, 232, 250), (150, 204, 238), (110, 170, 222)]
+base_x, base_y, length = 2.5, 13.5, 15.0  # the broken base (lower left); the spike runs up-right
+for x in range(16):
+    for y in range(16):
+        along = ((x + 0.5 - base_x) - (y + 0.5 - base_y)) / math.sqrt(2)   # distance along the spike
+        across = ((x + 0.5 - base_x) + (y + 0.5 - base_y)) / math.sqrt(2)  # signed distance across it
+        half = 3.3 * (1.0 - along / length) + crown_rng.uniform(-0.25, 0.25)  # tapering, a little jagged
+        if 0.0 <= along <= length and abs(across) <= half:
+            shade = 0 if across < -0.8 else (1 if across < 0.6 else 2)  # lit from the upper left
+            fragment.putpixel((x, y), jitter(SPIKE[shade], spread=4) if crown_rng.random() > 0.08 else SPIKE[3] + (255,))
+for x, y in ((2, 13), (3, 13), (2, 12), (1, 12), (3, 14), (4, 14)):  # the band of crown metal it broke from
+    fragment.putpixel((x, y), (44, 52, 78, 255))
+for x, y in ((6, 9), (7, 8), (8, 7)):  # the soul-glow in its core
+    fragment.putpixel((x, y), (120, 240, 255, 255))
+fragment.putpixel((7, 7), (200, 255, 255, 255))
+fragment.save(f"{OUT}/item/crown_fragment.png")
+print("crown fragment painted")

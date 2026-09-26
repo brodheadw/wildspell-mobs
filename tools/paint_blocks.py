@@ -78,3 +78,41 @@ for x in range(16):
             wisp.putpixel((x, y), color + (int(255 * min(1.0, k * 1.6)),))
 wisp.save(f"{OUT}/entity/lich_wisp.png")
 print("blocks painted")
+
+# --- Frozen Soul: a freed soul hanging in the air (see models/block/frozen_soul.json) ---------------
+# Left 8x8: the faint halo around it, clearest at the middle. Right, (9,1)-(15,7): its core, a pale
+# glow with the hollow eyes and open mouth of the vanilla soul wisp.
+soul_rng = random.Random(41)
+soul = Image.new("RGBA", (16, 16), (0, 0, 0, 0))
+for x in range(8):
+    for y in range(8):
+        r = math.hypot(x - 3.5, y - 3.5) / 4.6
+        alpha = int(110 * max(0.0, 1.0 - r) ** 1.4)
+        soul.putpixel((x, y), (150, 230, 255, alpha))
+CORE_EDGE, CORE, CORE_LIGHT, HOLLOW = (130, 215, 245), (200, 245, 255), (240, 255, 255), (40, 90, 130)
+for x in range(6):
+    for y in range(6):
+        edge = x in (0, 5) or y in (0, 5)
+        c = CORE_EDGE if edge else (CORE_LIGHT if (x, y) in ((2, 1), (3, 1)) else CORE)
+        c = tuple(max(0, min(255, v + soul_rng.randint(-4, 4))) for v in c)
+        soul.putpixel((9 + x, 1 + y), c + (200 if edge else 235,))
+for x, y in ((1, 2), (4, 2), (2, 4), (3, 4)):  # eyes and mouth
+    soul.putpixel((9 + x, 1 + y), HOLLOW + (240,))
+soul.save(f"{OUT}/block/frozen_soul.png")
+print("frozen soul painted")
+
+# --- Frost orb: the lich's spun-up ball of cold (camera-facing sprite) ------------------------------
+# A hard white-blue core in a ring of frost, with a few spikes of ice breaking the outline.
+orb = Image.new("RGBA", (16, 16), (0, 0, 0, 0))
+orb_rng = random.Random(53)
+for x in range(16):
+    for y in range(16):
+        r = math.hypot(x - 7.5, y - 7.5)
+        spike = (x in (7, 8) or y in (7, 8)) and r < 7.8
+        if r < 7.0 or spike:
+            k = max(0.0, 1.0 - r / 7.0)
+            base = (70, 170, 240) if r > 4.5 else (150, 225, 255) if r > 2.2 else (240, 255, 255)
+            c = tuple(max(0, min(255, v + orb_rng.randint(-8, 8))) for v in base)
+            orb.putpixel((x, y), c + (int(255 * min(1.0, 0.35 + k * 1.3)),))
+orb.save(f"{OUT}/entity/frost_orb.png")
+print("frost orb painted")

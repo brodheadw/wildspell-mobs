@@ -1,10 +1,9 @@
 package com.wildspell.mobs.entity;
 
 import com.wildspell.mobs.WildspellMobs;
-import com.wildspell.mobs.crypt.PhylacteryBlockEntity;
+import com.wildspell.mobs.crypt.LichSouls;
 import java.util.UUID;
 import javax.annotation.Nullable;
-import net.minecraft.core.BlockPos;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.syncher.SynchedEntityData;
@@ -18,16 +17,18 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.Vec3;
 
 /**
- * A struck-down lich's soul, flying straight home to its phylactery through rock and all. It glows
- * through walls, so a player can follow it to the crypt. Arriving, it sets the lich re-forming.
+ * A struck-down lich's soul, flying straight home to its phylactery through rock and all: to its
+ * altar, or to wherever it's been carried, following it if it moves. It glows through walls, so a
+ * player can follow it. Arriving, it sets the lich re-forming. If its phylactery is in another
+ * dimension, or it takes too long, the soul gets home anyway, by ways no one can follow.
  */
 public class LichWisp extends Entity {
     public static final double SPEED = 0.3;
-    /** Ticks before a soul that hasn't arrived is given up for lost. */
+    /** Ticks before a soul that hasn't arrived simply gets home. */
     public static final int MAX_AGE = 1200;
 
     @Nullable
-    private BlockPos home;
+    private UUID soul;
     @Nullable
     private UUID hunting;
 
@@ -38,10 +39,10 @@ public class LichWisp extends Entity {
         this.setGlowingTag(true);
     }
 
-    public LichWisp(Level level, Vec3 at, BlockPos home, @Nullable UUID hunting) {
+    public LichWisp(Level level, Vec3 at, UUID soul, @Nullable UUID hunting) {
         this(WildspellMobs.LICH_WISP.get(), level);
         this.setPos(at);
-        this.home = home;
+        this.soul = soul;
         this.hunting = hunting;
     }
 
@@ -57,13 +58,20 @@ public class LichWisp extends Entity {
             this.level().addParticle(WildspellMobs.FROST_MOTE.get(), this.getRandomX(0.4), this.getRandomY(), this.getRandomZ(0.4), 0.0, -0.02, 0.0);
             return;
         }
-        if (this.home == null || this.tickCount > MAX_AGE) {
+        ServerLevel level = (ServerLevel) this.level();
+        LichSouls.Soul soul = LichSouls.get(level).soul(this.soul);
+        if (soul == null || soul.burned()) {
             this.discard();
             return;
         }
-        Vec3 to = Vec3.atCenterOf(this.home).subtract(this.position());
+        if (soul.dimension() != level.dimension() || this.tickCount > MAX_AGE) {
+            this.arrive(level, soul);
+            return;
+        }
+        Vec3 home = soul.inAltar() ? Vec3.atCenterOf(soul.anchor()) : Vec3.atCenterOf(soul.anchor()).add(0.0, 1.0, 0.0);
+        Vec3 to = home.subtract(this.position());
         if (to.length() <= SPEED) {
-            this.arrive((ServerLevel) this.level());
+            this.arrive(level, soul);
             return;
         }
         // A slight weave, so it reads as a spirit rather than a projectile.
@@ -75,12 +83,10 @@ public class LichWisp extends Entity {
         }
     }
 
-    private void arrive(ServerLevel level) {
-        if (level.isLoaded(this.home) && level.getBlockEntity(this.home) instanceof PhylacteryBlockEntity phylactery) {
-            phylactery.onWispArrived(this.hunting);
-            level.sendParticles(ParticleTypes.SOUL, this.getX(), this.getY(), this.getZ(), 20, 0.2, 0.3, 0.2, 0.03);
-            level.playSound(null, this.home, SoundEvents.SOUL_ESCAPE.value(), SoundSource.HOSTILE, 1.5F, 0.5F);
-        }
+    private void arrive(ServerLevel level, LichSouls.Soul soul) {
+        soul.onWispArrived(level, this.hunting);
+        level.sendParticles(ParticleTypes.SOUL, this.getX(), this.getY(), this.getZ(), 20, 0.2, 0.3, 0.2, 0.03);
+        level.playSound(null, this.getX(), this.getY(), this.getZ(), SoundEvents.SOUL_ESCAPE.value(), SoundSource.HOSTILE, 1.5F, 0.5F);
         this.discard();
     }
 
@@ -101,14 +107,14 @@ public class LichWisp extends Entity {
 
     @Override
     protected void readAdditionalSaveData(CompoundTag tag) {
-        this.home = tag.contains("Home", CompoundTag.TAG_LONG) ? BlockPos.of(tag.getLong("Home")) : null;
+        this.soul = tag.hasUUID("Soul") ? tag.getUUID("Soul") : null;
         this.hunting = tag.hasUUID("Hunting") ? tag.getUUID("Hunting") : null;
     }
 
     @Override
     protected void addAdditionalSaveData(CompoundTag tag) {
-        if (this.home != null) {
-            tag.putLong("Home", this.home.asLong());
+        if (this.soul != null) {
+            tag.putUUID("Soul", this.soul);
         }
         if (this.hunting != null) {
             tag.putUUID("Hunting", this.hunting);

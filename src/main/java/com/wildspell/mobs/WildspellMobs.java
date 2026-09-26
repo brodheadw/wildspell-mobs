@@ -1,17 +1,27 @@
 package com.wildspell.mobs;
 
 import com.mojang.serialization.MapCodec;
+import com.wildspell.mobs.crypt.FrozenSoulBlock;
 import com.wildspell.mobs.crypt.LichCryptPiece;
+import com.wildspell.mobs.crypt.LichSouls;
 import com.wildspell.mobs.crypt.LichCryptStructure;
 import com.wildspell.mobs.crypt.PhylacteryBlock;
 import com.wildspell.mobs.crypt.PhylacteryBlockEntity;
+import com.wildspell.mobs.crypt.PhylacteryItem;
 import com.wildspell.mobs.entity.ElectricEel;
+import com.wildspell.mobs.entity.FrostOrb;
 import com.wildspell.mobs.entity.FrostShard;
 import com.wildspell.mobs.entity.FrozenZombie;
 import com.wildspell.mobs.entity.IceLich;
 import com.wildspell.mobs.entity.LichWisp;
+import com.wildspell.mobs.entity.LuminousMoth;
 import com.wildspell.mobs.entity.RimeSkull;
 import com.wildspell.mobs.item.FrostboundStaffItem;
+import com.wildspell.mobs.item.SoulseekerItem;
+import com.wildspell.mobs.moth.LuminousMoss;
+import com.wildspell.mobs.moth.MothBottleItem;
+import com.wildspell.mobs.moth.MothGlowBlock;
+import net.minecraft.core.component.DataComponentType;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.core.particles.ParticleType;
 import net.minecraft.core.particles.SimpleParticleType;
@@ -27,6 +37,7 @@ import net.minecraft.world.item.CreativeModeTabs;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.Rarity;
 import net.minecraft.world.level.block.AmethystClusterBlock;
+import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.SoundType;
 import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockBehaviour;
@@ -60,6 +71,11 @@ public class WildspellMobs {
     public static final DeferredRegister<BlockEntityType<?>> BLOCK_ENTITY_TYPES = DeferredRegister.create(Registries.BLOCK_ENTITY_TYPE, MODID);
     public static final DeferredRegister<StructureType<?>> STRUCTURE_TYPES = DeferredRegister.create(Registries.STRUCTURE_TYPE, MODID);
     public static final DeferredRegister<StructurePieceType> STRUCTURE_PIECES = DeferredRegister.create(Registries.STRUCTURE_PIECE, MODID);
+    public static final DeferredRegister.DataComponents DATA_COMPONENTS = DeferredRegister.createDataComponents(Registries.DATA_COMPONENT_TYPE, MODID);
+
+    /** The lich's soul an item is bound to: a carried phylactery, a Crown Fragment, a Soulseeker (see LichSouls). */
+    public static final DeferredHolder<DataComponentType<?>, DataComponentType<java.util.UUID>> SOUL = DATA_COMPONENTS.registerComponentType("soul",
+            builder -> builder.persistent(net.minecraft.core.UUIDUtil.CODEC).networkSynchronized(net.minecraft.core.UUIDUtil.STREAM_CODEC));
     public static final DeferredRegister<SoundEvent> SOUND_EVENTS = DeferredRegister.create(Registries.SOUND_EVENT, MODID);
     public static final DeferredRegister<ParticleType<?>> PARTICLE_TYPES = DeferredRegister.create(Registries.PARTICLE_TYPE, MODID);
     public static final DeferredRegister<MapCodec<? extends BiomeModifier>> BIOME_MODIFIER_SERIALIZERS =
@@ -104,6 +120,14 @@ public class WildspellMobs {
                     .clientTrackingRange(10)
                     .build("ice_lich"));
 
+    /** The lich's spun-up frost orb (see IceLich's spin attack). */
+    public static final DeferredHolder<EntityType<?>, EntityType<FrostOrb>> FROST_ORB = ENTITY_TYPES.register("frost_orb",
+            () -> EntityType.Builder.<FrostOrb>of(FrostOrb::new, MobCategory.MISC)
+                    .sized(0.6F, 0.6F)
+                    .clientTrackingRange(6)
+                    .updateInterval(2)
+                    .build("frost_orb"));
+
     /** A struck-down lich's soul, flying home to its phylactery. */
     public static final DeferredHolder<EntityType<?>, EntityType<LichWisp>> LICH_WISP = ENTITY_TYPES.register("lich_wisp",
             () -> EntityType.Builder.<LichWisp>of(LichWisp::new, MobCategory.MISC)
@@ -112,6 +136,37 @@ public class WildspellMobs {
                     .updateInterval(2)
                     .fireImmune()
                     .build("lich_wisp"));
+
+    public static final DeferredHolder<EntityType<?>, EntityType<LuminousMoth>> LUMINOUS_MOTH = ENTITY_TYPES.register("luminous_moth",
+            () -> EntityType.Builder.of(LuminousMoth::new, MobCategory.AMBIENT)
+                    .sized(0.6F, 0.5F)
+                    .eyeHeight(0.25F)
+                    .clientTrackingRange(8)
+                    .build("luminous_moth"));
+
+    /** The light a Luminous Moth sheds into the air around it (see MothGlowBlock). */
+    public static final DeferredHolder<net.minecraft.world.level.block.Block, MothGlowBlock> MOTH_GLOW = BLOCKS.register("moth_glow",
+            () -> new MothGlowBlock(BlockBehaviour.Properties.of()
+                    .replaceable()
+                    .noCollission()
+                    .instabreak()
+                    .noLootTable()
+                    .noOcclusion()
+                    .lightLevel(MothGlowBlock::lightLevel)
+                    .pushReaction(PushReaction.DESTROY)));
+
+    /** Moss a Luminous Moth has brightened; fades back to plain moss once moths leave it. */
+    public static final DeferredHolder<net.minecraft.world.level.block.Block, LuminousMoss.MossBlock> LUMINOUS_MOSS = BLOCKS.register("luminous_moss",
+            () -> new LuminousMoss.MossBlock(BlockBehaviour.Properties.ofFullCopy(Blocks.MOSS_BLOCK)
+                    .lightLevel(state -> 9)
+                    .randomTicks()
+                    .dropsLike(Blocks.MOSS_BLOCK)));
+
+    public static final DeferredHolder<net.minecraft.world.level.block.Block, LuminousMoss.Carpet> LUMINOUS_MOSS_CARPET = BLOCKS.register("luminous_moss_carpet",
+            () -> new LuminousMoss.Carpet(BlockBehaviour.Properties.ofFullCopy(Blocks.MOSS_CARPET)
+                    .lightLevel(state -> 6)
+                    .randomTicks()
+                    .dropsLike(Blocks.MOSS_CARPET)));
 
     public static final DeferredHolder<EntityType<?>, EntityType<ElectricEel>> ELECTRIC_EEL = ENTITY_TYPES.register("electric_eel",
             () -> EntityType.Builder.of(ElectricEel::new, MobCategory.UNDERGROUND_WATER_CREATURE)
@@ -140,6 +195,16 @@ public class WildspellMobs {
                     .noOcclusion()
                     .pushReaction(PushReaction.BLOCK)));
 
+    /** A freed soul, lingering as a cold light in the caves around a cleansed crypt. */
+    public static final DeferredHolder<net.minecraft.world.level.block.Block, FrozenSoulBlock> FROZEN_SOUL = BLOCKS.register("frozen_soul",
+            () -> new FrozenSoulBlock(BlockBehaviour.Properties.of()
+                    .mapColor(MapColor.ICE)
+                    .strength(0.5F)
+                    .sound(SoundType.AMETHYST)
+                    .lightLevel(state -> 13)
+                    .noOcclusion()
+                    .pushReaction(PushReaction.DESTROY)));
+
     public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<PhylacteryBlockEntity>> PHYLACTERY = BLOCK_ENTITY_TYPES.register("phylactery",
             () -> BlockEntityType.Builder.of(PhylacteryBlockEntity::new, FROZEN_PHYLACTERY_BLOCK.get()).build(null));
 
@@ -159,10 +224,20 @@ public class WildspellMobs {
             () -> new DeferredSpawnEggItem(RIME_SKULL, 0xD6F1FF, 0x4FA8D8, new Item.Properties()));
 
     /** The phylactery's item; creative-only, for building crypts or testing. */
-    public static final DeferredItem<BlockItem> FROZEN_PHYLACTERY = ITEMS.registerSimpleBlockItem(FROZEN_PHYLACTERY_BLOCK,
-            new Item.Properties().rarity(Rarity.RARE));
+    public static final DeferredItem<PhylacteryItem> FROZEN_PHYLACTERY = ITEMS.register("frozen_phylactery",
+            () -> new PhylacteryItem(FROZEN_PHYLACTERY_BLOCK.get(), new Item.Properties().rarity(Rarity.EPIC).stacksTo(1)));
+
+    public static final DeferredItem<BlockItem> FROZEN_SOUL_ITEM = ITEMS.registerSimpleBlockItem(FROZEN_SOUL, new Item.Properties().rarity(Rarity.UNCOMMON));
 
     public static final DeferredItem<BlockItem> RIME_WARD_ITEM = ITEMS.registerSimpleBlockItem(RIME_WARD, new Item.Properties().rarity(Rarity.UNCOMMON));
+
+    /** A shard of a lich's ice crown, still bound to its soul; it drops when a player strikes the lich down. */
+    public static final DeferredItem<Item> CROWN_FRAGMENT = ITEMS.registerSimpleItem("crown_fragment",
+            new Item.Properties().rarity(Rarity.RARE).component(DataComponents.ENCHANTMENT_GLINT_OVERRIDE, true));
+
+    /** Built around a Crown Fragment; points to the nearest lich's crypt. */
+    public static final DeferredItem<SoulseekerItem> SOULSEEKER = ITEMS.register("soulseeker",
+            () -> new SoulseekerItem(new Item.Properties().rarity(Rarity.UNCOMMON).stacksTo(1)));
 
     public static final DeferredItem<FrostboundStaffItem> FROSTBOUND_STAFF = ITEMS.register("frostbound_staff",
             () -> new FrostboundStaffItem(new Item.Properties().rarity(Rarity.EPIC).durability(250)));
@@ -172,6 +247,12 @@ public class WildspellMobs {
 
     public static final DeferredItem<DeferredSpawnEggItem> FROZEN_ZOMBIE_SPAWN_EGG = ITEMS.register("frozen_zombie_spawn_egg",
             () -> new DeferredSpawnEggItem(FROZEN_ZOMBIE, 0x9FD4E8, 0x3F6B4A, new Item.Properties()));
+
+    public static final DeferredItem<MothBottleItem> LUMINOUS_MOTH_BOTTLE = ITEMS.register("luminous_moth_bottle",
+            () -> new MothBottleItem(new Item.Properties().stacksTo(1)));
+
+    public static final DeferredItem<DeferredSpawnEggItem> LUMINOUS_MOTH_SPAWN_EGG = ITEMS.register("luminous_moth_spawn_egg",
+            () -> new DeferredSpawnEggItem(LUMINOUS_MOTH, 0xD8EFC4, 0x7FE0C8, new Item.Properties()));
 
     public static final DeferredItem<DeferredSpawnEggItem> ELECTRIC_EEL_SPAWN_EGG = ITEMS.register("electric_eel_spawn_egg",
             () -> new DeferredSpawnEggItem(ELECTRIC_EEL, 0x3A4034, 0xE8A23A, new Item.Properties()));
@@ -183,6 +264,7 @@ public class WildspellMobs {
         BLOCK_ENTITY_TYPES.register(modBus);
         STRUCTURE_TYPES.register(modBus);
         STRUCTURE_PIECES.register(modBus);
+        DATA_COMPONENTS.register(modBus);
         SOUND_EVENTS.register(modBus);
         PARTICLE_TYPES.register(modBus);
         BIOME_MODIFIER_SERIALIZERS.register(modBus);
@@ -192,6 +274,8 @@ public class WildspellMobs {
         container.registerConfig(ModConfig.Type.COMMON, SpawnBalance.SPEC);
         NeoForge.EVENT_BUS.addListener(SpawnBalance::onPositionCheck);
         NeoForge.EVENT_BUS.addListener(ZombieFreezing::onEntityTick);
+        NeoForge.EVENT_BUS.addListener(LichSouls::onServerTick);
+        NeoForge.EVENT_BUS.addListener(SoulseekerItem::onCrafted);
     }
 
     public static ResourceLocation id(String path) {
@@ -206,14 +290,18 @@ public class WildspellMobs {
         event.put(RIME_SKULL.get(), RimeSkull.createAttributes().build());
         event.put(FROZEN_ZOMBIE.get(), FrozenZombie.createAttributes().build());
         event.put(ICE_LICH.get(), IceLich.createAttributes().build());
+        event.put(LUMINOUS_MOTH.get(), LuminousMoth.createAttributes().build());
         event.put(ELECTRIC_EEL.get(), ElectricEel.createAttributes().build());
     }
 
     private static void registerSpawnPlacements(RegisterSpawnPlacementsEvent event) {
-        event.register(RIME_SKULL.get(), SpawnPlacementTypes.ON_GROUND, Heightmap.Types.MOTION_BLOCKING_NO_LEAVES,
-                Monster::checkMonsterSpawnRules, RegisterSpawnPlacementsEvent.Operation.REPLACE);
+        // It floats, so it needs no ground to stand on: ice floors (where vanilla spawns nothing) are fine.
+        event.register(RIME_SKULL.get(), SpawnPlacementTypes.NO_RESTRICTIONS, Heightmap.Types.MOTION_BLOCKING_NO_LEAVES,
+                RimeSkull::checkRimeSkullSpawnRules, RegisterSpawnPlacementsEvent.Operation.REPLACE);
         event.register(FROZEN_ZOMBIE.get(), SpawnPlacementTypes.ON_GROUND, Heightmap.Types.MOTION_BLOCKING_NO_LEAVES,
                 Monster::checkMonsterSpawnRules, RegisterSpawnPlacementsEvent.Operation.REPLACE);
+        event.register(LUMINOUS_MOTH.get(), SpawnPlacementTypes.NO_RESTRICTIONS, Heightmap.Types.MOTION_BLOCKING_NO_LEAVES,
+                LuminousMoth::checkMothSpawnRules, RegisterSpawnPlacementsEvent.Operation.REPLACE);
         event.register(ELECTRIC_EEL.get(), SpawnPlacementTypes.IN_WATER, Heightmap.Types.MOTION_BLOCKING_NO_LEAVES,
                 ElectricEel::checkEelSpawnRules, RegisterSpawnPlacementsEvent.Operation.REPLACE);
     }
@@ -223,13 +311,19 @@ public class WildspellMobs {
             event.accept(RIME_SKULL_SPAWN_EGG);
             event.accept(FROZEN_ZOMBIE_SPAWN_EGG);
             event.accept(ICE_LICH_SPAWN_EGG);
+            event.accept(LUMINOUS_MOTH_SPAWN_EGG);
             event.accept(ELECTRIC_EEL_SPAWN_EGG);
         } else if (event.getTabKey() == CreativeModeTabs.INGREDIENTS) {
             event.accept(RIME_SHARD);
             event.accept(ENCHANTED_ICE_CRYSTAL);
+            event.accept(CROWN_FRAGMENT);
         } else if (event.getTabKey() == CreativeModeTabs.FUNCTIONAL_BLOCKS) {
             event.accept(FROZEN_PHYLACTERY);
+            event.accept(FROZEN_SOUL_ITEM);
             event.accept(RIME_WARD_ITEM);
+        } else if (event.getTabKey() == CreativeModeTabs.TOOLS_AND_UTILITIES) {
+            event.accept(SOULSEEKER);
+            event.accept(LUMINOUS_MOTH_BOTTLE);
         } else if (event.getTabKey() == CreativeModeTabs.COMBAT) {
             event.accept(FROSTBOUND_STAFF);
         }

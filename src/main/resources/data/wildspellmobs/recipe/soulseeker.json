@@ -1,0 +1,33 @@
+{
+  "neoforge:conditions": [
+    {
+      "type": "neoforge:mod_loaded",
+      "modid": "yungscavebiomes"
+    }
+  ],
+  "type": "minecraft:crafting_shaped",
+  "category": "equipment",
+  "pattern": [
+    "RER",
+    "FCF",
+    "RFR"
+  ],
+  "key": {
+    "R": {
+      "item": "wildspellmobs:rime_shard"
+    },
+    "E": {
+      "item": "wildspellmobs:enchanted_ice_crystal"
+    },
+    "F": {
+      "item": "yungscavebiomes:frost_lily"
+    },
+    "C": {
+      "item": "wildspellmobs:crown_fragment"
+    }
+  },
+  "result": {
+    "id": "wildspellmobs:soulseeker",
+    "count": 1
+  }
+}

@@ -4,6 +4,7 @@ import java.util.EnumSet;
 import javax.annotation.Nullable;
 import net.minecraft.core.BlockPos;
 import com.wildspell.mobs.WildspellMobs;
+import com.wildspell.mobs.crypt.LichSouls;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.syncher.EntityDataAccessor;
@@ -14,6 +15,8 @@ import net.minecraft.sounds.SoundSource;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.tags.DamageTypeTags;
 import net.minecraft.util.Mth;
+import net.minecraft.util.RandomSource;
+import net.minecraft.world.Difficulty;
 import net.minecraft.world.DifficultyInstance;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.Entity;
@@ -52,6 +55,8 @@ public class RimeSkull extends Monster {
 
     private static final byte EVENT_GNASH = 100;
     private static final int CHOMP_TICKS = 5;
+    /** A natural spawn hovers at most this far above whatever is under it. */
+    private static final int HOVER_SPAWN_HEIGHT = 3;
     // Client-side gnash animation: ticks left and how many chomps this gnash has.
     private int gnashTicks;
     private int gnashLength;
@@ -84,6 +89,27 @@ public class RimeSkull extends Monster {
 
     public void setVariant(int variant) {
         this.entityData.set(DATA_VARIANT, Math.floorMod(variant, VARIANTS));
+    }
+
+    /**
+     * Natural spawns: a dark open spot, hovering within a few blocks of something below it. Unlike
+     * ground mobs it doesn't care what that something is, so it spawns over ice too (vanilla lets
+     * nothing but polar bears spawn on ice), and in the cramped ice-floored caverns as well as the open ones.
+     */
+    public static boolean checkRimeSkullSpawnRules(EntityType<RimeSkull> type, ServerLevelAccessor level, MobSpawnType spawnType, BlockPos pos, RandomSource random) {
+        if (level.getDifficulty() == Difficulty.PEACEFUL || !level.getBlockState(pos).getCollisionShape(level, pos).isEmpty() || !level.getFluidState(pos).isEmpty()
+                || LichSouls.isCleansedZone(level.getLevel(), pos)) {
+            return false;
+        }
+        if (!MobSpawnType.ignoresLightRequirements(spawnType) && !Monster.isDarkEnoughToSpawn(level, pos, random)) {
+            return false;
+        }
+        for (int dy = 1; dy <= HOVER_SPAWN_HEIGHT; ++dy) {
+            if (!level.getBlockState(pos.below(dy)).getCollisionShape(level, pos.below(dy)).isEmpty()) {
+                return true;
+            }
+        }
+        return false;
     }
 
     @Override
@@ -130,6 +156,10 @@ public class RimeSkull extends Monster {
         if (this.level().isClientSide) {
             this.clientEffects();
             return;
+        }
+        // Undead ice: daylight sets it burning, like a skeleton.
+        if (this.isSunBurnTick()) {
+            this.igniteForSeconds(8.0F);
         }
         if (this.chargeCooldown > 0) {
             --this.chargeCooldown;

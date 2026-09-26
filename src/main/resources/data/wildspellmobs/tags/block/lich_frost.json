@@ -1,0 +1,10 @@
+{
+  "values": [
+    "minecraft:snow",
+    "minecraft:powder_snow",
+    {
+      "id": "yungscavebiomes:ice_sheet",
+      "required": false
+    }
+  ]
+}

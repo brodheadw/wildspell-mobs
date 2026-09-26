@@ -1,5 +1,6 @@
 package com.wildspell.mobs;
 
+import com.wildspell.mobs.crypt.LichSouls;
 import com.wildspell.mobs.entity.ColdEffects;
 import com.wildspell.mobs.entity.FrozenZombie;
 import net.minecraft.core.particles.ParticleTypes;
@@ -42,7 +43,8 @@ public final class ZombieFreezing {
         }
         CompoundTag data = zombie.getPersistentData();
         int chill = data.getInt(CHILL);
-        if (!level.getBiome(zombie.blockPosition()).is(FREEZES_ZOMBIES)) {
+        // Around a cleansed crypt the cold has lost its hold on the dead; and nothing freezes while it burns.
+        if (!level.getBiome(zombie.blockPosition()).is(FREEZES_ZOMBIES) || zombie.isOnFire() || LichSouls.isCleansedZone(level, zombie.blockPosition())) {
             if (chill > 0) {
                 data.remove(CHILL);
             }
