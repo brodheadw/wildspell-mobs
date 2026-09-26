@@ -176,7 +176,9 @@ public class ElectricEel extends WaterAnimal {
     public void readAdditionalSaveData(CompoundTag tag) {
         super.readAdditionalSaveData(tag);
         this.setDen(tag.contains("Den") ? BlockPos.of(tag.getLong("Den")) : null);
-        this.fedTicks = tag.getInt("FedTicks");
+        if (tag.contains("FedTicks")) {
+            this.fedTicks = tag.getInt("FedTicks");
+        }
     }
 
     @Override
