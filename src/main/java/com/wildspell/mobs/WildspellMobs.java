@@ -9,6 +9,7 @@ import com.wildspell.mobs.entity.FrostShard;
 import com.wildspell.mobs.entity.FrozenZombie;
 import com.wildspell.mobs.entity.IceLich;
 import com.wildspell.mobs.entity.LichWisp;
+import com.wildspell.mobs.entity.Mossback;
 import com.wildspell.mobs.entity.RimeSkull;
 import com.wildspell.mobs.item.FrostboundStaffItem;
 import net.minecraft.core.component.DataComponents;
@@ -112,6 +113,14 @@ public class WildspellMobs {
                     .fireImmune()
                     .build("lich_wisp"));
 
+    /** A rare peaceful wanderer of jungles and leafy Overworld biomes. */
+    public static final DeferredHolder<EntityType<?>, EntityType<Mossback>> MOSSBACK = ENTITY_TYPES.register("mossback",
+            () -> EntityType.Builder.of(Mossback::new, MobCategory.CREATURE)
+                    .sized(2.7F, 1.95F)
+                    .passengerAttachments(1.85F)
+                    .clientTrackingRange(10)
+                    .build("mossback"));
+
     /** The lich's phylactery, on the altar of its crypt (see PhylacteryBlockEntity). */
     public static final DeferredHolder<net.minecraft.world.level.block.Block, PhylacteryBlock> FROZEN_PHYLACTERY_BLOCK = BLOCKS.register("frozen_phylactery",
             () -> new PhylacteryBlock(BlockBehaviour.Properties.of()
@@ -149,6 +158,9 @@ public class WildspellMobs {
 
     public static final DeferredItem<DeferredSpawnEggItem> RIME_SKULL_SPAWN_EGG = ITEMS.register("rime_skull_spawn_egg",
             () -> new DeferredSpawnEggItem(RIME_SKULL, 0xD6F1FF, 0x4FA8D8, new Item.Properties()));
+
+    public static final DeferredItem<DeferredSpawnEggItem> MOSSBACK_SPAWN_EGG = ITEMS.register("mossback_spawn_egg",
+            () -> new DeferredSpawnEggItem(MOSSBACK, 0x576B3B, 0x92A96C, new Item.Properties()));
 
     /** The phylactery's item; creative-only, for building crypts or testing. */
     public static final DeferredItem<BlockItem> FROZEN_PHYLACTERY = ITEMS.registerSimpleBlockItem(FROZEN_PHYLACTERY_BLOCK,
@@ -195,9 +207,12 @@ public class WildspellMobs {
         event.put(RIME_SKULL.get(), RimeSkull.createAttributes().build());
         event.put(FROZEN_ZOMBIE.get(), FrozenZombie.createAttributes().build());
         event.put(ICE_LICH.get(), IceLich.createAttributes().build());
+        event.put(MOSSBACK.get(), Mossback.createAttributes().build());
     }
 
     private static void registerSpawnPlacements(RegisterSpawnPlacementsEvent event) {
+        event.register(MOSSBACK.get(), SpawnPlacementTypes.ON_GROUND, Heightmap.Types.MOTION_BLOCKING_NO_LEAVES,
+                Mossback::checkSpawnRules, RegisterSpawnPlacementsEvent.Operation.REPLACE);
         event.register(RIME_SKULL.get(), SpawnPlacementTypes.ON_GROUND, Heightmap.Types.MOTION_BLOCKING_NO_LEAVES,
                 Monster::checkMonsterSpawnRules, RegisterSpawnPlacementsEvent.Operation.REPLACE);
         event.register(FROZEN_ZOMBIE.get(), SpawnPlacementTypes.ON_GROUND, Heightmap.Types.MOTION_BLOCKING_NO_LEAVES,
@@ -209,6 +224,7 @@ public class WildspellMobs {
             event.accept(RIME_SKULL_SPAWN_EGG);
             event.accept(FROZEN_ZOMBIE_SPAWN_EGG);
             event.accept(ICE_LICH_SPAWN_EGG);
+            event.accept(MOSSBACK_SPAWN_EGG);
         } else if (event.getTabKey() == CreativeModeTabs.INGREDIENTS) {
             event.accept(RIME_SHARD);
             event.accept(ENCHANTED_ICE_CRYSTAL);

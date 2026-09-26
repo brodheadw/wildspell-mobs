@@ -22,6 +22,7 @@ public class WildspellMobsClient {
     @SubscribeEvent
     static void registerLayers(EntityRenderersEvent.RegisterLayerDefinitions event) {
         event.registerLayerDefinition(RimeSkullModel.LAYER, RimeSkullModel::createBodyLayer);
+        event.registerLayerDefinition(MossbackModel.LAYER, MossbackModel::createBodyLayer);
         event.registerLayerDefinition(FrozenZombieModel.CRUST_LAYER, FrozenZombieModel::createCrustLayer);
     }
 
@@ -31,6 +32,7 @@ public class WildspellMobsClient {
         event.registerEntityRenderer(WildspellMobs.FROST_SHARD.get(), ThrownItemRenderer::new);
         event.registerEntityRenderer(WildspellMobs.FROZEN_ZOMBIE.get(), FrozenZombieRenderer::new);
         event.registerEntityRenderer(WildspellMobs.ICE_LICH.get(), IceLichRenderer::new);
+        event.registerEntityRenderer(WildspellMobs.MOSSBACK.get(), MossbackRenderer::new);
         event.registerEntityRenderer(WildspellMobs.LICH_WISP.get(), LichWispRenderer::new);
     }
 
