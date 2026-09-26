@@ -23,5 +23,7 @@
   "block.wildspellmobs.rime_ward": "Rime Ward",
   "entity.wildspellmobs.lich_wisp": "Lich Soul",
   "message.wildspellmobs.lich_soul_flees": "The lich's soul flees to its phylactery. It will not stay dead.",
-  "message.wildspellmobs.phylactery_shattered": "The phylactery shatters. The lich is mortal."
+  "message.wildspellmobs.phylactery_shattered": "The phylactery shatters. The lich is mortal.",
+  "entity.wildspellmobs.mossback": "Mossback",
+  "item.wildspellmobs.mossback_spawn_egg": "Mossback Spawn Egg"
 }

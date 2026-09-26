@@ -10,6 +10,7 @@ The player-facing description is [publish/DESCRIPTION.md](publish/DESCRIPTION.md
   gait; variants: whole, one-armed, and ice-bound (sunk into the ice block it froze on, throws
   snowballs, freed if the ice breaks). Separately, most have a torn brow down to the skull with a
   glowing socket; one in three kept a whole face.
+- **Mossback**: a huge, peaceful, persistent tortoise-like wanderer with a living mossy shell. Rare single spawns in vanilla jungle variants (including WWOO's jungle landscapes); less often in leafy forests and swamps. Empty-hand right click lets you ride as a passenger without steering it. No breeding or combat loot. Spawn egg or `/summon wildspellmobs:mossback` for immediate testing in an existing world. Its current model/texture is a first-pass prototype.
 - **Ice Lich**: a floating frost-lich boss (GeckoLib model) bound to a **Frozen Phylactery** in a
   crypt generated in the Frosted Caves. Very rarely (`lichAmbushChance`, per second within 64 blocks
   of a crypt) it rises behind a player and hunts them, blinking after them when it loses sight. It
