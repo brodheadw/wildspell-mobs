@@ -27,6 +27,13 @@ A frost lich in a tattered robe and a crown of ice, frozen entrails hanging from
 - **Frost:** frost hits build up a little at a time. Like powder snow, any piece of leather armour keeps it off.
 - **Its fall:** only its last form drops the **Frostbound Staff**, which fires frost shards of your own. When it falls its hold on the caves breaks: the frozen dead around it crumble, the frost melts back from its crypt, its fires burn warm, its hoard waits on the altar, and the souls it held linger through the caves as glowing Frozen Souls. Break one and it serves as soul fuel: soul torches, soul lanterns, soul campfires. Zombies no longer freeze there, and Rime Skulls don't return.
 
+## Luminous Moth
+A little glowing moth of the Lush Caves. It never attacks.
+- Spends most of its time settled on a plant, the moss or flat against a cave wall, and flits off in short, jinking flights before landing again. Walk past and it takes off in a panic; sneak up and it stays put.
+- Moss near a moth lights up. It keeps glowing while moths stay around and slowly fades once they leave.
+- Hold a **Spore Blossom** and nearby moths flutter after you.
+- Catch one with a glass bottle. Let it out somewhere dark and it stays there, lighting the area up like a living lantern; bottle it again to move it.
+
 ## Drops
 - **Enchanted Ice Crystal:** YUNG's Enchanted Ice now drops one when mined normally, on top of its burst of experience. Silk Touch still gives the block.
 - **Ice:** YUNG's Ice Cubes now shatter into Ice when killed.

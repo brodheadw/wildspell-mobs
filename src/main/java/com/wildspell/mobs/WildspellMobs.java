@@ -13,9 +13,13 @@ import com.wildspell.mobs.entity.FrostShard;
 import com.wildspell.mobs.entity.FrozenZombie;
 import com.wildspell.mobs.entity.IceLich;
 import com.wildspell.mobs.entity.LichWisp;
+import com.wildspell.mobs.entity.LuminousMoth;
 import com.wildspell.mobs.entity.RimeSkull;
 import com.wildspell.mobs.item.FrostboundStaffItem;
 import com.wildspell.mobs.item.SoulseekerItem;
+import com.wildspell.mobs.moth.LuminousMoss;
+import com.wildspell.mobs.moth.MothBottleItem;
+import com.wildspell.mobs.moth.MothGlowBlock;
 import net.minecraft.core.component.DataComponentType;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.core.particles.ParticleType;
@@ -32,6 +36,7 @@ import net.minecraft.world.item.CreativeModeTabs;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.Rarity;
 import net.minecraft.world.level.block.AmethystClusterBlock;
+import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.SoundType;
 import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockBehaviour;
@@ -131,6 +136,37 @@ public class WildspellMobs {
                     .fireImmune()
                     .build("lich_wisp"));
 
+    public static final DeferredHolder<EntityType<?>, EntityType<LuminousMoth>> LUMINOUS_MOTH = ENTITY_TYPES.register("luminous_moth",
+            () -> EntityType.Builder.of(LuminousMoth::new, MobCategory.AMBIENT)
+                    .sized(0.6F, 0.5F)
+                    .eyeHeight(0.25F)
+                    .clientTrackingRange(8)
+                    .build("luminous_moth"));
+
+    /** The light a Luminous Moth sheds into the air around it (see MothGlowBlock). */
+    public static final DeferredHolder<net.minecraft.world.level.block.Block, MothGlowBlock> MOTH_GLOW = BLOCKS.register("moth_glow",
+            () -> new MothGlowBlock(BlockBehaviour.Properties.of()
+                    .replaceable()
+                    .noCollission()
+                    .instabreak()
+                    .noLootTable()
+                    .noOcclusion()
+                    .lightLevel(MothGlowBlock::lightLevel)
+                    .pushReaction(PushReaction.DESTROY)));
+
+    /** Moss a Luminous Moth has brightened; fades back to plain moss once moths leave it. */
+    public static final DeferredHolder<net.minecraft.world.level.block.Block, LuminousMoss.MossBlock> LUMINOUS_MOSS = BLOCKS.register("luminous_moss",
+            () -> new LuminousMoss.MossBlock(BlockBehaviour.Properties.ofFullCopy(Blocks.MOSS_BLOCK)
+                    .lightLevel(state -> 9)
+                    .randomTicks()
+                    .dropsLike(Blocks.MOSS_BLOCK)));
+
+    public static final DeferredHolder<net.minecraft.world.level.block.Block, LuminousMoss.Carpet> LUMINOUS_MOSS_CARPET = BLOCKS.register("luminous_moss_carpet",
+            () -> new LuminousMoss.Carpet(BlockBehaviour.Properties.ofFullCopy(Blocks.MOSS_CARPET)
+                    .lightLevel(state -> 6)
+                    .randomTicks()
+                    .dropsLike(Blocks.MOSS_CARPET)));
+
     /** The lich's phylactery, on the altar of its crypt (see PhylacteryBlockEntity). */
     public static final DeferredHolder<net.minecraft.world.level.block.Block, PhylacteryBlock> FROZEN_PHYLACTERY_BLOCK = BLOCKS.register("frozen_phylactery",
             () -> new PhylacteryBlock(BlockBehaviour.Properties.of()
@@ -204,6 +240,12 @@ public class WildspellMobs {
     public static final DeferredItem<DeferredSpawnEggItem> FROZEN_ZOMBIE_SPAWN_EGG = ITEMS.register("frozen_zombie_spawn_egg",
             () -> new DeferredSpawnEggItem(FROZEN_ZOMBIE, 0x9FD4E8, 0x3F6B4A, new Item.Properties()));
 
+    public static final DeferredItem<MothBottleItem> LUMINOUS_MOTH_BOTTLE = ITEMS.register("luminous_moth_bottle",
+            () -> new MothBottleItem(new Item.Properties().stacksTo(1)));
+
+    public static final DeferredItem<DeferredSpawnEggItem> LUMINOUS_MOTH_SPAWN_EGG = ITEMS.register("luminous_moth_spawn_egg",
+            () -> new DeferredSpawnEggItem(LUMINOUS_MOTH, 0xD8EFC4, 0x7FE0C8, new Item.Properties()));
+
     public WildspellMobs(IEventBus modBus, ModContainer container) {
         ENTITY_TYPES.register(modBus);
         ITEMS.register(modBus);
@@ -237,6 +279,7 @@ public class WildspellMobs {
         event.put(RIME_SKULL.get(), RimeSkull.createAttributes().build());
         event.put(FROZEN_ZOMBIE.get(), FrozenZombie.createAttributes().build());
         event.put(ICE_LICH.get(), IceLich.createAttributes().build());
+        event.put(LUMINOUS_MOTH.get(), LuminousMoth.createAttributes().build());
     }
 
     private static void registerSpawnPlacements(RegisterSpawnPlacementsEvent event) {
@@ -245,6 +288,8 @@ public class WildspellMobs {
                 RimeSkull::checkRimeSkullSpawnRules, RegisterSpawnPlacementsEvent.Operation.REPLACE);
         event.register(FROZEN_ZOMBIE.get(), SpawnPlacementTypes.ON_GROUND, Heightmap.Types.MOTION_BLOCKING_NO_LEAVES,
                 Monster::checkMonsterSpawnRules, RegisterSpawnPlacementsEvent.Operation.REPLACE);
+        event.register(LUMINOUS_MOTH.get(), SpawnPlacementTypes.NO_RESTRICTIONS, Heightmap.Types.MOTION_BLOCKING_NO_LEAVES,
+                LuminousMoth::checkMothSpawnRules, RegisterSpawnPlacementsEvent.Operation.REPLACE);
     }
 
     private static void addToCreativeTabs(BuildCreativeModeTabContentsEvent event) {
@@ -252,6 +297,7 @@ public class WildspellMobs {
             event.accept(RIME_SKULL_SPAWN_EGG);
             event.accept(FROZEN_ZOMBIE_SPAWN_EGG);
             event.accept(ICE_LICH_SPAWN_EGG);
+            event.accept(LUMINOUS_MOTH_SPAWN_EGG);
         } else if (event.getTabKey() == CreativeModeTabs.INGREDIENTS) {
             event.accept(RIME_SHARD);
             event.accept(ENCHANTED_ICE_CRYSTAL);
@@ -262,6 +308,7 @@ public class WildspellMobs {
             event.accept(RIME_WARD_ITEM);
         } else if (event.getTabKey() == CreativeModeTabs.TOOLS_AND_UTILITIES) {
             event.accept(SOULSEEKER);
+            event.accept(LUMINOUS_MOTH_BOTTLE);
         } else if (event.getTabKey() == CreativeModeTabs.COMBAT) {
             event.accept(FROSTBOUND_STAFF);
         }

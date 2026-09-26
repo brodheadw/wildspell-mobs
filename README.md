@@ -43,6 +43,15 @@ The player-facing description is [publish/DESCRIPTION.md](publish/DESCRIPTION.md
   Crown Fragment, a shard of its crown still bound to its soul. Bound in Rime Shards, an Enchanted Ice
   Crystal and Frost Lilies it makes the Soulseeker: its needle points to that lich's phylactery,
   wherever it is, and using it says how far, and whether above or below.
+- **Luminous Moth**: a small, peaceful glowing moth (ambient) in the Lush Caves
+  (`#wildspellmobs:luminous_moth_spawns`). It mostly sits settled on a plant
+  (`#wildspellmobs:luminous_moth_perches`), any solid surface or a wall, between short jinking
+  flights; anything moving within a few blocks flushes it (a sneaking player only right next to it).
+  It brightens moss near it into Luminous Moss, which
+  fades back once no moth has been near for a while. It follows anyone holding a lure
+  (`#wildspellmobs:luminous_moth_lures`: Spore Blossom). A glass bottle catches it; released
+  somewhere dark (light below 8), it keeps to that spot and lights it. Its light is real block light:
+  invisible `moth_glow` blocks that remove themselves once no moth is keeping them.
 - **Frost**: every frost hit builds vanilla freezing (the shards a little at a time); like powder snow,
   any piece of leather armour keeps it off.
 - **Ice Cube drops**: YUNG's Ice Cubes have no loot of their own; this gives them 0-2 Ice.
@@ -62,6 +71,7 @@ The player-facing description is [publish/DESCRIPTION.md](publish/DESCRIPTION.md
   - `crypt/`: the crypt structure and its piece, the phylactery block and its block entity (ambushes,
     re-forming, the braziers, the wards).
   - `item/`: `FrostboundStaffItem`.
+  - `moth/`: the moth's glow block, Luminous Moss and the bottled moth; the moth itself is in `entity/`.
   - `client/`: models, renderers, the frost mote particle.
 - `src/main/resources/`: textures, sounds, lang, loot tables, biome modifiers and biome tags.
 - `tools/`: generators for the art and sound. Edit these, not the PNG/OGG files directly.
@@ -71,6 +81,8 @@ The player-facing description is [publish/DESCRIPTION.md](publish/DESCRIPTION.md
     mono Ogg Vorbis (Minecraft only fades mono sounds with distance).
   - `make_lich_model.py`, `paint_lich.py`, `preview_lich.py`: the Ice Lich's GeckoLib model and
     animations, its texture and glowmask, and a software preview renderer to check them without a game.
+  - `paint_moth.py` (needs Pillow): the Luminous Moth and its glow layer, the Luminous Moss overlay
+    and the bottled moth.
   - `paint_blocks.py`: the phylactery, Rime Ward and lich-soul textures.
   - `make_arena.py`: the empty gametest arena structure.
 - `publish/`: Modrinth/CurseForge page text, icon and gallery image.
@@ -87,8 +99,10 @@ Gametests cover the mobs' spawning, AI and variants, zombie freezing and thawing
 fire, Rime Skulls burning in the sun, the spawn balance, the Ice Lich (volleys, minions, the
 interruptible summon, enraged bursts, re-forming at its phylactery, wards, carrying and burning the
 phylactery, the last form, the cleansing and safe zone, the crypt waking, ambushes, the Crown Fragment
-and Soulseeker, and the crypt built right in every orientation), frost and leather, the staff and the
-new drops. They need YUNG's Cave Biomes and its
+and Soulseeker, and the crypt built right in every orientation), frost and leather, the staff, the
+new drops, and the Luminous Moth (its light following it and clearing up after it, perching and
+brightening moss, settling on walls, being flushed but not by a sneaking player, the moss fading,
+following a Spore Blossom, bottling and releasing in the dark). They need YUNG's Cave Biomes and its
 dependencies at dev runtime: put `YungsCaveBiomes`, `YungsApi`, `geckolib` and `TerraBlender` jars
 for NeoForge 1.21.1 in `libs/` (GeckoLib is also a compile dependency) (gitignored, never shipped). Add `CreeperOverhaul`, `resourcefulconfig`
 and `resourcefullib` too to cover the Creeper Overhaul rules (only snowy creepers, and rarely, in the

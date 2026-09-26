@@ -40,5 +40,11 @@
   "block.wildspellmobs.frozen_soul": "Frozen Soul",
   "entity.wildspellmobs.frost_orb": "Frost Orb",
   "advancements.wildspellmobs.eternal_damnation.title": "Eternal Damnation",
-  "advancements.wildspellmobs.eternal_damnation.description": "Set a lich's phylactery down in the End, where its soul will wander the void forever"
+  "advancements.wildspellmobs.eternal_damnation.description": "Set a lich's phylactery down in the End, where its soul will wander the void forever",
+  "entity.wildspellmobs.luminous_moth": "Luminous Moth",
+  "item.wildspellmobs.luminous_moth_spawn_egg": "Luminous Moth Spawn Egg",
+  "item.wildspellmobs.luminous_moth_bottle": "Bottled Luminous Moth",
+  "block.wildspellmobs.luminous_moss": "Luminous Moss",
+  "block.wildspellmobs.luminous_moss_carpet": "Luminous Moss Carpet",
+  "block.wildspellmobs.moth_glow": "Moth Glow"
 }
