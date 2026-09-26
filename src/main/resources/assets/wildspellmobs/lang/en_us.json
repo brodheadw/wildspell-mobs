@@ -46,5 +46,8 @@
   "item.wildspellmobs.luminous_moth_bottle": "Bottled Luminous Moth",
   "block.wildspellmobs.luminous_moss": "Luminous Moss",
   "block.wildspellmobs.luminous_moss_carpet": "Luminous Moss Carpet",
-  "block.wildspellmobs.moth_glow": "Moth Glow"
+  "block.wildspellmobs.moth_glow": "Moth Glow",
+  "entity.wildspellmobs.electric_eel": "Electric Eel",
+  "item.wildspellmobs.electric_eel_spawn_egg": "Electric Eel Spawn Egg",
+  "death.attack.wildspellmobs.eel_shock": "%1$s was electrocuted by %2$s"
 }

@@ -1,0 +1,5 @@
+{
+  "type": "neoforge:add_spawns",
+  "biomes": "#wildspellmobs:electric_eel_spawns",
+  "spawners": {"type": "wildspellmobs:electric_eel", "weight": 5, "minCount": 1, "maxCount": 1}
+}
