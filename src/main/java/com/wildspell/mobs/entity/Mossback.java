@@ -21,10 +21,8 @@ import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.AgeableMob;
 import net.minecraft.world.entity.Entity;
-import net.minecraft.world.entity.EntityDimensions;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.MobSpawnType;
-import net.minecraft.world.entity.Pose;
 import net.minecraft.world.entity.SpawnGroupData;
 import net.minecraft.world.entity.ai.attributes.AttributeSupplier;
 import net.minecraft.world.entity.ai.attributes.Attributes;
@@ -43,7 +41,6 @@ import net.minecraft.world.phys.AABB;
 
 /** One species with four visible life stages. Ancient size is earned, not an ordinary adult spawn. */
 public class Mossback extends Animal {
-    private static final EntityDataAccessor<Float> DATA_GROWTH = SynchedEntityData.defineId(Mossback.class, EntityDataSerializers.FLOAT);
     private static final EntityDataAccessor<Integer> DATA_STAGE = SynchedEntityData.defineId(Mossback.class, EntityDataSerializers.INT);
     private static final TagKey<Biome> SHORE = TagKey.create(Registries.BIOME, WildspellMobs.id("mossback_shore_spawns"));
     private long birthGameTick = Long.MIN_VALUE;
@@ -65,12 +62,11 @@ public class Mossback extends Animal {
     @Override
     protected void defineSynchedData(SynchedEntityData.Builder builder) {
         super.defineSynchedData(builder);
-        builder.define(DATA_GROWTH, 0.13F);
         builder.define(DATA_STAGE, MossbackGrowth.HATCHLING);
     }
 
     public float growthScale() {
-        return this.entityData.get(DATA_GROWTH);
+        return (float) this.getAttributeValue(Attributes.SCALE);
     }
 
     public int lifeStage() {
@@ -84,17 +80,6 @@ public class Mossback extends Animal {
     public long ageDays() {
         return this.birthGameTick == Long.MIN_VALUE ? 0L
                 : MossbackGrowth.days(MossbackGrowth.elapsed(this.birthGameTick, this.level().getGameTime()));
-    }
-
-    @Override
-    public EntityDimensions getDimensions(Pose pose) {
-        return super.getDimensions(pose).scale(this.growthScale());
-    }
-
-    @Override
-    public void onSyncedDataUpdated(EntityDataAccessor<?> key) {
-        super.onSyncedDataUpdated(key);
-        if (DATA_GROWTH.equals(key)) this.refreshDimensions();
     }
 
     @Override
@@ -118,7 +103,7 @@ public class Mossback extends Animal {
         long age = MossbackGrowth.elapsed(this.birthGameTick, this.level().getGameTime());
         float newScale = MossbackGrowth.scale(age);
         int stage = MossbackGrowth.stage(age);
-        if (Math.abs(newScale - growthScale()) >= 0.001F) this.entityData.set(DATA_GROWTH, newScale);
+        if (Math.abs(newScale - growthScale()) >= 0.001F) this.getAttribute(Attributes.SCALE).setBaseValue(newScale);
         if (stage != lifeStage()) this.entityData.set(DATA_STAGE, stage);
     }
 
