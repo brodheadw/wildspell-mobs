@@ -38,10 +38,10 @@ public final class MossbackGrowth {
 
     public static float scale(long ageTicks) {
         double d = Math.max(0.0, ageTicks / (double) DAY_TICKS);
-        if (d < HATCHLING_DAYS) return interpolate(d, 0, HATCHLING_DAYS, 0.13F, 0.35F);
-        if (d < JUVENILE_DAYS) return interpolate(d, HATCHLING_DAYS, JUVENILE_DAYS, 0.35F, 1.0F);
-        if (d < ANCIENT_DAYS) return interpolate(d, JUVENILE_DAYS, ANCIENT_DAYS, 1.0F, 1.38F);
-        if (d < FULL_SIZE_DAYS) return interpolate(d, ANCIENT_DAYS, FULL_SIZE_DAYS, 1.38F, 2.46F);
+        if (d < HATCHLING_DAYS) return interpolate(d, 0, HATCHLING_DAYS, 0.13F, 0.20F);
+        if (d < JUVENILE_DAYS) return interpolate(d, HATCHLING_DAYS, JUVENILE_DAYS, 0.20F, 0.40F);
+        if (d < ANCIENT_DAYS) return interpolate(d, JUVENILE_DAYS, ANCIENT_DAYS, 0.40F, 1.10F);
+        if (d < FULL_SIZE_DAYS) return interpolate(d, ANCIENT_DAYS, FULL_SIZE_DAYS, 1.10F, 2.46F);
         return 2.46F;
     }
 
