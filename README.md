@@ -10,6 +10,7 @@ The player-facing description is [publish/DESCRIPTION.md](publish/DESCRIPTION.md
   gait; variants: whole, one-armed, and ice-bound (sunk into the ice block it froze on, throws
   snowballs, freed if the ice breaks). Separately, most have a torn brow down to the skull with a
   glowing socket; one in three kept a whole face.
+- **Mossback**: one persistent, peaceful tortoise species with four stages. Shoreline hatchlings (under 30 in-game days, near water) are about 0.35 blocks long at birth; juveniles grow to roughly a block by day 180. Normal adults roam jungles, forests and swamps. The exceptionally rare ancient may spawn inland with a local 512-block exclusion, but an ordinary individual cannot reach that stage until 730 in-game days (two 365-day years), reaching full size at 1095 days (three years). Its age is recorded against world game time so it continues aging while unloaded in a running world. Only mature and ancient animals can carry an unsteerable player passenger. Vegetation develops with age; final-stage garden blocks are decorative geometry, not world blocks. No breeding or combat loot. Spawn egg or `/summon wildspellmobs:mossback` for testing. Prototype art and collision still need an in-game pass.
 - **Ice Lich**: a floating frost-lich boss (GeckoLib model) bound to a **Frozen Phylactery** in a
   crypt generated in the Frosted Caves. Very rarely (`lichAmbushChance`, per second within 64 blocks
   of a crypt) it rises behind a player and hunts them, blinking after them when it loses sight. It

@@ -1,0 +1,10 @@
+{
+  "type": "neoforge:add_spawns",
+  "biomes": "#wildspellmobs:mossback_woodland_spawns",
+  "spawners": {
+    "type": "wildspellmobs:mossback",
+    "weight": 1,
+    "minCount": 1,
+    "maxCount": 1
+  }
+}
