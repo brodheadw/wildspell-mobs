@@ -289,7 +289,9 @@ public class WildspellMobsTests {
                 lich.hurt(helper.getLevel().damageSources().mobAttack(pig), 1.0F);
                 hitAt[0] = helper.getTick();
             }
-            minions[0] |= !helper.getLevel().getEntitiesOfClass(Mob.class, lich.getBoundingBox().inflate(32), IceLich::isMinion).isEmpty();
+            // Only this lich's minions: earlier tests' can still be about.
+            minions[0] |= !helper.getLevel().getEntitiesOfClass(Mob.class, lich.getBoundingBox().inflate(32),
+                    e -> e.getTags().contains(IceLich.MINION_TAG + "." + lich.getStringUUID())).isEmpty();
         });
         helper.succeedWhen(() -> {
             helper.assertTrue(hitAt[0] >= 0, "lich never began a summon");
