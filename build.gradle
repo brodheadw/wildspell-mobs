@@ -28,6 +28,13 @@ sourceSets.main.resources {
 
 repositories {
     // Add here additional repositories if required by some of the dependencies below.
+    maven {
+        name = 'GeckoLib'
+        url = 'https://dl.cloudsmith.io/public/geckolib3/geckolib/maven/'
+        content {
+            includeGroup 'software.bernie.geckolib'
+        }
+    }
 }
 
 base {
@@ -126,7 +133,8 @@ dependencies {
     // Drop the jars into ./libs; they are not shipped or declared as dependencies.
     localRuntime fileTree(dir: 'libs', include: '*.jar')
     // The Ice Lich's model and animations. GeckoLib ships in the pack (YUNG's Cave Biomes needs it too).
-    compileOnly files('libs/geckolib-neoforge-1.21.1-4.9.3.jar')
+    // Compiled against from its Maven so a clean checkout (and CI) builds; at dev runtime it comes from ./libs.
+    compileOnly "software.bernie.geckolib:geckolib-neoforge-${minecraft_version}:4.9.3"
 
     // Example optional mod dependency with JEI
     // The JEI API is declared for compile time use, while the full JEI artifact is used at runtime

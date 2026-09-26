@@ -118,7 +118,8 @@ everything in the water but nothing ashore, only swimmers in its territory are h
 hungry, caught and swallowed, leaping at someone on the bank, taking a crevice as its den). They need
 YUNG's Cave Biomes and its
 dependencies at dev runtime: put `YungsCaveBiomes`, `YungsApi`, `geckolib` and `TerraBlender` jars
-for NeoForge 1.21.1 in `libs/` (GeckoLib is also a compile dependency) (gitignored, never shipped). Add `CreeperOverhaul`, `resourcefulconfig`
+for NeoForge 1.21.1 in `libs/` (gitignored, never shipped; GeckoLib is compiled against from its Maven, so a
+clean checkout builds without them). Add `CreeperOverhaul`, `resourcefulconfig`
 and `resourcefullib` too to cover the Creeper Overhaul rules (only snowy creepers, and rarely, in the
 Frosted Caves); the creeper test checks whichever setup it runs in. Adding `ftb-quests`,
 `ftb-library`, `ftb-teams` and `architectury` lets the test server load the modpack's quest book
