@@ -24,6 +24,13 @@ A frost lich in a tattered robe and a crown of ice, bound to a phylactery hidden
 - **Frost:** frost hits build up a little at a time. Like powder snow, any piece of leather armour keeps it off.
 - **Reward:** only a mortal lich drops the **Frostbound Staff**, which fires frost shards of your own.
 
+## Electric Eel
+A long, dark eel of the flooded caves, orange at the throat. Leave its water alone and it leaves you alone.
+- It lies in a crevice in the rock with its head out. Swim near its den and it comes for you. It senses you by its electric field, so it doesn't need to see you.
+- Before it strikes it goes still, crackling, and its flanks light up brighter and brighter. That's your warning to get out of the water: the discharge shocks everything swimming nearby and locks up your muscles for a moment.
+- Standing at the water's edge isn't safe either. Like real electric eels, it leaps out at you and shocks you on contact.
+- It hunts fish too, so watch for flashes in the dark water.
+
 ## Drops
 - **Enchanted Ice Crystal:** YUNG's Enchanted Ice now drops one when mined normally, on top of its burst of experience. Silk Touch still gives the block.
 - **Ice:** YUNG's Ice Cubes now shatter into Ice when killed.

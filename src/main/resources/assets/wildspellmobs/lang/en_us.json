@@ -23,5 +23,8 @@
   "block.wildspellmobs.rime_ward": "Rime Ward",
   "entity.wildspellmobs.lich_wisp": "Lich Soul",
   "message.wildspellmobs.lich_soul_flees": "The lich's soul flees to its phylactery. It will not stay dead.",
-  "message.wildspellmobs.phylactery_shattered": "The phylactery shatters. The lich is mortal."
+  "message.wildspellmobs.phylactery_shattered": "The phylactery shatters. The lich is mortal.",
+  "entity.wildspellmobs.electric_eel": "Electric Eel",
+  "item.wildspellmobs.electric_eel_spawn_egg": "Electric Eel Spawn Egg",
+  "death.attack.wildspellmobs.eel_shock": "%1$s was electrocuted by %2$s"
 }

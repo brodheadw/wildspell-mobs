@@ -21,6 +21,14 @@ The player-facing description is [publish/DESCRIPTION.md](publish/DESCRIPTION.md
   broken while any of the crypt's four **Rime Wards** stand; shattered, it leaves the lich mortal (and
   if it had no body at that moment, it takes one last form on the altar). Only a mortal lich drops
   the **Frostbound Staff** (fires frost shards).
+- **Electric Eel**: an underground water creature in flooded caves anywhere in the Overworld
+  (`#wildspellmobs:electric_eel_spawns`; the glow squid's spawn rules: deep, dark water). It takes a
+  crevice near its spawn as its den and lies in it. Swimmers within 6 blocks of the den are hunted
+  (it senses them, no line of sight needed); it also hunts fish. It winds up a discharge (1.5 s of
+  crackle and brightening glow), then shocks everything in the water within 5 blocks (4 damage plus
+  heavy Slowness, `wildspellmobs:eel_shock`, no knockback) except other eels, and bites in between.
+  Someone on the bank within 4 blocks gets a leap and a 6-damage contact shock. Stranded, it flops
+  toward water. It drops nothing but XP.
 - **Frost**: every frost hit builds vanilla freezing (the shards a little at a time); like powder snow,
   any piece of leather armour keeps it off.
 - **Ice Cube drops**: YUNG's Ice Cubes have no loot of their own; this gives them 0-2 Ice.
@@ -34,9 +42,9 @@ The player-facing description is [publish/DESCRIPTION.md](publish/DESCRIPTION.md
 ## Layout
 
 - `src/main/java/com/wildspell/mobs/`: registration (`WildspellMobs`), cave spawn balancing
-  (`SpawnBalance`), zombie freezing (`ZombieFreezing`), gametests (`WildspellMobsTests`).
+  (`SpawnBalance`), zombie freezing (`ZombieFreezing`), gametests (`WildspellMobsTests`, `ElectricEelTests`).
   - `entity/`: `RimeSkull`, `FrozenZombie`, `IceLich`, `LichWisp` (its soul in flight), `FrostShard`
-    (every frost projectile), `Frost` (the shared freezing rules).
+    (every frost projectile), `Frost` (the shared freezing rules), `ElectricEel`.
   - `crypt/`: the crypt structure and its piece, the phylactery block and its block entity (ambushes,
     re-forming, the braziers, the wards).
   - `item/`: `FrostboundStaffItem`.
@@ -50,6 +58,7 @@ The player-facing description is [publish/DESCRIPTION.md](publish/DESCRIPTION.md
   - `make_lich_model.py`, `paint_lich.py`, `preview_lich.py`: the Ice Lich's GeckoLib model and
     animations, its texture and glowmask, and a software preview renderer to check them without a game.
   - `paint_blocks.py`: the phylactery, Rime Ward and lich-soul textures.
+  - `paint_eel.py` (needs Pillow): the Electric Eel and its glow layer (the electric organ).
   - `make_arena.py`: the empty gametest arena structure.
 - `publish/`: Modrinth/CurseForge page text, icon and gallery image.
 
@@ -64,7 +73,9 @@ Needs JDK 21 (`JAVA_HOME`).
 Gametests cover the mobs' spawning, AI and variants, zombie freezing, the spawn balance, the Ice Lich
 (volleys, minions, the interruptible summon, enraged bursts, re-forming at its phylactery, wards,
 shattering, the crypt waking, ambushes, and the crypt built right in every orientation), frost and
-leather, the staff and the new drops. They need YUNG's Cave Biomes and its
+leather, the staff, the new drops, and the Electric Eel (a discharge hits everything in the water
+but nothing ashore, only swimmers in its territory are hunted, leaping at someone on the bank, taking
+a crevice as its den). They need YUNG's Cave Biomes and its
 dependencies at dev runtime: put `YungsCaveBiomes`, `YungsApi`, `geckolib` and `TerraBlender` jars
 for NeoForge 1.21.1 in `libs/` (GeckoLib is also a compile dependency) (gitignored, never shipped). Add `CreeperOverhaul`, `resourcefulconfig`
 and `resourcefullib` too to cover the Creeper Overhaul rules (only snowy creepers, and rarely, in the
