@@ -8,6 +8,7 @@ import com.wildspell.mobs.crypt.LichCryptStructure;
 import com.wildspell.mobs.crypt.PhylacteryBlock;
 import com.wildspell.mobs.crypt.PhylacteryBlockEntity;
 import com.wildspell.mobs.crypt.PhylacteryItem;
+import com.wildspell.mobs.entity.ElectricEel;
 import com.wildspell.mobs.entity.FrostOrb;
 import com.wildspell.mobs.entity.FrostShard;
 import com.wildspell.mobs.entity.FrozenZombie;
@@ -167,6 +168,13 @@ public class WildspellMobs {
                     .randomTicks()
                     .dropsLike(Blocks.MOSS_CARPET)));
 
+    public static final DeferredHolder<EntityType<?>, EntityType<ElectricEel>> ELECTRIC_EEL = ENTITY_TYPES.register("electric_eel",
+            () -> EntityType.Builder.of(ElectricEel::new, MobCategory.UNDERGROUND_WATER_CREATURE)
+                    .sized(0.7F, 0.45F)
+                    .eyeHeight(0.25F)
+                    .clientTrackingRange(8)
+                    .build("electric_eel"));
+
     /** The lich's phylactery, on the altar of its crypt (see PhylacteryBlockEntity). */
     public static final DeferredHolder<net.minecraft.world.level.block.Block, PhylacteryBlock> FROZEN_PHYLACTERY_BLOCK = BLOCKS.register("frozen_phylactery",
             () -> new PhylacteryBlock(BlockBehaviour.Properties.of()
@@ -246,6 +254,9 @@ public class WildspellMobs {
     public static final DeferredItem<DeferredSpawnEggItem> LUMINOUS_MOTH_SPAWN_EGG = ITEMS.register("luminous_moth_spawn_egg",
             () -> new DeferredSpawnEggItem(LUMINOUS_MOTH, 0xD8EFC4, 0x7FE0C8, new Item.Properties()));
 
+    public static final DeferredItem<DeferredSpawnEggItem> ELECTRIC_EEL_SPAWN_EGG = ITEMS.register("electric_eel_spawn_egg",
+            () -> new DeferredSpawnEggItem(ELECTRIC_EEL, 0x3A4034, 0xE8A23A, new Item.Properties()));
+
     public WildspellMobs(IEventBus modBus, ModContainer container) {
         ENTITY_TYPES.register(modBus);
         ITEMS.register(modBus);
@@ -280,6 +291,7 @@ public class WildspellMobs {
         event.put(FROZEN_ZOMBIE.get(), FrozenZombie.createAttributes().build());
         event.put(ICE_LICH.get(), IceLich.createAttributes().build());
         event.put(LUMINOUS_MOTH.get(), LuminousMoth.createAttributes().build());
+        event.put(ELECTRIC_EEL.get(), ElectricEel.createAttributes().build());
     }
 
     private static void registerSpawnPlacements(RegisterSpawnPlacementsEvent event) {
@@ -290,6 +302,8 @@ public class WildspellMobs {
                 Monster::checkMonsterSpawnRules, RegisterSpawnPlacementsEvent.Operation.REPLACE);
         event.register(LUMINOUS_MOTH.get(), SpawnPlacementTypes.NO_RESTRICTIONS, Heightmap.Types.MOTION_BLOCKING_NO_LEAVES,
                 LuminousMoth::checkMothSpawnRules, RegisterSpawnPlacementsEvent.Operation.REPLACE);
+        event.register(ELECTRIC_EEL.get(), SpawnPlacementTypes.IN_WATER, Heightmap.Types.MOTION_BLOCKING_NO_LEAVES,
+                ElectricEel::checkEelSpawnRules, RegisterSpawnPlacementsEvent.Operation.REPLACE);
     }
 
     private static void addToCreativeTabs(BuildCreativeModeTabContentsEvent event) {
@@ -298,6 +312,7 @@ public class WildspellMobs {
             event.accept(FROZEN_ZOMBIE_SPAWN_EGG);
             event.accept(ICE_LICH_SPAWN_EGG);
             event.accept(LUMINOUS_MOTH_SPAWN_EGG);
+            event.accept(ELECTRIC_EEL_SPAWN_EGG);
         } else if (event.getTabKey() == CreativeModeTabs.INGREDIENTS) {
             event.accept(RIME_SHARD);
             event.accept(ENCHANTED_ICE_CRYSTAL);
