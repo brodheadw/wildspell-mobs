@@ -137,4 +137,34 @@ public class PegasusTests {
         helper.assertTrue(mare.getBreedOffspring(helper.getLevel(), stallion) instanceof Pegasus, "foal isn't a pegasus");
         helper.succeed();
     }
+
+    @GameTest(template = ARENA)
+    public static void pegasusKeepsItsCoat(GameTestHelper helper) {
+        Pegasus pink = helper.spawn(WildspellMobs.PEGASUS.get(), 4.5F, 0.0F, 4.5F);
+        pink.setVariant(Pegasus.Variant.PINK);
+        net.minecraft.nbt.CompoundTag saved = new net.minecraft.nbt.CompoundTag();
+        pink.saveWithoutId(saved);
+        Pegasus loaded = helper.spawn(WildspellMobs.PEGASUS.get(), 2.5F, 0.0F, 2.5F);
+        loaded.load(saved);
+        helper.assertTrue(loaded.getVariant() == Pegasus.Variant.PINK, "coat lost on save: " + loaded.getVariant());
+        helper.succeed();
+    }
+
+    @GameTest(template = ARENA)
+    public static void foalsTakeAParentsCoat(GameTestHelper helper) {
+        net.minecraft.util.RandomSource random = net.minecraft.util.RandomSource.create(1);
+        int pinkFromWhite = 0;
+        int pinkFromPink = 0;
+        for (int i = 0; i < 4000; i++) {
+            if (Pegasus.foalVariant(Pegasus.Variant.WHITE, Pegasus.Variant.BLACK, random) == Pegasus.Variant.PINK) {
+                pinkFromWhite++;
+            }
+            if (Pegasus.foalVariant(Pegasus.Variant.PINK, Pegasus.Variant.PINK, random) == Pegasus.Variant.PINK) {
+                pinkFromPink++;
+            }
+        }
+        helper.assertTrue(pinkFromWhite < 60, "white and black made " + pinkFromWhite + " pink foals in 4000");
+        helper.assertTrue(pinkFromPink > 800 && pinkFromPink < 1300, "two pinks made " + pinkFromPink + " pink foals in 4000");
+        helper.succeed();
+    }
 }
