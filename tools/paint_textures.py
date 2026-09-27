@@ -285,47 +285,69 @@ print("textures written")
 
 
 # --- Item: Soulseeker, 32 needle frames (soulseeker_00..31) --------------------------------------
-# A frosted-ice ring around a dark scrying face; the needle is the Crown Fragment bound inside it, its
-# glowing tip pulling toward the crypt, its tail bone.
+# A scrying focus: a dark glass eye set in a jagged frame of rime, a spike of ice at each diagonal, the
+# soul-glow caught at the pivot. The needle is the Crown Fragment: a thick spike of ice whose tip burns
+# soul-blue toward the crypt, a splinter of bone for a tail.
 # Frames follow the vanilla compass: frame 16 points straight up, and frame k is turned (k - 16) / 32
 # of a full turn clockwise from there (the item model's "angle" overrides pick the frame).
 compass_rng = random.Random(23)
 RIM = [(214, 238, 250), (182, 220, 242), (150, 198, 232), (236, 248, 255)]
-FACE = [(22, 30, 52), (28, 38, 64), (18, 24, 44)]
-TIP = [(150, 245, 255), (210, 255, 255)]
-TAIL = (170, 176, 190)
+RIM_DARK = (96, 132, 176)
+FACE = [(10, 12, 30), (14, 18, 40), (8, 10, 24)]
+GLOW = [(120, 235, 255), (190, 255, 255), (60, 170, 240)]
+TIP = [(120, 225, 255), (245, 255, 255)]
+BONE = [(232, 226, 206), (206, 200, 182)]
 
 
 def compass_base():
     img = Image.new("RGBA", (16, 16), (0, 0, 0, 0))
     for x in range(16):
         for y in range(16):
-            r = math.hypot(x - 7.5, y - 7.5)
-            if r <= 7.0:
-                if r > 5.6:
-                    # Lit from the top left: the rim is paler there.
-                    shade = 3 if (x + y) < 12 else (0 if (x + y) < 18 else 2)
-                    c = RIM[shade] if compass_rng.random() > 0.15 else RIM[1]
+            cx, cy = x - 7.5, y - 7.5
+            r = math.hypot(cx, cy)
+            # The frame: a ring with four spikes on the diagonals, chipped at the edge.
+            diagonal = abs(abs(cx) - abs(cy)) < 0.75 and r > 5.0
+            if r <= 6.1 or (diagonal and r <= 7.9):
+                if r > 4.4:
+                    lit = (x + y) < 12
+                    c = RIM[3] if lit and compass_rng.random() > 0.3 else RIM[0] if lit else RIM[1] if (x + y) < 18 else RIM[2]
+                    if r > 5.9 and not diagonal and compass_rng.random() < 0.35:
+                        c = RIM_DARK  # the chipped outer edge
                 else:
                     c = compass_rng.choice(FACE)
                 img.putpixel((x, y), c + (255,))
-    for tx, ty in ((7, 2), (8, 2), (13, 7), (13, 8), (7, 13), (8, 13), (2, 7), (2, 8)):
-        img.putpixel((tx, ty), (96, 132, 176, 255))  # tick marks at the four points
+    for tx, ty in ((7, 3), (8, 3), (12, 7), (12, 8), (7, 12), (8, 12), (3, 7), (3, 8)):
+        img.putpixel((tx, ty), RIM_DARK + (255,))  # the four points, cut into the frame
     return img
+
+
+def compass_needle(frame, theta):
+    dx, dy = math.sin(theta), -math.cos(theta)
+    nx, ny = -dy, dx  # across the needle
+    # Tail: a thin splinter of bone. Tip: a spike of ice two pixels wide, burning at the end.
+    for i in range(0, 40):
+        t = i / 39.0 * 3.4
+        for w in (0.0,):
+            x, y = 7.5 - dx * t + nx * w, 7.5 - dy * t + ny * w
+            px, py = int(math.floor(x)), int(math.floor(y))
+            if 0 <= px < 16 and 0 <= py < 16 and math.hypot(px - 7.5, py - 7.5) < 4.6:
+                frame.putpixel((px, py), (BONE[0] if i % 7 else BONE[1]) + (255,))
+    for i in range(0, 60):
+        t = i / 59.0 * 4.6
+        widths = (-0.5, 0.5) if t < 3.2 else (0.0,)
+        for w in widths:
+            x, y = 7.5 + dx * t + nx * w, 7.5 + dy * t + ny * w
+            px, py = int(math.floor(x)), int(math.floor(y))
+            if 0 <= px < 16 and 0 <= py < 16 and math.hypot(px - 7.5, py - 7.5) < 4.7:
+                frame.putpixel((px, py), (TIP[1] if t > 3.0 else TIP[0] if t > 1.2 else GLOW[2]) + (255,))
+    # The pivot: the soul-glow, brightest at the centre.
+    for px, py, c in ((7, 7, GLOW[1]), (8, 7, GLOW[0]), (7, 8, GLOW[0]), (8, 8, GLOW[2])):
+        frame.putpixel((px, py), c + (255,))
 
 
 for k in range(32):
     frame = compass_base()
-    theta = (k - 16) / 32.0 * 2.0 * math.pi
-    dx, dy = math.sin(theta), -math.cos(theta)
-    steps = 12
-    for i in range(-steps, steps + 1):
-        t = i / steps * 4.2  # the needle reaches 4.2 px each way from the centre
-        x, y = 7.5 + dx * t, 7.5 + dy * t
-        px, py = int(math.floor(x)), int(math.floor(y))
-        if 0 <= px < 16 and 0 <= py < 16:
-            frame.putpixel((px, py), (TIP[1] if t > 3.0 else TIP[0]) + (255,) if t > 0 else TAIL + (255,))
-    frame.putpixel((7, 7), (60, 80, 110, 255))  # the pivot
+    compass_needle(frame, (k - 16) / 32.0 * 2.0 * math.pi)
     frame.save(f"{OUT}/item/soulseeker_{k:02d}.png")
 print("rime compass painted")
 
