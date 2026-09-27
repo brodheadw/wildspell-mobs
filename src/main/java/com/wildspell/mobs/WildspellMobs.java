@@ -178,9 +178,10 @@ public class WildspellMobs {
 
     public static final DeferredHolder<EntityType<?>, EntityType<Pegasus>> PEGASUS = ENTITY_TYPES.register("pegasus",
             () -> EntityType.Builder.of(Pegasus::new, MobCategory.CREATURE)
-                    .sized(1.3964844F, 1.6F)
-                    .eyeHeight(1.52F)
-                    .passengerAttachments(1.44375F)
+                    // A horse's, scaled with the model (1.25 against the horse's 1.1).
+                    .sized(1.587F, 1.818F)
+                    .eyeHeight(1.727F)
+                    .passengerAttachments(1.64F)
                     .clientTrackingRange(10)
                     .build("pegasus"));
 

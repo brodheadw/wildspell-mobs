@@ -3,7 +3,15 @@ package com.wildspell.mobs.entity;
 import com.wildspell.mobs.WildspellMobs;
 import javax.annotation.Nullable;
 import net.minecraft.core.BlockPos;
+import net.minecraft.world.level.ServerLevelAccessor;
+import net.minecraft.world.entity.SpawnGroupData;
+import net.minecraft.world.DifficultyInstance;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.core.particles.DustParticleOptions;
 import net.minecraft.core.registries.Registries;
+import net.minecraft.network.syncher.EntityDataAccessor;
+import net.minecraft.network.syncher.EntityDataSerializers;
+import net.minecraft.network.syncher.SynchedEntityData;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.sounds.SoundEvent;
 import net.minecraft.sounds.SoundEvents;
@@ -64,6 +72,32 @@ public class Pegasus extends AbstractHorse {
     /** Chance per tick an idle wild pegasus takes wing (about once every two minutes). */
     private static final int SOAR_CHANCE = 2400;
 
+    /** Whether it's in the air, from the server: a still mob gets no movement packets to tell its client. */
+    private static final EntityDataAccessor<Boolean> DATA_ALOFT = SynchedEntityData.defineId(Pegasus.class, EntityDataSerializers.BOOLEAN);
+    private static final EntityDataAccessor<Integer> DATA_VARIANT = SynchedEntityData.defineId(Pegasus.class, EntityDataSerializers.INT);
+    /** One pegasus in this many is born pink, wild or bred. */
+    public static final int PINK_ONE_IN = 200;
+
+    /** Its coat. A herd is all white or all black; any one of them may be the rare pink with rainbow wings. */
+    public enum Variant {
+        WHITE("white", 0xFFF6DC, 0xFFFFFF, 0xF2DC9A),
+        BLACK("black", 0xC8CCE0, 0x5A6CB4, 0x9AA0BC),
+        PINK("pink");
+
+        public final String name;
+        /** The colours its flight sparkles are drawn from; none means a random rainbow hue for each. */
+        private final int[] sparkles;
+
+        Variant(String name, int... sparkles) {
+            this.name = name;
+            this.sparkles = sparkles;
+        }
+
+        static Variant byId(int id) {
+            return id >= 0 && id < values().length ? values()[id] : WHITE;
+        }
+    }
+
     private int soarTicks;
     private float soarTurn;
 
@@ -72,13 +106,69 @@ public class Pegasus extends AbstractHorse {
     private float wingSpreadO;
     private float flap;
     private float flapO;
+    private float flapStrength;
+    private float flapStrengthO;
 
     public Pegasus(EntityType<? extends Pegasus> type, Level level) {
         super(type, level);
     }
 
+    @Override
+    protected void defineSynchedData(SynchedEntityData.Builder builder) {
+        super.defineSynchedData(builder);
+        builder.define(DATA_ALOFT, false);
+        builder.define(DATA_VARIANT, Variant.WHITE.ordinal());
+    }
+
     public static AttributeSupplier.Builder createAttributes() {
         return createBaseHorseAttributes();
+    }
+
+    public Variant getVariant() {
+        return Variant.byId(this.entityData.get(DATA_VARIANT));
+    }
+
+    public void setVariant(Variant variant) {
+        this.entityData.set(DATA_VARIANT, variant.ordinal());
+    }
+
+    @Override
+    public void addAdditionalSaveData(CompoundTag tag) {
+        super.addAdditionalSaveData(tag);
+        tag.putString("Variant", this.getVariant().name);
+    }
+
+    @Override
+    public void readAdditionalSaveData(CompoundTag tag) {
+        super.readAdditionalSaveData(tag);
+        for (Variant variant : Variant.values()) {
+            if (variant.name.equals(tag.getString("Variant"))) {
+                this.setVariant(variant);
+            }
+        }
+    }
+
+    @Override
+    public SpawnGroupData finalizeSpawn(ServerLevelAccessor level, DifficultyInstance difficulty, MobSpawnType spawnType, @Nullable SpawnGroupData groupData) {
+        Variant herd;
+        if (groupData instanceof Herd existing) {
+            herd = existing.variant;
+        } else {
+            herd = this.random.nextBoolean() ? Variant.WHITE : Variant.BLACK;
+            groupData = new Herd(herd);
+        }
+        this.setVariant(this.random.nextInt(PINK_ONE_IN) == 0 ? Variant.PINK : herd);
+        return super.finalizeSpawn(level, difficulty, spawnType, groupData);
+    }
+
+    /** What a spawning group shares: its coat. */
+    public static class Herd extends AgeableMob.AgeableMobGroupData {
+        final Variant variant;
+
+        Herd(Variant variant) {
+            super(0.2F);
+            this.variant = variant;
+        }
     }
 
     @Override
@@ -129,13 +219,21 @@ public class Pegasus extends AbstractHorse {
             // Flying without gravity keeps a rider from being kicked for "floating a vehicle" on servers that
             // don't allow flight (ServerGamePacketListenerImpl skips no-gravity vehicles); flight supplies its own sink.
             this.setNoGravity(this.isVehicle() && this.isAloft());
+            // Checked against the ground itself: a mob that never moves (NoAI) never updates onGround.
+            this.entityData.set(DATA_ALOFT, this.isAloft() && this.level().noCollision(this, this.getBoundingBox().move(0.0, -0.1, 0.0)));
             return;
         }
         this.wingSpreadO = this.wingSpread;
         this.flapO = this.flap;
-        boolean aloft = this.isAloft();
+        this.flapStrengthO = this.flapStrength;
+        // The rider's own client drives a ridden pegasus and knows first; everyone else goes by the server.
+        boolean aloft = this.isControlledByLocalInstance() ? this.isAloft() : this.entityData.get(DATA_ALOFT);
         this.wingSpread = Mth.approach(this.wingSpread, aloft ? 1.0F : 0.0F, 0.15F);
         boolean rising = this.getY() - this.yo > 0.02;
+        this.flapStrength = Mth.approach(this.flapStrength, rising ? 1.0F : 0.3F, 0.08F);
+        if (aloft) {
+            this.sparkle();
+        }
         float before = this.flap;
         this.flap += aloft ? (rising ? 0.7F : 0.3F) : 0.0F;
         // One wingbeat per 2 pi: a soft beat sound on each downstroke while it climbs.
@@ -145,6 +243,19 @@ public class Pegasus extends AbstractHorse {
         }
     }
 
+    /** A tiny sparkle shed from under its wings as it flies, in its coat's colours. */
+    private void sparkle() {
+        int[] colours = this.getVariant().sparkles;
+        int rgb = colours.length > 0 ? colours[this.random.nextInt(colours.length)]
+                : Mth.hsvToRgb(this.random.nextFloat(), 0.55F, 1.0F);
+        Vec3 side = Vec3.directionFromRotation(0.0F, this.yBodyRot + 90.0F);
+        Vec3 back = Vec3.directionFromRotation(0.0F, this.yBodyRot + 180.0F);
+        double out = (0.6 + this.random.nextDouble() * 1.6) * (this.random.nextBoolean() ? 1.0 : -1.0);
+        Vec3 at = this.position().add(side.scale(out)).add(back.scale(this.random.nextDouble() * 0.8 - 0.2))
+                .add(0.0, this.getBbHeight() * 0.8 + this.random.nextDouble() * 0.3, 0.0);
+        this.level().addParticle(new DustParticleOptions(Vec3.fromRGB24(rgb).toVector3f(), 0.45F), at.x, at.y, at.z, 0.0, -0.02, 0.0);
+    }
+
     /** 0 folded against its sides, 1 spread. */
     public float getWingSpread(float partialTick) {
         return Mth.lerp(partialTick, this.wingSpreadO, this.wingSpread);
@@ -152,6 +263,11 @@ public class Pegasus extends AbstractHorse {
 
     public float getFlap(float partialTick) {
         return Mth.lerp(partialTick, this.flapO, this.flap);
+    }
+
+    /** How deep its wingbeats are: full while it climbs, shallow while it glides. */
+    public float getFlapStrength(float partialTick) {
+        return Mth.lerp(partialTick, this.flapStrengthO, this.flapStrength);
     }
 
     @Override
@@ -277,8 +393,19 @@ public class Pegasus extends AbstractHorse {
         Pegasus foal = WildspellMobs.PEGASUS.get().create(level);
         if (foal != null) {
             this.setOffspringAttributes(partner, foal);
+            foal.setVariant(foalVariant(this.getVariant(), ((Pegasus) partner).getVariant(), this.random));
         }
         return foal;
+    }
+
+    /** A foal takes one parent's coat; pink runs in a family (one in four from a pink parent) but can turn up anywhere. */
+    public static Variant foalVariant(Variant a, Variant b, RandomSource random) {
+        if (random.nextInt(PINK_ONE_IN) == 0 || ((a == Variant.PINK || b == Variant.PINK) && random.nextInt(4) == 0)) {
+            return Variant.PINK;
+        }
+        Variant pick = random.nextBoolean() ? a : b;
+        // A pink parent that doesn't pass it on gives the other parent's coat, or white.
+        return pick != Variant.PINK ? pick : (a != Variant.PINK ? a : b != Variant.PINK ? b : Variant.WHITE);
     }
 
     @Override

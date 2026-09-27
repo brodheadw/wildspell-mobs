@@ -62,7 +62,7 @@ The player-facing description is [publish/DESCRIPTION.md](publish/DESCRIPTION.md
   heavy Slowness, `wildspellmobs:eel_shock`, no knockback) except other eels, and bites in between.
   Someone on the bank within 4 blocks gets a leap and a 6-damage contact shock. Stranded, it flops
   toward water. It drops nothing but XP.
-- **Pegasus**: a winged horse (creature) of the Aether's meadows and groves
+- **Pegasus**: a winged horse (creature), a little bigger than a horse, of the Aether's meadows and groves
   (`#wildspellmobs:pegasus_spawns`, on `#wildspellmobs:pegasus_spawnable_on`: Aether grass; the biome
   ids are optional, so it spawns nowhere without the Aether or Deep Aether). Tamed, fed, bred and saddled
   like a horse; it also eats Aether berries (`#wildspellmobs:pegasus_treats`) as apples. Saddled and
@@ -72,6 +72,11 @@ The player-facing description is [publish/DESCRIPTION.md](publish/DESCRIPTION.md
   servers without `allow-flight` don't kick the rider for floating a vehicle. A wild adult now and
   then (and when hurt) spirals up one turn and back down another, landing about where it rose. The
   rider's jump key is read through an access transformer (`LivingEntity.jumping`).
+  Coats: a herd is all white or all black; any pegasus is pink with rainbow wings one time in 200
+  (`Pegasus.PINK_ONE_IN`), and a pink parent passes it on one time in four. It sheds tiny dust
+  sparkles in its coat's colours while it flies. The wings are bird-built (humerus, forearm, hand;
+  tertials, secondaries, primaries, two covert rows), spread in the air and folded along the flank
+  on the ground.
 - **Frost**: every frost hit builds vanilla freezing (the shards a little at a time); like powder snow,
   any piece of leather armour keeps it off.
 - **Ice Cube drops**: YUNG's Ice Cubes have no loot of their own; this gives them 0-2 Ice.
@@ -105,8 +110,8 @@ The player-facing description is [publish/DESCRIPTION.md](publish/DESCRIPTION.md
     and the bottled moth.
   - `paint_blocks.py`: the phylactery, Rime Ward and lich-soul textures.
   - `paint_eel.py` (needs Pillow): the Electric Eel and its glow layer (the electric organ).
-  - `paint_pegasus.py` (needs Pillow and the gradle-unpacked 1.21.1 client jar): the Pegasus, the
-    vanilla white horse recoloured, with its wings in the right half of the sheet.
+  - `paint_pegasus.py` (needs Pillow and the gradle-unpacked 1.21.1 client jar): the Pegasus's white,
+    black and pink coats, the vanilla white horse recoloured, with its feathers beside it on the sheet.
   - `make_arena.py`: the empty gametest arena structures (the small arena, and the tall sky arena flight
     tests need).
 - `publish/`: Modrinth/CurseForge page text, icon and gallery image.
@@ -130,7 +135,7 @@ following a Spore Blossom, bottling and releasing in the dark), and the Electric
 everything in the water but nothing ashore, only swimmers in its territory are hunted, fish only when
 hungry, caught and swallowed, leaping at someone on the bank, taking a crevice as its den), and the
 Pegasus (gliding down unhurt, a rider climbing and gliding, the wild soar coming back to where it rose,
-tamed ones staying put, spawn ground, breeding). They need
+tamed ones staying put, spawn ground, breeding, coats saved and inherited). They need
 YUNG's Cave Biomes and its
 dependencies at dev runtime: put `YungsCaveBiomes`, `YungsApi`, `geckolib` and `TerraBlender` jars
 for NeoForge 1.21.1 in `libs/` (gitignored, never shipped; GeckoLib is compiled against from its Maven, so a
