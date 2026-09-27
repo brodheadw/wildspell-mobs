@@ -106,6 +106,7 @@ public class IceLich extends Monster implements RangedAttackMob, GeoEntity {
     private static final int BLINK_AFTER_UNSEEN = 60;
     /** Seconds a bound lich with nobody to fight lingers before sinking back into its phylactery. */
     private static final int IDLE_LIMIT = 60;
+    public static final int OUT_OF_COLD_LIMIT = 10;
     /** Ticks between minion-cap checks once the cap is full. */
     private static final int FULL_CAP_RECHECK = 40;
     private static final EntityDataAccessor<Byte> DATA_ACTION = SynchedEntityData.defineId(IceLich.class, EntityDataSerializers.BYTE);
@@ -133,6 +134,8 @@ public class IceLich extends Monster implements RangedAttackMob, GeoEntity {
     private int burstTicks;
     private int unseenTicks;
     private int idleSeconds;
+    /** Seconds its prey has been out of the freezing caves; past the limit the lich lets them go. */
+    private int outOfColdSeconds;
     private Vec3 burstAt = Vec3.ZERO;
     private Vec3 beamDir = Vec3.ZERO;
     /** The soul (see {@link LichSouls}) this lich is a form of, or null if it's an unbound, mortal lich. */
@@ -683,6 +686,15 @@ public class IceLich extends Monster implements RangedAttackMob, GeoEntity {
             if (prey != null && prey.distanceToSqr(Vec3.atCenterOf(soul.anchor())) > PhylacteryBlockEntity.leash() * PhylacteryBlockEntity.leash()) {
                 this.retreat();
                 return;
+            }
+            // The cold is its domain: prey that climbs out of the freezing caves and stays out is let go.
+            if (prey != null && !this.level().getBiome(prey.blockPosition()).is(com.wildspell.mobs.ZombieFreezing.FREEZES_ZOMBIES)) {
+                if (++this.outOfColdSeconds >= OUT_OF_COLD_LIMIT) {
+                    this.retreat();
+                    return;
+                }
+            } else {
+                this.outOfColdSeconds = 0;
             }
             if (this.getTarget() == null && prey == null) {
                 if (++this.idleSeconds >= IDLE_LIMIT) {
