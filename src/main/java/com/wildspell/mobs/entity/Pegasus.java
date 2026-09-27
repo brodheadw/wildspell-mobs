@@ -3,12 +3,9 @@ package com.wildspell.mobs.entity;
 import com.wildspell.mobs.WildspellMobs;
 import javax.annotation.Nullable;
 import net.minecraft.core.BlockPos;
-import net.minecraft.world.level.ServerLevelAccessor;
-import net.minecraft.world.entity.SpawnGroupData;
-import net.minecraft.world.DifficultyInstance;
-import net.minecraft.nbt.CompoundTag;
 import net.minecraft.core.particles.DustParticleOptions;
 import net.minecraft.core.registries.Registries;
+import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.syncher.EntityDataAccessor;
 import net.minecraft.network.syncher.EntityDataSerializers;
 import net.minecraft.network.syncher.SynchedEntityData;
@@ -18,6 +15,7 @@ import net.minecraft.sounds.SoundEvents;
 import net.minecraft.tags.TagKey;
 import net.minecraft.util.Mth;
 import net.minecraft.util.RandomSource;
+import net.minecraft.world.DifficultyInstance;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.damagesource.DamageSource;
@@ -25,6 +23,7 @@ import net.minecraft.world.entity.AgeableMob;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.MobSpawnType;
 import net.minecraft.world.entity.MoverType;
+import net.minecraft.world.entity.SpawnGroupData;
 import net.minecraft.world.entity.ai.attributes.AttributeSupplier;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.animal.Animal;
@@ -35,6 +34,7 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.LevelAccessor;
+import net.minecraft.world.level.ServerLevelAccessor;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.phys.Vec3;
 
@@ -101,6 +101,8 @@ public class Pegasus extends AbstractHorse {
 
     private int soarTicks;
     private float soarTurn;
+    /** Whether ridden flight set its no-gravity flag, so it only ever clears what it set. */
+    private boolean flightNoGravity;
 
     // Client-side wing animation (see PegasusModel).
     private float wingSpread;
@@ -210,7 +212,12 @@ public class Pegasus extends AbstractHorse {
     @Override
     public void aiStep() {
         super.aiStep();
-        if (!this.level().isClientSide && !this.isSoaring() && this.random.nextInt(SOAR_CHANCE) == 0) {
+        if (this.level().isClientSide) {
+            return;
+        }
+        if (this.isSoaring() && (this.isVehicle() || this.isLeashed())) {
+            this.soarTicks = 0; // mounted or leashed mid-soar: it comes down as a rider or a lead would have it
+        } else if (!this.isSoaring() && this.random.nextInt(SOAR_CHANCE) == 0) {
             this.startSoaring();
         }
     }
@@ -221,7 +228,11 @@ public class Pegasus extends AbstractHorse {
         if (!this.level().isClientSide) {
             // Flying without gravity keeps a rider from being kicked for "floating a vehicle" on servers that
             // don't allow flight (ServerGamePacketListenerImpl skips no-gravity vehicles); flight supplies its own sink.
-            this.setNoGravity(this.isVehicle() && this.isAloft());
+            boolean flying = this.isVehicle() && this.isAloft();
+            if (flying != this.flightNoGravity) {
+                this.flightNoGravity = flying;
+                this.setNoGravity(flying);
+            }
             // Checked against the ground itself: a mob that never moves (NoAI) never updates onGround.
             this.entityData.set(DATA_ALOFT, this.isAloft() && this.level().noCollision(this, this.getBoundingBox().move(0.0, -0.1, 0.0)));
             return;
