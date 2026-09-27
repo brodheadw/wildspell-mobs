@@ -695,6 +695,38 @@ public class WildspellMobsTests {
         });
     }
 
+    /** YUNG's icicles hanging over lava (or beside it) melt away; ones over stone are left alone. */
+    @GameTest(template = ARENA, timeoutTicks = 100)
+    public static void iciclesMeltOverLava(GameTestHelper helper) {
+        shade(helper);
+        net.minecraft.world.level.block.Block icicle = net.minecraft.core.registries.BuiltInRegistries.BLOCK.get(
+                net.minecraft.resources.ResourceLocation.fromNamespaceAndPath("yungscavebiomes", "icicle"));
+        if (icicle == Blocks.AIR) {
+            helper.succeed();
+            return;
+        }
+        helper.setBlock(2, 3, 4, Blocks.STONE);
+        helper.setBlock(2, 2, 4, icicle);
+        helper.setBlock(2, 0, 4, Blocks.LAVA);
+        helper.setBlock(6, 3, 4, Blocks.STONE);
+        helper.setBlock(6, 2, 4, icicle);
+        helper.setBlock(6, 0, 4, Blocks.STONE);
+        helper.assertTrue(helper.getBlockState(new BlockPos(2, 2, 4)).is(com.wildspell.mobs.IceMelting.MELTS_NEAR_HEAT), "the icicle is meltable");
+        helper.assertTrue(com.wildspell.mobs.IceMelting.melt(helper.getLevel(), helper.absolutePos(new BlockPos(2, 2, 4))), "over lava it melts");
+        helper.assertBlockPresent(Blocks.AIR, 2, 2, 4);
+        helper.assertFalse(com.wildspell.mobs.IceMelting.melt(helper.getLevel(), helper.absolutePos(new BlockPos(6, 2, 4))), "over stone it stays");
+        helper.assertBlockPresent(icicle, 6, 2, 4);
+        // The sampler finds them too: two thousand looks into a 9x5x9 volume all but certainly land on both
+        // the icicle hanging one block over magma and the one two blocks over it.
+        helper.setBlock(6, 0, 4, Blocks.MAGMA_BLOCK);
+        helper.setBlock(6, 1, 4, icicle);
+        int melted = com.wildspell.mobs.IceMelting.sampleAround(helper.getLevel(), helper.absolutePos(new BlockPos(4, 2, 4)), 2000, 4, 2);
+        helper.assertTrue(melted == 2, "the sampler melted " + melted);
+        helper.assertBlockPresent(Blocks.AIR, 6, 1, 4);
+        helper.assertBlockPresent(Blocks.AIR, 6, 2, 4);
+        helper.succeed();
+    }
+
     // Built well off to the side of the test grid, so the crypts can't reach, or shade, another test's arena.
     @GameTest(template = ARENA, timeoutTicks = 100, batch = "cryptGen")
     public static void cryptBuildsTheSameWayRoundInEveryOrientation(GameTestHelper helper) {
