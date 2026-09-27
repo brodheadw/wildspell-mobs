@@ -74,6 +74,7 @@ public class FlytrapTests {
             helper.assertFalse(FlytrapBlock.canGrow(helper.getLevel(), helper.absolutePos(PLANT), grown), "a grown flytrap can grow further");
             helper.assertFalse(FlytrapBlock.canGrow(helper.getLevel(), helper.absolutePos(roofed), helper.getBlockState(roofed)),
                     "a flytrap grew tall under a roof");
+            clearPlants(helper);
             helper.succeed();
         });
     }
@@ -106,6 +107,7 @@ public class FlytrapTests {
             helper.assertBlockNotPresent(WildspellMobs.FLYTRAP_STEM.get(), spots[2].above());
             helper.assertBlockNotPresent(WildspellMobs.FLYTRAP_STEM.get(), spots[2].above(2));
             helper.assertTrue(helper.getEntities(EntityType.ITEM).isEmpty(), "withering a flytrap dropped something");
+            clearPlants(helper);
             helper.succeed();
         });
     }
@@ -134,6 +136,7 @@ public class FlytrapTests {
             helper.assertTrue(head.isMoving(player), "the player isn't seen moving: the test isn't testing the player");
             helper.assertTrue(!moth.isAlive() || moth.getHealth() < moth.getMaxHealth(), "the sprout never bit the moth");
             player.discard();
+            clearPlants(helper);
         });
     }
 
@@ -159,6 +162,7 @@ public class FlytrapTests {
             helper.assertTrue(head.getHeld() == pig, "the flytrap bit the pig but isn't holding it");
             helper.assertTrue(pig.hasEffect(MobEffects.MOVEMENT_SLOWDOWN), "the held pig isn't slowed");
             helper.assertTrue(head.getAction() == FlytrapHead.ACTION_HOLD, "not in the hold pose");
+            clearPlants(helper);
         });
     }
 
@@ -191,6 +195,7 @@ public class FlytrapTests {
             sneaker.discard();
             still.discard();
             walker.discard();
+            clearPlants(helper);
             helper.succeed();
         });
     }
@@ -217,6 +222,7 @@ public class FlytrapTests {
         helper.runAfterDelay(34, () -> {
             FlytrapHead head = head(helper, PLANT);
             helper.assertTrue(head.getHeld() == null && head.getAction() == FlytrapHead.ACTION_IDLE, "the flytrap took the pig back");
+            clearPlants(helper);
             helper.succeed();
         });
     }
@@ -241,6 +247,7 @@ public class FlytrapTests {
             helper.assertTrue(burntLoss == 6.0F, "fire did " + burntLoss + ", not double");
             helper.assertTrue(burnt.isOnFire(), "a touch of fire didn't set it alight");
             helper.assertTrue(cut.getMaxHealth() == 20.0F, "a young plant's head has " + cut.getMaxHealth() + " health");
+            clearPlants(helper);
             helper.succeed();
         });
     }
@@ -262,6 +269,7 @@ public class FlytrapTests {
             List<FlytrapHead> heads = heads(helper, PLANT);
             helper.assertTrue(heads.size() == 1, "the plant has " + heads.size() + " heads");
             assertAt(helper, heads.getFirst(), home);
+            clearPlants(helper);
             helper.succeed();
         });
     }
@@ -290,6 +298,7 @@ public class FlytrapTests {
                     "a living head outlived its plant");
             helper.assertTrue(count(helper, WildspellMobs.FLYTRAP_SPROUT.get()) == 2, "sprouts: " + count(helper, WildspellMobs.FLYTRAP_SPROUT.get()));
             helper.assertTrue(count(helper, WildspellMobs.TRAP_JAW.get()) == 3, "trap jaws: " + count(helper, WildspellMobs.TRAP_JAW.get()));
+            clearPlants(helper);
             helper.succeed();
         });
     }
@@ -316,6 +325,7 @@ public class FlytrapTests {
             helper.assertTrue(helper.getEntities(WildspellMobs.FLYTRAP_HEAD.get()).isEmpty(), "heads outlived their broken plants");
             helper.assertTrue(count(helper, WildspellMobs.FLYTRAP_SPROUT.get()) == 3, "sprouts: " + count(helper, WildspellMobs.FLYTRAP_SPROUT.get()));
             helper.assertTrue(count(helper, WildspellMobs.TRAP_JAW.get()) == 3, "trap jaws: " + count(helper, WildspellMobs.TRAP_JAW.get()));
+            clearPlants(helper);
             helper.succeed();
         });
     }
@@ -329,6 +339,7 @@ public class FlytrapTests {
             boolean roots = ground != Blocks.STONE && ground != Blocks.AIR;
             helper.assertTrue(flytrap.canSurvive(helper.getLevel(), helper.absolutePos(spot)) == roots, "flytrap rooting in " + ground + ": " + !roots);
         }
+        clearPlants(helper);
         helper.succeed();
     }
 
@@ -337,6 +348,7 @@ public class FlytrapTests {
         var biomes = helper.getLevel().registryAccess().registryOrThrow(Registries.BIOME);
         assertGrows(helper, biomes.get(JUNGLE), "flytrap_patch_jungle");
         assertGrows(helper, biomes.get(LUSH_CAVES), "flytrap_patch_lush_caves");
+        clearPlants(helper);
         helper.succeed();
     }
 
@@ -365,8 +377,23 @@ public class FlytrapTests {
                 }
             }
             helper.assertTrue(plants >= 1, "no flytraps in the patch");
-            helper.succeed();
+                        clearPlants(helper);
+                        helper.succeed();
         });
+    }
+
+    /**
+     * Clears every plant well around a test (their heads go with them). A patch can spill past the
+     * arena, and a plant left behind is flammable: fire from a later batch's test (the frozen zombies
+     * and fire) spread through leftover flytraps into neighbouring arenas and flaked those tests.
+     */
+    private static void clearPlants(GameTestHelper helper) {
+        for (BlockPos pos : BlockPos.betweenClosed(helper.absolutePos(new BlockPos(-12, -2, -12)), helper.absolutePos(new BlockPos(20, 8, 20)))) {
+            BlockState state = helper.getLevel().getBlockState(pos);
+            if (state.is(WildspellMobs.FLYTRAP.get()) || state.is(WildspellMobs.FLYTRAP_STEM.get())) {
+                helper.getLevel().setBlock(pos, Blocks.AIR.defaultBlockState(), Block.UPDATE_CLIENTS);
+            }
+        }
     }
 
     private static void assertGrows(GameTestHelper helper, Biome biome, String feature) {
