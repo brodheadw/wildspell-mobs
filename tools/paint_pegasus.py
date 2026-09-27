@@ -67,6 +67,10 @@ COATS = {
         coat_dark=(232, 170, 194), coat_light=(255, 224, 236),
         hoof=[(250, 244, 250), (236, 228, 240)],
         pupil=(40, 20, 44), iris=(150, 70, 170),
+        # crystal eyes, 2 wide and 3 tall: facets rows top to bottom, (back column, front column)
+        gem_eyes=[((255, 255, 255), (196, 232, 255)),
+                  ((150, 122, 240), (86, 78, 214)),
+                  ((122, 212, 250), (58, 40, 148))],
         feather=[(255, 236, 244), (252, 230, 240), (255, 242, 248)],
         shaft=(240, 206, 222), edge=(226, 190, 214), root=(255, 232, 242), tip=(255, 255, 255),
         # dusk tones (DUSK), every feather and covert its own, shuffled so no two neighbours match
@@ -109,8 +113,15 @@ def paint(name, c):
 
     # Eyes two tall, so they read from a distance: a pupil over an iris.
     for x, y in eyes:
-        px[x, y] = c["pupil"] + (255,)
-        px[x, y + 1] = c["iris"] + (255,)
+        if c.get("gem_eyes"):
+            # The two side faces mirror each other: widen each eye toward the same side of the head.
+            front = x - 1 if x < 13 else x + 1
+            for row, (back_colour, front_colour) in enumerate(c["gem_eyes"]):
+                px[x, y + row] = back_colour + (255,)
+                px[front, y + row] = front_colour + (255,)
+        else:
+            px[x, y] = c["pupil"] + (255,)
+            px[x, y + 1] = c["iris"] + (255,)
     bands = dusk_run(rng, 6) if c.get("dusk") else None
 
     def hair(x0, y0, w, h):
