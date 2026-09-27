@@ -42,7 +42,7 @@ A long, dark eel of the flooded caves, orange at the throat. Leave its water alo
 - When it's hungry it hunts fish: it chases one down, stuns it with a small pulse and swallows it whole. Once it has eaten, it leaves them alone for a few minutes.
 
 ## Pegasus
-A great winged horse, a little bigger than a horse, grazing the meadows of the Aether (needs the Aether mod). Herds come white or black, and once in a long while you'll find a pink one with rainbow wings.
+A great winged horse, a little bigger than a horse, grazing the meadows of the Aether (needs the Aether mod). Herds come white and gold, pure white or black, and once in a long while you'll find a pink one with wings in indigo, lavender and baby blue.
 - Tame it the way you'd tame a horse. It likes Aether berries as much as apples.
 - Saddle it and jump to take off. Hold jump to climb, look where you want to go and push forward, and let go to glide back down. It dives faster than it climbs.
 - In flight its wings spread wide and it leaves a trail of tiny sparkles; on the ground it folds them along its back.

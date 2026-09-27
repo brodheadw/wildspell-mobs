@@ -78,14 +78,15 @@ public class Pegasus extends AbstractHorse {
     /** One pegasus in this many is born pink, wild or bred. */
     public static final int PINK_ONE_IN = 200;
 
-    /** Its coat. A herd is all white or all black; any one of them may be the rare pink with rainbow wings. */
+    /** Its coat. A herd is all white-and-gold, all pure white or all black; any one of them may be the rare pink with dusk-toned wings. */
     public enum Variant {
         WHITE("white", 0xFFF6DC, 0xFFFFFF, 0xF2DC9A),
         BLACK("black", 0xC8CCE0, 0x5A6CB4, 0x9AA0BC),
-        PINK("pink");
+        PINK("pink", 0x4A40AA, 0x7C54C4, 0xB096E4, 0x849CE8, 0xAAD0F6, 0xF8BAD6, 0xE28CBA),
+        PURE("pure", 0xFFFFFF, 0xF4F6FF);
 
         public final String name;
-        /** The colours its flight sparkles are drawn from; none means a random rainbow hue for each. */
+        /** The colours its flight sparkles are drawn from: its feathers' own. */
         private final int[] sparkles;
 
         Variant(String name, int... sparkles) {
@@ -154,12 +155,14 @@ public class Pegasus extends AbstractHorse {
         if (groupData instanceof Herd existing) {
             herd = existing.variant;
         } else {
-            herd = this.random.nextBoolean() ? Variant.WHITE : Variant.BLACK;
+            herd = HERD_COATS[this.random.nextInt(HERD_COATS.length)];
             groupData = new Herd(herd);
         }
         this.setVariant(this.random.nextInt(PINK_ONE_IN) == 0 ? Variant.PINK : herd);
         return super.finalizeSpawn(level, difficulty, spawnType, groupData);
     }
+
+    private static final Variant[] HERD_COATS = {Variant.WHITE, Variant.PURE, Variant.BLACK};
 
     /** What a spawning group shares: its coat. */
     public static class Herd extends AgeableMob.AgeableMobGroupData {
@@ -231,7 +234,8 @@ public class Pegasus extends AbstractHorse {
         this.wingSpread = Mth.approach(this.wingSpread, aloft ? 1.0F : 0.0F, 0.15F);
         boolean rising = this.getY() - this.yo > 0.02;
         this.flapStrength = Mth.approach(this.flapStrength, rising ? 1.0F : 0.3F, 0.08F);
-        if (aloft) {
+        if (aloft && this.wingSpread > 0.8F) {
+            this.sparkle();
             this.sparkle();
         }
         float before = this.flap;
@@ -243,17 +247,39 @@ public class Pegasus extends AbstractHorse {
         }
     }
 
-    /** A tiny sparkle shed from under its wings as it flies, in its coat's colours. */
+    // The spread wing, as PegasusModel poses it, in model units: shoulder, bone lengths, and each bone's rise
+    // (radians above level, before the beat). Used to shed sparkles from the wings themselves.
+    private static final float MODEL_SCALE = 1.25F / 16.0F;
+    private static final float[] WING_BONES = {10.0F, 12.0F, 8.0F};
+    private static final float[] WING_RISE = {1.0F, 0.72F, 0.62F};
+
+    /** A tiny sparkle shed from a random spot on one of its spread wings, in its coat's colours. */
     private void sparkle() {
         int[] colours = this.getVariant().sparkles;
-        int rgb = colours.length > 0 ? colours[this.random.nextInt(colours.length)]
-                : Mth.hsvToRgb(this.random.nextFloat(), 0.55F, 1.0F);
-        Vec3 side = Vec3.directionFromRotation(0.0F, this.yBodyRot + 90.0F);
-        Vec3 back = Vec3.directionFromRotation(0.0F, this.yBodyRot + 180.0F);
-        double out = (0.6 + this.random.nextDouble() * 1.6) * (this.random.nextBoolean() ? 1.0 : -1.0);
-        Vec3 at = this.position().add(side.scale(out)).add(back.scale(this.random.nextDouble() * 0.8 - 0.2))
-                .add(0.0, this.getBbHeight() * 0.8 + this.random.nextDouble() * 0.3, 0.0);
-        this.level().addParticle(new DustParticleOptions(Vec3.fromRGB24(rgb).toVector3f(), 0.45F), at.x, at.y, at.z, 0.0, -0.02, 0.0);
+        int rgb = colours[this.random.nextInt(colours.length)];
+        // Walk out along the wing's bones to a random point, following the current beat.
+        float flap = this.getFlap(1.0F);
+        float strength = this.getFlapStrength(1.0F);
+        float beat = Mth.sin(flap) * 0.6F * strength;
+        float outerBeat = Mth.sin(flap - 0.9F) * 0.45F * strength;
+        float along = this.random.nextFloat() * (WING_BONES[0] + WING_BONES[1] + WING_BONES[2]);
+        double out = 5.2;
+        double up = 0.0;
+        for (int b = 0; b < WING_BONES.length && along > 0.0F; b++) {
+            float length = Math.min(along, WING_BONES[b]);
+            double rise = WING_RISE[b] + beat + (b > 0 ? outerBeat * (b == 1 ? 0.5 : 1.0) : 0.0);
+            out += Math.cos(rise) * length;
+            up += Math.sin(rise) * length;
+            along -= length;
+        }
+        double back = 4.0 + this.random.nextFloat() * 18.0; // somewhere across the feathers, shoulder to trailing edge
+        Vec3 side = Vec3.directionFromRotation(0.0F, this.yBodyRot + 90.0F).scale(this.random.nextBoolean() ? 1.0 : -1.0);
+        Vec3 forward = Vec3.directionFromRotation(0.0F, this.yBodyRot);
+        Vec3 at = this.position()
+                .add(side.scale(out * MODEL_SCALE))
+                .add(forward.scale((4.0 - back) * MODEL_SCALE))
+                .add(0.0, (20.0 + up) * MODEL_SCALE, 0.0);
+        this.level().addParticle(new DustParticleOptions(Vec3.fromRGB24(rgb).toVector3f(), 0.4F), at.x, at.y, at.z, 0.0, -0.03, 0.0);
     }
 
     /** 0 folded against its sides, 1 spread. */

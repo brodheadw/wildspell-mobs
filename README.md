@@ -72,7 +72,8 @@ The player-facing description is [publish/DESCRIPTION.md](publish/DESCRIPTION.md
   servers without `allow-flight` don't kick the rider for floating a vehicle. A wild adult now and
   then (and when hurt) spirals up one turn and back down another, landing about where it rose. The
   rider's jump key is read through an access transformer (`LivingEntity.jumping`).
-  Coats: a herd is all white or all black; any pegasus is pink with rainbow wings one time in 200
+  Coats: a herd is all white-and-gold, all pure white or all black; any pegasus is pink with
+  dusk-toned wings (indigo, purple, lavender, blues, pinks) one time in 200
   (`Pegasus.PINK_ONE_IN`), and a pink parent passes it on one time in four. It sheds tiny dust
   sparkles in its coat's colours while it flies. The wings are bird-built (humerus, forearm, hand;
   tertials, secondaries, primaries, two covert rows), spread in the air and folded along the flank

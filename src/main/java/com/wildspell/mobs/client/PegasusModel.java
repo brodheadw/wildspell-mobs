@@ -18,9 +18,10 @@ import net.minecraft.util.Mth;
 
 /**
  * The vanilla horse with a pair of great feathered wings rising from the withers. Each wing is built like a
- * bird's: humerus, forearm and hand, the marginal coverts forming its leading edge, with tertials on the humerus, secondaries on the forearm, six long
- * primaries fanned from the hand, and a row of greater and of marginal coverts over each bone. Every
- * feather is a single flat face, so overlapping planes never fight.
+ * bird's: humerus, forearm and hand, with five tertials on the humerus, eight secondaries on the forearm,
+ * nine long primaries fanned from the hand and three rows of coverts (marginal, median, greater) over each
+ * bone, the marginals forming the leading edge. Every feather is a single flat face with its own patch of
+ * the texture, so overlapping planes never fight and each can be coloured on its own.
  *
  * <p>Spread, the humerus climbs steeply from the shoulder, the forearm levels out and the hand sweeps back,
  * the primaries splayed; it beats from the shoulder, the outer wing lagging, deep when it climbs and shallow
@@ -29,8 +30,8 @@ import net.minecraft.util.Mth;
  * and every flight feather laid back and drooping over the flank.
  *
  * <p>Planes are built in the wing's frame: +x along the bone (out from the body when spread), +z toward the
- * trailing edge, -y the upper side. The texture is 128x128, the horse's 64x64 sheet in the top left and the
- * wing to its right; paint_pegasus.py uses the same layout.
+ * trailing edge, -y the upper side. The texture is 128x128: the horse's 64x64 sheet in the top left, the
+ * coverts to its right and the flight feathers below; paint_pegasus.py uses the same layout.
  */
 public class PegasusModel extends HorseModel<Pegasus> {
     public static final ModelLayerLocation LAYER = new ModelLayerLocation(WildspellMobs.id("pegasus"), "main");
@@ -41,32 +42,34 @@ public class PegasusModel extends HorseModel<Pegasus> {
     private static final float HAND = 8.0F;
     private static final float FEATHER_WIDTH = 3.0F;
 
-    private static final float TERTIAL_LENGTH = 14.0F;
-    private static final float[] TERTIAL_AT = {1.5F, 4.0F, 6.5F};
-    private static final float SECONDARY_LENGTH = 20.0F;
-    private static final float[] SECONDARY_AT = {0.0F, 2.3F, 4.6F, 6.9F, 9.2F};
-    private static final float[] PRIMARY_LENGTH = {20.0F, 22.0F, 24.0F, 26.0F, 28.0F, 30.0F};
-    private static final float PRIMARY_STEP = 1.2F;
-    private static final float GREATER_DEPTH = 9.0F;
-    private static final float MARGINAL_DEPTH = 4.0F;
-    /** Where each flat face sits on the sheet (u, v of its top-left corner). */
-    private static final int[] TERTIAL_FACE = {64, 40};
-    private static final int[] SECONDARY_FACE = {68, 40};
-    private static final int PRIMARY_FACE_U = 72;
-    private static final int PRIMARY_FACE_V = 40;
-    private static final int[][] GREATER_FACE = {{100, 40}, {100, 50}, {100, 60}};
-    private static final int[][] MARGINAL_FACE = {{64, 12}, {76, 12}, {90, 12}};
+    // Flight feathers along each bone: where each sits along it and how long it is, inner first.
+    private static final float[] TERTIAL_AT = {0.5F, 2.5F, 4.5F, 6.5F, 8.0F};
+    private static final float[] TERTIAL_LENGTH = {11.0F, 12.0F, 13.0F, 14.0F, 15.0F};
+    private static final float[] SECONDARY_AT = {0.0F, 1.5F, 3.0F, 4.5F, 6.0F, 7.5F, 9.0F, 10.5F};
+    private static final float[] SECONDARY_LENGTH = {18.0F, 18.0F, 19.0F, 19.0F, 20.0F, 20.0F, 21.0F, 21.0F};
+    private static final float[] PRIMARY_AT = {0.0F, 0.9F, 1.8F, 2.7F, 3.6F, 4.5F, 5.4F, 6.3F, 7.2F};
+    private static final float[] PRIMARY_LENGTH = {20.0F, 21.5F, 23.0F, 24.5F, 26.0F, 27.0F, 28.0F, 29.0F, 30.0F};
+    /** Covert rows over every bone, outermost (the leading edge) first: marginal, median, greater. */
+    private static final float[] COVERT_DEPTH = {4.0F, 6.0F, 9.0F};
+    private static final float[] COVERT_LIFT = {-0.45F, -0.35F, -0.25F};
+    private static final float[] COVERT_BACK = {-1.0F, 0.0F, 0.4F};
+    /** Where each flat face sits on the sheet (u, v of its top-left corner); paint_pegasus.py matches these. */
+    private static final int[] COVERT_FACE_U = {64, 76, 90}; // per bone
+    private static final int[] COVERT_FACE_V = {0, 6, 14}; // per row
+    /** Flight feathers' faces run 3 wide from here along one row: tertials, secondaries, then primaries. */
+    private static final int FEATHER_FACE_U = 30;
+    private static final int FEATHER_FACE_V = 64;
 
     /** Each feather sits this much below the one before it, so overlaps never z-fight. */
-    private static final float LAYER_STEP = 0.04F;
+    private static final float LAYER_STEP = 0.03F;
 
     // Folded (left wing; the right mirrors it). See the class comment: back, forward, back, upper side out.
     private static final float FOLDED_HUMERUS_YAW = -Mth.HALF_PI;
     private static final float FOLDED_ROLL = Mth.HALF_PI;
-    /** How far each folded flight feather droops below the line of the back, in radians. */
-    private static final float[] TERTIAL_DROOP = {0.5F, 0.4F, 0.3F};
-    private static final float[] SECONDARY_DROOP = {0.45F, 0.38F, 0.31F, 0.24F, 0.17F};
-    private static final float[] PRIMARY_DROOP = {0.14F, 0.12F, 0.1F, 0.08F, 0.06F, 0.04F};
+    /** How far folded flight feathers droop below the line of the back, in radians: most at the inner end. */
+    private static final float TERTIAL_DROOP = 0.5F;
+    private static final float SECONDARY_DROOP = 0.45F;
+    private static final float PRIMARY_DROOP = 0.14F;
     /** Folded flight feathers are drawn shorter (along their length) so they end over the rump, not past it. */
     private static final float FOLDED_TERTIAL_LENGTH = 0.75F;
     private static final float FOLDED_FLIGHT_LENGTH = 0.6F;
@@ -108,22 +111,27 @@ public class PegasusModel extends HorseModel<Pegasus> {
         PartDefinition[] bones = {humerus, forearm, hand};
         float[] lengths = {HUMERUS, FOREARM, HAND};
         for (int b = 0; b < 3; b++) {
-            bones[b].addOrReplaceChild("greater", plane(side, GREATER_FACE[b], lengths[b], GREATER_DEPTH), PartPose.offset(0.0F, -0.25F, 0.4F));
-            bones[b].addOrReplaceChild("marginal", plane(side, MARGINAL_FACE[b], lengths[b], MARGINAL_DEPTH), PartPose.offset(0.0F, -0.4F, -1.0F));
+            for (int row = 0; row < COVERT_DEPTH.length; row++) {
+                int[] face = {COVERT_FACE_U[b], COVERT_FACE_V[row]};
+                bones[b].addOrReplaceChild("covert_" + row, plane(side, face, lengths[b], COVERT_DEPTH[row]),
+                        PartPose.offset(0.0F, COVERT_LIFT[row], COVERT_BACK[row]));
+            }
         }
-        for (int i = 0; i < TERTIAL_AT.length; i++) {
-            humerus.addOrReplaceChild("feather_" + i, plane(side, TERTIAL_FACE, FEATHER_WIDTH, TERTIAL_LENGTH),
-                    PartPose.offset(side * TERTIAL_AT[i], i * LAYER_STEP, 0.5F));
+        int u = FEATHER_FACE_U;
+        u = feathers(humerus, side, TERTIAL_AT, TERTIAL_LENGTH, 0.0F, u);
+        u = feathers(forearm, side, SECONDARY_AT, SECONDARY_LENGTH, 0.0F, u);
+        feathers(hand, side, PRIMARY_AT, PRIMARY_LENGTH, 0.2F, u);
+    }
+
+    /** Lays flight feathers along a bone, each with its own face from {@code u} on; returns the next free u. */
+    private static int feathers(PartDefinition bone, float side, float[] at, float[] length, float layer, int u) {
+        for (int i = 0; i < at.length; i++) {
+            int[] face = {u, FEATHER_FACE_V};
+            bone.addOrReplaceChild("feather_" + i, plane(side, face, FEATHER_WIDTH, length[i]),
+                    PartPose.offset(side * at[i], layer + i * LAYER_STEP, 0.5F));
+            u += (int) FEATHER_WIDTH;
         }
-        for (int i = 0; i < SECONDARY_AT.length; i++) {
-            forearm.addOrReplaceChild("feather_" + i, plane(side, SECONDARY_FACE, FEATHER_WIDTH, SECONDARY_LENGTH),
-                    PartPose.offset(side * SECONDARY_AT[i], i * LAYER_STEP, 0.5F));
-        }
-        for (int i = 0; i < PRIMARY_LENGTH.length; i++) {
-            int[] face = {PRIMARY_FACE_U + 4 * i, PRIMARY_FACE_V};
-            hand.addOrReplaceChild("feather_" + i, plane(side, face, FEATHER_WIDTH, PRIMARY_LENGTH[i]),
-                    PartPose.offset(side * i * PRIMARY_STEP, 0.2F + i * LAYER_STEP, 0.5F));
-        }
+        return u;
     }
 
     /** A flat face {@code width} along the bone and {@code depth} back from it; the face's texture sits at {@code face}. */
@@ -160,14 +168,20 @@ public class PegasusModel extends HorseModel<Pegasus> {
             this.forearm = humerus.getChild("forearm");
             this.hand = this.forearm.getChild("hand");
             ModelPart[] bones = {this.humerus, this.forearm, this.hand};
-            this.coverts = new ModelPart[6];
-            for (int b = 0; b < 3; b++) {
-                this.coverts[2 * b] = bones[b].getChild("greater");
-                this.coverts[2 * b + 1] = bones[b].getChild("marginal");
+            this.coverts = new ModelPart[bones.length * COVERT_DEPTH.length];
+            for (int b = 0; b < bones.length; b++) {
+                for (int row = 0; row < COVERT_DEPTH.length; row++) {
+                    this.coverts[b * COVERT_DEPTH.length + row] = bones[b].getChild("covert_" + row);
+                }
             }
             this.tertials = feathers(this.humerus, TERTIAL_AT.length);
             this.secondaries = feathers(this.forearm, SECONDARY_AT.length);
-            this.primaries = feathers(this.hand, PRIMARY_LENGTH.length);
+            this.primaries = feathers(this.hand, PRIMARY_AT.length);
+        }
+
+        /** The inner feather droops by {@code most}, the outer about a third as much. */
+        private static float droop(float most, int i, int count) {
+            return most * (1.0F - 0.65F * i / (count - 1));
         }
 
         private static ModelPart[] feathers(ModelPart bone, int count) {
@@ -205,15 +219,16 @@ public class PegasusModel extends HorseModel<Pegasus> {
             float tertialLength = Mth.lerp(spread, FOLDED_TERTIAL_LENGTH, 1.0F);
             float flightLength = Mth.lerp(spread, FOLDED_FLIGHT_LENGTH, 1.0F);
             for (int i = 0; i < this.tertials.length; i++) {
-                this.tertials[i].yRot = s * Mth.lerp(spread, Mth.HALF_PI + TERTIAL_DROOP[i], 0.0F);
+                this.tertials[i].yRot = s * Mth.lerp(spread, Mth.HALF_PI + droop(TERTIAL_DROOP, i, this.tertials.length), 0.0F);
                 this.tertials[i].zScale = tertialLength;
             }
             for (int i = 0; i < this.secondaries.length; i++) {
-                this.secondaries[i].yRot = s * Mth.lerp(spread, -(Mth.HALF_PI + SECONDARY_DROOP[i]), 0.0F);
+                this.secondaries[i].yRot = s * Mth.lerp(spread, -(Mth.HALF_PI + droop(SECONDARY_DROOP, i, this.secondaries.length)), 0.0F);
                 this.secondaries[i].zScale = flightLength;
             }
             for (int i = 0; i < this.primaries.length; i++) {
-                this.primaries[i].yRot = s * Mth.lerp(spread, Mth.HALF_PI + PRIMARY_DROOP[i], PRIMARY_SPLAY * (i + 0.5F));
+                this.primaries[i].yRot = s * Mth.lerp(spread, Mth.HALF_PI + droop(PRIMARY_DROOP, i, this.primaries.length),
+                        PRIMARY_SPLAY * 6.0F / this.primaries.length * (i + 0.5F));
                 this.primaries[i].zScale = flightLength;
             }
         }
