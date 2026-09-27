@@ -287,6 +287,7 @@ public class WildspellMobs {
         container.registerConfig(ModConfig.Type.COMMON, SpawnBalance.SPEC);
         NeoForge.EVENT_BUS.addListener(SpawnBalance::onPositionCheck);
         NeoForge.EVENT_BUS.addListener(ZombieFreezing::onEntityTick);
+        NeoForge.EVENT_BUS.addListener(IceMelting::onPlayerTick);
         NeoForge.EVENT_BUS.addListener(LichSouls::onServerTick);
         NeoForge.EVENT_BUS.addListener(SoulseekerItem::onCrafted);
     }
