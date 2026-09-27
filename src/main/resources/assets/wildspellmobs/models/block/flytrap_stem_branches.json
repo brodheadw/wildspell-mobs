@@ -1,0 +1,198 @@
+{
+ "parent": "minecraft:block/block",
+ "render_type": "minecraft:cutout",
+ "ambientocclusion": false,
+ "textures": {
+  "particle": "wildspellmobs:block/flytrap_stem",
+  "stem": "wildspellmobs:block/flytrap_stem",
+  "leaves": "wildspellmobs:block/flytrap_leaves"
+ },
+ "elements": [
+  {
+   "from": [
+    6,
+    0,
+    6
+   ],
+   "to": [
+    10,
+    16,
+    10
+   ],
+   "faces": {
+    "north": {
+     "uv": [
+      0,
+      0,
+      4,
+      16
+     ],
+     "texture": "#stem"
+    },
+    "south": {
+     "uv": [
+      2,
+      0,
+      6,
+      16
+     ],
+     "texture": "#stem"
+    },
+    "west": {
+     "uv": [
+      4,
+      0,
+      8,
+      16
+     ],
+     "texture": "#stem"
+    },
+    "east": {
+     "uv": [
+      6,
+      0,
+      10,
+      16
+     ],
+     "texture": "#stem"
+    }
+   }
+  },
+  {
+   "from": [
+    -7,
+    7,
+    7
+   ],
+   "to": [
+    6,
+    9,
+    9
+   ],
+   "faces": {
+    "north": {
+     "uv": [
+      0,
+      12,
+      13,
+      14
+     ],
+     "texture": "#stem"
+    },
+    "south": {
+     "uv": [
+      0,
+      12,
+      13,
+      14
+     ],
+     "texture": "#stem"
+    },
+    "up": {
+     "uv": [
+      0,
+      12,
+      13,
+      14
+     ],
+     "texture": "#stem"
+    },
+    "down": {
+     "uv": [
+      0,
+      12,
+      13,
+      14
+     ],
+     "texture": "#stem"
+    },
+    "west": {
+     "uv": [
+      10,
+      0,
+      12,
+      2
+     ],
+     "texture": "#stem"
+    },
+    "east": {
+     "uv": [
+      10,
+      0,
+      12,
+      2
+     ],
+     "texture": "#stem"
+    }
+   }
+  },
+  {
+   "from": [
+    10,
+    7,
+    7
+   ],
+   "to": [
+    23,
+    9,
+    9
+   ],
+   "faces": {
+    "north": {
+     "uv": [
+      0,
+      12,
+      13,
+      14
+     ],
+     "texture": "#stem"
+    },
+    "south": {
+     "uv": [
+      0,
+      12,
+      13,
+      14
+     ],
+     "texture": "#stem"
+    },
+    "up": {
+     "uv": [
+      0,
+      12,
+      13,
+      14
+     ],
+     "texture": "#stem"
+    },
+    "down": {
+     "uv": [
+      0,
+      12,
+      13,
+      14
+     ],
+     "texture": "#stem"
+    },
+    "west": {
+     "uv": [
+      10,
+      0,
+      12,
+      2
+     ],
+     "texture": "#stem"
+    },
+    "east": {
+     "uv": [
+      10,
+      0,
+      12,
+      2
+     ],
+     "texture": "#stem"
+    }
+   }
+  }
+ ]
+}

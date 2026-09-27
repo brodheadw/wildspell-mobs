@@ -1,0 +1,112 @@
+{
+ "parent": "minecraft:block/block",
+ "render_type": "minecraft:cutout",
+ "ambientocclusion": false,
+ "textures": {
+  "particle": "wildspellmobs:block/flytrap_stem",
+  "stem": "wildspellmobs:block/flytrap_stem",
+  "leaves": "wildspellmobs:block/flytrap_leaves"
+ },
+ "elements": [
+  {
+   "from": [
+    0,
+    0.25,
+    0
+   ],
+   "to": [
+    16,
+    0.25,
+    16
+   ],
+   "faces": {
+    "up": {
+     "uv": [
+      0,
+      0,
+      16,
+      16
+     ],
+     "texture": "#leaves"
+    },
+    "down": {
+     "uv": [
+      0,
+      16,
+      16,
+      0
+     ],
+     "texture": "#leaves"
+    }
+   }
+  },
+  {
+   "from": [
+    7,
+    0,
+    7
+   ],
+   "to": [
+    9,
+    16,
+    9
+   ],
+   "faces": {
+    "north": {
+     "uv": [
+      0,
+      0,
+      2,
+      16
+     ],
+     "texture": "#stem"
+    },
+    "south": {
+     "uv": [
+      2,
+      0,
+      4,
+      16
+     ],
+     "texture": "#stem"
+    },
+    "west": {
+     "uv": [
+      4,
+      0,
+      6,
+      16
+     ],
+     "texture": "#stem"
+    },
+    "east": {
+     "uv": [
+      6,
+      0,
+      8,
+      16
+     ],
+     "texture": "#stem"
+    },
+    "up": {
+     "uv": [
+      10,
+      0,
+      12,
+      2
+     ],
+     "texture": "#stem"
+    },
+    "down": {
+     "uv": [
+      10,
+      0,
+      12,
+      2
+     ],
+     "texture": "#stem"
+    }
+   }
+  }
+ ]
+}

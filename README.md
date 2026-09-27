@@ -78,6 +78,29 @@ The player-facing description is [publish/DESCRIPTION.md](publish/DESCRIPTION.md
   sparkles in its coat's colours while it flies. The wings are bird-built (humerus, forearm, hand;
   tertials, secondaries, primaries, two covert rows), spread in the air and folded along the flank
   on the ground.
+- **Flytrap**: a snapping plant, half block and half entity. The block (`wildspellmobs:flytrap`,
+  `age` 0-2) is the leaves and stalk; its jaws are `wildspellmobs:flytrap_head` entities (GeckoLib
+  model) anchored to it, which never leave their place on the plant and turn to follow whatever moves
+  near them. It roots only in `#wildspellmobs:flytrap_roots_in` (`#minecraft:dirt`: grass, moss,
+  mud...) and grows like a sapling (random ticks in light 9+, about ten minutes a stage, or bone meal):
+  a sprout with one small head that snaps only at tiny creatures (`#wildspellmobs:flytrap_sprout_prey`:
+  bees, bats, silverfish, endermites, Luminous Moths; or anything 0.7 blocks or smaller; 1.5 reach); a
+  young plant a block tall with one head at about player height (3 reach); and a grown plant, its stalk
+  three blocks tall (the block and two `flytrap_stem`s, which need the headroom), with a big top head
+  (4 reach, 30 health) and two side heads on branches. A head lunges (0.4 s wind-up) at anything
+  moving within its reach (players, the sorcerer who grew it, other mobs; never another
+  `#wildspellmobs:hostile_growth`), bites (2/4/6) and holds for 1.2 s: Slowness V and a drag along the
+  ground toward the jaws. It senses movement, not sight (0.15 blocks over a 4-tick check), so anything
+  standing still and any sneaking player slips past; striking it counts as moving. Fire does double
+  damage to a head and sets it alight for 8 s, and the plant burns like leaves. Shears used on a head
+  that holds someone cut them free. Killing any head breaks the whole plant, as does taking any block
+  of it: it drops a **Flytrap Sprout** (which plants a new one) and a **Trap Jaw** per grown stage. The
+  heads come a tick after the plant is placed or grows, and go (without dying) when it's gone or
+  changes stage, however that happens, set to air included. Natural patches of a few plants at mixed
+  stages generate on jungle floors and lush cave floors (`wildspellmobs:flytrap_patch`, placed features
+  `flytrap_patch_jungle` and `flytrap_patch_lush_caves`). Wildspell Magic places the block by id at
+  any `age` at the edge of runaway growth (placing the grown stage builds its stem) and withers it to
+  air on a reversal; `#wildspellmobs:hostile_growth` holds both blocks and the head.
 - **Frost**: every frost hit builds vanilla freezing (the shards a little at a time); like powder snow,
   any piece of leather armour keeps it off.
 - **Ice Cube drops**: YUNG's Ice Cubes have no loot of their own; this gives them 0-2 Ice.
@@ -93,11 +116,12 @@ The player-facing description is [publish/DESCRIPTION.md](publish/DESCRIPTION.md
 - `src/main/java/com/wildspell/mobs/`: registration (`WildspellMobs`), cave spawn balancing
   (`SpawnBalance`), zombie freezing (`ZombieFreezing`), gametests (`WildspellMobsTests`, `ElectricEelTests`).
   - `entity/`: `RimeSkull`, `FrozenZombie`, `IceLich`, `LichWisp` (its soul in flight), `FrostShard`
-    (every frost projectile), `Frost` (the shared freezing rules), `ElectricEel`.
+    (every frost projectile), `Frost` (the shared freezing rules), `ElectricEel`, `FlytrapHead`.
   - `crypt/`: the crypt structure and its piece, the phylactery block and its block entity (ambushes,
     re-forming, the braziers, the wards).
   - `item/`: `FrostboundStaffItem`.
   - `moth/`: the moth's glow block, Luminous Moss and the bottled moth; the moth itself is in `entity/`.
+  - `flytrap/`: the flytrap's block, its stem and its world-generation patch; its heads are in `entity/`.
   - `client/`: models, renderers, the frost mote particle.
 - `src/main/resources/`: textures, sounds, lang, loot tables, biome modifiers and biome tags.
 - `tools/`: generators for the art and sound. Edit these, not the PNG/OGG files directly.
@@ -113,6 +137,9 @@ The player-facing description is [publish/DESCRIPTION.md](publish/DESCRIPTION.md
   - `paint_eel.py` (needs Pillow): the Electric Eel and its glow layer (the electric organ).
   - `paint_pegasus.py` (needs Pillow and the gradle-unpacked 1.21.1 client jar): the Pegasus's white,
     black and pink coats, the vanilla white horse recoloured, with its feathers beside it on the sheet.
+  - `make_flytrap_model.py`, `paint_flytrap.py` (needs Pillow): the Flytrap head's GeckoLib model and
+    animations and the plant's block models and blockstates; the head, leaf and stalk textures and the
+    Flytrap Sprout and Trap Jaw items.
   - `make_arena.py`: the empty gametest arena structures (the small arena, and the tall sky arena flight
     tests need).
 - `publish/`: Modrinth/CurseForge page text, icon and gallery image.
@@ -136,7 +163,12 @@ following a Spore Blossom, bottling and releasing in the dark), and the Electric
 everything in the water but nothing ashore, only swimmers in its territory are hunted, fish only when
 hungry, caught and swallowed, leaping at someone on the bank, taking a crevice as its den), and the
 Pegasus (gliding down unhurt, a rider climbing and gliding, the wild soar coming back to where it rose,
-tamed ones staying put, spawn ground, breeding, coats saved and inherited). They need
+tamed ones staying put, spawn ground, breeding, coats saved and inherited), and the Flytrap (growing
+through its stages with the right heads and reach, placed at any stage and withered to air, a sprout
+biting a moth but not a player, a head biting and holding a moving mob, sneaking or still players and
+still mobs slipping past, shears cutting a victim free, double fire damage, heads keeping their place,
+killing a head or breaking any part breaking the whole plant with its drops, rooting only in grass, moss
+or mud, and its patches generating in jungles and lush caves with their heads). They need
 YUNG's Cave Biomes and its
 dependencies at dev runtime: put `YungsCaveBiomes`, `YungsApi`, `geckolib` and `TerraBlender` jars
 for NeoForge 1.21.1 in `libs/` (gitignored, never shipped; GeckoLib is compiled against from its Maven, so a
