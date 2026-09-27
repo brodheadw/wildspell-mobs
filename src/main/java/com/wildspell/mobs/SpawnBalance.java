@@ -51,8 +51,15 @@ public final class SpawnBalance {
 
     public static final ModConfigSpec.DoubleValue LICH_AMBUSH_CHANCE = BUILDER
             .comment("Chance (0-1), each second, that an Ice Lich rises behind a player in the Frosted Caves within 64",
-                    "blocks of its crypt. The default averages about 17 minutes spent near a crypt. 0 = never.")
-            .defineInRange("lichAmbushChance", 0.001, 0.0, 1.0);
+                    "blocks of its crypt. The default averages about 4 minutes spent near a crypt; while it waits, the",
+                    "caves give signs (a whisper behind you, a drift of ice motes). 0 = never.")
+            .defineInRange("lichAmbushChance", 0.004, 0.0, 1.0);
+
+    public static final ModConfigSpec.IntValue LICH_AMBUSH_RANGE = BUILDER
+            .comment("The Ice Lich's hunting ground: how far (blocks) from its phylactery it can sense a player in the Frosted",
+                    "Caves and rise behind them, and how far it will chase before it goes home. The crypt need not be loaded,",
+                    "and only the nearest crypt to a player stalks them.")
+            .defineInRange("lichAmbushRange", 200, 16, 4096);
 
     static final ModConfigSpec SPEC = BUILDER.build();
 

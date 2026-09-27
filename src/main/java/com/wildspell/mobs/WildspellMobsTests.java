@@ -557,6 +557,12 @@ public class WildspellMobsTests {
         SpawnBalance.LICH_AMBUSH_CHANCE.set(1.0);
         // There's no teardown hook, so put the config back before the timeout whether or not it passes.
         helper.runAtTickTime(150, () -> SpawnBalance.LICH_AMBUSH_CHANCE.set(chance));
+        // The roll runs from the soul's tick over level.players(), which a mock player is not in: hand it the player.
+        helper.onEachTick(() -> {
+            if (helper.getTick() % 20 == 5) {
+                PhylacteryBlockEntity.ambushFromAfar(helper.getLevel(), java.util.List.of(phylactery.soul(helper.getLevel())), java.util.List.of(player));
+            }
+        });
         helper.succeedWhen(() -> {
             java.util.List<IceLich> liches = helper.getLevel().getEntitiesOfClass(IceLich.class, player.getBoundingBox().inflate(24.0));
             helper.assertTrue(liches.size() == 1, "no ambush yet");
@@ -565,6 +571,127 @@ public class WildspellMobsTests {
             helper.assertTrue(lich.distanceTo(player) >= 9.0, "rose right on top of the player: " + lich.distanceTo(player));
             SpawnBalance.LICH_AMBUSH_CHANCE.set(chance);
             player.discard();
+        });
+    }
+
+    /** The ambush range is a config value and a hard edge: outside it, nothing rises however sure the roll. */
+    @GameTest(template = ARENA, timeoutTicks = 160, batch = "lichAmbushRange")
+    public static void lichRespectsItsAmbushRange(GameTestHelper helper) {
+        paintFrostedCaves(helper);
+        placePhylactery(helper, new BlockPos(4, 1, 0), net.minecraft.core.Direction.NORTH);
+        net.minecraft.world.entity.player.Player player = addMockPlayer(helper, new net.minecraft.world.phys.Vec3(4.5, 1.0, 6.5));
+        double chance = SpawnBalance.LICH_AMBUSH_CHANCE.get();
+        int range = SpawnBalance.LICH_AMBUSH_RANGE.get();
+        SpawnBalance.LICH_AMBUSH_CHANCE.set(1.0);
+        SpawnBalance.LICH_AMBUSH_RANGE.set(4);
+        helper.assertTrue(PhylacteryBlockEntity.leash() == 4.0, "the chase ends at the same range");
+        Runnable restore = () -> {
+            SpawnBalance.LICH_AMBUSH_CHANCE.set(chance);
+            SpawnBalance.LICH_AMBUSH_RANGE.set(range);
+        };
+        helper.runAtTickTime(150, restore);
+        PhylacteryBlockEntity phylactery = (PhylacteryBlockEntity) helper.getBlockEntity(new BlockPos(4, 1, 0));
+        helper.onEachTick(() -> {
+            if (helper.getTick() % 20 == 5) {
+                PhylacteryBlockEntity.ambushFromAfar(helper.getLevel(), java.util.List.of(phylactery.soul(helper.getLevel())), java.util.List.of(player));
+            }
+        });
+        helper.runAfterDelay(100, () -> {
+            try {
+                helper.assertTrue(helper.getLevel().getEntitiesOfClass(IceLich.class, player.getBoundingBox().inflate(24.0)).isEmpty(),
+                        "six blocks out with a range of four, and something rose");
+            } finally {
+                restore.run();
+                player.discard();
+            }
+            helper.succeed();
+        });
+    }
+
+    /** Two crypts in reach: the nearer one's lich rises, the other stays dormant. One lich to a player. */
+    @GameTest(template = ARENA, timeoutTicks = 200, batch = "lichNearestCrypt")
+    public static void nearestCryptClaimsThePlayer(GameTestHelper helper) {
+        paintFrostedCaves(helper);
+        PhylacteryBlockEntity far = placePhylactery(helper, new BlockPos(1, 1, 0), net.minecraft.core.Direction.NORTH);
+        PhylacteryBlockEntity near = placePhylactery(helper, new BlockPos(7, 1, 0), net.minecraft.core.Direction.NORTH);
+        net.minecraft.world.entity.player.Player player = addMockPlayer(helper, new net.minecraft.world.phys.Vec3(7.5, 1.0, 7.5));
+        double chance = SpawnBalance.LICH_AMBUSH_CHANCE.get();
+        SpawnBalance.LICH_AMBUSH_CHANCE.set(1.0);
+        helper.runAtTickTime(190, () -> SpawnBalance.LICH_AMBUSH_CHANCE.set(chance));
+        helper.onEachTick(() -> {
+            if (helper.getTick() % 20 == 5) {
+                PhylacteryBlockEntity.ambushFromAfar(helper.getLevel(), java.util.List.of(far.soul(helper.getLevel()), near.soul(helper.getLevel())), java.util.List.of(player));
+            }
+        });
+        helper.succeedWhen(() -> {
+            helper.assertTrue(near.lichId() != null, "the nearer crypt's lich has not risen");
+            helper.assertTrue(far.lichId() == null, "the farther crypt's lich rose too");
+            SpawnBalance.LICH_AMBUSH_CHANCE.set(chance);
+            player.discard();
+        });
+    }
+
+    /**
+     * A zombie that steps out of the cold (the cave biome's edge or roof, which a chase crosses all the
+     * time) loses its chill only as fast as it gained it; only fire clears it outright. Babies are
+     * zombies too: nothing here checks age.
+     */
+    @GameTest(template = ARENA, timeoutTicks = 120)
+    public static void chillFadesOutsideTheColdButFireClearsIt(GameTestHelper helper) {
+        shade(helper);
+        Zombie zombie = helper.spawn(EntityType.ZOMBIE, 2.5F, 1.0F, 4.5F);
+        zombie.setNoAi(true);
+        zombie.setBaby(true);
+        zombie.getPersistentData().putInt("wildspellmobs:chill", 100);
+        Zombie burning = helper.spawn(EntityType.ZOMBIE, 6.5F, 1.0F, 4.5F);
+        burning.setNoAi(true);
+        burning.getPersistentData().putInt("wildspellmobs:chill", 100);
+        burning.setRemainingFireTicks(400);
+        helper.runAfterDelay(45, () -> {
+            int chill = zombie.getPersistentData().getInt("wildspellmobs:chill");
+            helper.assertTrue(chill > 40 && chill < 100, "out of the cold the chill fades, not vanishes: " + chill);
+            helper.assertTrue(zombie.isBaby(), "still a baby");
+            helper.assertFalse(burning.getPersistentData().contains("wildspellmobs:chill"), "fire clears it outright");
+            helper.killAllEntities();
+            helper.succeed();
+        });
+    }
+
+    /**
+     * A lich left standing in its crypt, then the crypt unloaded, used to keep its soul "up" forever, so
+     * it never stalked anyone again. Now the soul raises a fresh body behind the player, and the old one,
+     * refused by its soul when next it checks in, vanishes as a stale copy.
+     */
+    @GameTest(template = ARENA, timeoutTicks = 200, batch = "lichBodyAway")
+    public static void lichIdleInAnUnloadedCryptStillStalks(GameTestHelper helper) {
+        paintFrostedCaves(helper);
+        PhylacteryBlockEntity phylactery = placePhylactery(helper, new BlockPos(4, 1, 0), net.minecraft.core.Direction.NORTH);
+        net.minecraft.world.entity.player.Player player = addMockPlayer(helper, new net.minecraft.world.phys.Vec3(4.5, 1.0, 6.5));
+        com.wildspell.mobs.crypt.LichSouls.Soul soul = phylactery.soul(helper.getLevel());
+        IceLich old = soul.raise(helper.getLevel(), helper.absoluteVec(new net.minecraft.world.phys.Vec3(4.5, 1.0, 1.5)), null);
+        helper.assertTrue(old != null && old.getUUID().equals(phylactery.lichId()), "the first body is on record");
+        old.setNoAi(true);
+        double chance = SpawnBalance.LICH_AMBUSH_CHANCE.get();
+        SpawnBalance.LICH_AMBUSH_CHANCE.set(1.0);
+        com.wildspell.mobs.crypt.LichSouls.ASSUME_BODY_AWAY_FOR_TEST = true;
+        Runnable restore = () -> {
+            SpawnBalance.LICH_AMBUSH_CHANCE.set(chance);
+            com.wildspell.mobs.crypt.LichSouls.ASSUME_BODY_AWAY_FOR_TEST = false;
+        };
+        helper.runAtTickTime(190, restore);
+        helper.onEachTick(() -> {
+            if (helper.getTick() % 20 == 5) {
+                PhylacteryBlockEntity.ambushFromAfar(helper.getLevel(), java.util.List.of(soul), java.util.List.of(player));
+            }
+        });
+        helper.succeedWhen(() -> {
+            java.util.UUID now = phylactery.lichId();
+            helper.assertTrue(now != null && !now.equals(old.getUUID()), "no fresh body has risen");
+            helper.assertTrue(helper.getLevel().getEntity(now) instanceof IceLich fresh && fresh.getTarget() == player, "the fresh body isn't hunting the player");
+            helper.assertFalse(old.isAlive(), "the old body should have vanished as a stale copy");
+            restore.run();
+            player.discard();
+            helper.killAllEntities();
         });
     }
 
