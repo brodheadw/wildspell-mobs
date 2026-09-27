@@ -9,6 +9,10 @@ import com.wildspell.mobs.crypt.PhylacteryBlock;
 import com.wildspell.mobs.crypt.PhylacteryBlockEntity;
 import com.wildspell.mobs.crypt.PhylacteryItem;
 import com.wildspell.mobs.entity.ElectricEel;
+import com.wildspell.mobs.entity.FlytrapHead;
+import com.wildspell.mobs.flytrap.FlytrapBlock;
+import com.wildspell.mobs.flytrap.FlytrapPatchFeature;
+import com.wildspell.mobs.flytrap.FlytrapStemBlock;
 import com.wildspell.mobs.entity.FrostOrb;
 import com.wildspell.mobs.entity.FrostShard;
 import com.wildspell.mobs.entity.FrozenZombie;
@@ -36,6 +40,7 @@ import net.minecraft.world.entity.monster.Monster;
 import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.CreativeModeTabs;
 import net.minecraft.world.item.Item;
+import net.minecraft.world.item.ItemNameBlockItem;
 import net.minecraft.world.item.Rarity;
 import net.minecraft.world.level.block.AmethystClusterBlock;
 import net.minecraft.world.level.block.Blocks;
@@ -185,6 +190,43 @@ public class WildspellMobs {
                     .clientTrackingRange(10)
                     .build("pegasus"));
 
+    /** A flytrap's jaws, anchored to its plant; sized per head (see FlytrapHead). */
+    public static final DeferredHolder<EntityType<?>, EntityType<FlytrapHead>> FLYTRAP_HEAD = ENTITY_TYPES.register("flytrap_head",
+            () -> EntityType.Builder.of(FlytrapHead::new, MobCategory.MONSTER)
+                    .sized(0.6F, 0.85F)
+                    .eyeHeight(0.62F)
+                    .clientTrackingRange(8)
+                    .build("flytrap_head"));
+
+    /** A snapping plant of lush caves and jungles, in three stages; Wildspell Magic also grows them from runaway growth. */
+    public static final DeferredHolder<net.minecraft.world.level.block.Block, FlytrapBlock> FLYTRAP = BLOCKS.register("flytrap",
+            () -> new FlytrapBlock(BlockBehaviour.Properties.of()
+                    .mapColor(MapColor.PLANT)
+                    .strength(0.5F)
+                    .sound(SoundType.BIG_DRIPLEAF)
+                    .noOcclusion()
+                    .randomTicks()
+                    .ignitedByLava()
+                    .pushReaction(PushReaction.DESTROY)));
+
+    /** The grown flytrap's stalk. */
+    public static final DeferredHolder<net.minecraft.world.level.block.Block, FlytrapStemBlock> FLYTRAP_STEM = BLOCKS.register("flytrap_stem",
+            () -> new FlytrapStemBlock(BlockBehaviour.Properties.of()
+                    .mapColor(MapColor.PLANT)
+                    .strength(0.5F)
+                    .sound(SoundType.BIG_DRIPLEAF)
+                    .noOcclusion()
+                    .noLootTable()
+                    .ignitedByLava()
+                    .pushReaction(PushReaction.DESTROY)));
+
+    public static final DeferredRegister<net.minecraft.world.level.levelgen.feature.Feature<?>> FEATURES =
+            DeferredRegister.create(Registries.FEATURE, MODID);
+
+    /** A few flytraps at mixed stages, on grass, moss or mud (see FlytrapPatchFeature). */
+    public static final DeferredHolder<net.minecraft.world.level.levelgen.feature.Feature<?>, FlytrapPatchFeature> FLYTRAP_PATCH =
+            FEATURES.register("flytrap_patch", FlytrapPatchFeature::new);
+
     /** The lich's phylactery, on the altar of its crypt (see PhylacteryBlockEntity). */
     public static final DeferredHolder<net.minecraft.world.level.block.Block, PhylacteryBlock> FROZEN_PHYLACTERY_BLOCK = BLOCKS.register("frozen_phylactery",
             () -> new PhylacteryBlock(BlockBehaviour.Properties.of()
@@ -270,6 +312,13 @@ public class WildspellMobs {
     public static final DeferredItem<DeferredSpawnEggItem> PEGASUS_SPAWN_EGG = ITEMS.register("pegasus_spawn_egg",
             () -> new DeferredSpawnEggItem(PEGASUS, 0xF4F1E8, 0xE8C766, new Item.Properties()));
 
+    /** A lobe of a flytrap's jaws; a grown plant drops one per stage. */
+    public static final DeferredItem<Item> TRAP_JAW = ITEMS.registerSimpleItem("trap_jaw");
+
+    /** Plants a flytrap's first stage; every broken flytrap drops one. */
+    public static final DeferredItem<ItemNameBlockItem> FLYTRAP_SPROUT = ITEMS.register("flytrap_sprout",
+            () -> new ItemNameBlockItem(FLYTRAP.get(), new Item.Properties()));
+
     public WildspellMobs(IEventBus modBus, ModContainer container) {
         ENTITY_TYPES.register(modBus);
         ITEMS.register(modBus);
@@ -281,6 +330,7 @@ public class WildspellMobs {
         SOUND_EVENTS.register(modBus);
         PARTICLE_TYPES.register(modBus);
         BIOME_MODIFIER_SERIALIZERS.register(modBus);
+        FEATURES.register(modBus);
         modBus.addListener(WildspellMobs::registerAttributes);
         modBus.addListener(WildspellMobs::registerSpawnPlacements);
         modBus.addListener(WildspellMobs::addToCreativeTabs);
@@ -307,6 +357,7 @@ public class WildspellMobs {
         event.put(LUMINOUS_MOTH.get(), LuminousMoth.createAttributes().build());
         event.put(ELECTRIC_EEL.get(), ElectricEel.createAttributes().build());
         event.put(PEGASUS.get(), Pegasus.createAttributes().build());
+        event.put(FLYTRAP_HEAD.get(), FlytrapHead.createAttributes().build());
     }
 
     private static void registerSpawnPlacements(RegisterSpawnPlacementsEvent event) {
@@ -335,10 +386,13 @@ public class WildspellMobs {
             event.accept(RIME_SHARD);
             event.accept(ENCHANTED_ICE_CRYSTAL);
             event.accept(CROWN_FRAGMENT);
+            event.accept(TRAP_JAW);
         } else if (event.getTabKey() == CreativeModeTabs.FUNCTIONAL_BLOCKS) {
             event.accept(FROZEN_PHYLACTERY);
             event.accept(FROZEN_SOUL_ITEM);
             event.accept(RIME_WARD_ITEM);
+        } else if (event.getTabKey() == CreativeModeTabs.NATURAL_BLOCKS) {
+            event.accept(FLYTRAP_SPROUT);
         } else if (event.getTabKey() == CreativeModeTabs.TOOLS_AND_UTILITIES) {
             event.accept(SOULSEEKER);
             event.accept(LUMINOUS_MOTH_BOTTLE);

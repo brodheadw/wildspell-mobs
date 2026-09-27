@@ -1,0 +1,32 @@
+{
+  "type": "minecraft:block",
+  "pools": [
+    {
+      "rolls": 1,
+      "conditions": [{"condition": "minecraft:survives_explosion"}],
+      "entries": [{"type": "minecraft:item", "name": "wildspellmobs:flytrap_sprout"}]
+    },
+    {
+      "rolls": 1,
+      "conditions": [
+        {"condition": "minecraft:block_state_property", "block": "wildspellmobs:flytrap", "properties": {"age": "1"}},
+        {"condition": "minecraft:survives_explosion"}
+      ],
+      "entries": [{"type": "minecraft:item", "name": "wildspellmobs:trap_jaw"}]
+    },
+    {
+      "rolls": 1,
+      "conditions": [
+        {"condition": "minecraft:block_state_property", "block": "wildspellmobs:flytrap", "properties": {"age": "2"}},
+        {"condition": "minecraft:survives_explosion"}
+      ],
+      "entries": [
+        {
+          "type": "minecraft:item",
+          "name": "wildspellmobs:trap_jaw",
+          "functions": [{"function": "minecraft:set_count", "count": 2}]
+        }
+      ]
+    }
+  ]
+}

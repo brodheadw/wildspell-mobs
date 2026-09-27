@@ -57,6 +57,7 @@ public class WildspellMobsClient {
         event.registerEntityRenderer(WildspellMobs.LUMINOUS_MOTH.get(), LuminousMothRenderer::new);
         event.registerEntityRenderer(WildspellMobs.ELECTRIC_EEL.get(), ElectricEelRenderer::new);
         event.registerEntityRenderer(WildspellMobs.PEGASUS.get(), PegasusRenderer::new);
+        event.registerEntityRenderer(WildspellMobs.FLYTRAP_HEAD.get(), FlytrapHeadRenderer::new);
     }
 
     @SubscribeEvent

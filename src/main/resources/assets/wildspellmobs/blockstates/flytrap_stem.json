@@ -1,0 +1,10 @@
+{
+ "variants": {
+  "branches=false": {
+   "model": "wildspellmobs:block/flytrap_stem"
+  },
+  "branches=true": {
+   "model": "wildspellmobs:block/flytrap_stem_branches"
+  }
+ }
+}

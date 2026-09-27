@@ -94,7 +94,7 @@ Cold-cave monsters for YUNG's Frosted Caves. Rime Skulls float, gnash and spit i
 [[dependencies.${mod_id}]]
     modId="geckolib"
     type="required"
-    reason="The Ice Lich's model and animations"
+    reason="The Ice Lich's and the Flytrap's models and animations"
     versionRange="[4.9,)"
     ordering="NONE"
     side="BOTH"
