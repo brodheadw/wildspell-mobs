@@ -62,17 +62,15 @@ public class PhylacteryBlockEntity extends BlockEntity {
     public static final int CRYPT_ABOVE = 6;
     /** Players within this range of the phylactery wake its crypt; beyond it, the phylactery idles. */
     public static final double NEAR = 64.0;
-    /** How much further out than the ambush range a hunting lich follows before it gives up and goes home. */
-    public static final double LEASH_BEYOND_RANGE = 64.0;
 
     /** How far from its crypt a lich can sense and ambush a player (config). */
     public static double ambushRange() {
         return SpawnBalance.LICH_AMBUSH_RANGE.get();
     }
 
-    /** A hunting lich gives up and goes home once its prey is this far from the phylactery. */
+    /** A hunting lich gives up and goes home once its prey is out of that same range. */
     public static double leash() {
-        return ambushRange() + LEASH_BEYOND_RANGE;
+        return ambushRange();
     }
     /** Ticks for the lich to re-form after its soul gets home; much quicker while the crypt is awake. */
     public static final int REFORM_TICKS = 400;
