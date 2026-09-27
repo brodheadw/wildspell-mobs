@@ -695,6 +695,28 @@ public class WildspellMobsTests {
         });
     }
 
+    /** The cold is the lich's domain: prey that climbs out of the Frosted Caves and stays out is let go. */
+    @GameTest(template = ARENA, timeoutTicks = 400, batch = "lichOutOfCold")
+    public static void lichLetsPreyGoOutsideTheCold(GameTestHelper helper) {
+        paintFrostedCaves(helper);
+        PhylacteryBlockEntity phylactery = placePhylactery(helper, new BlockPos(4, 1, 0), net.minecraft.core.Direction.NORTH);
+        net.minecraft.world.entity.player.Player player = addMockPlayer(helper, new net.minecraft.world.phys.Vec3(4.5, 1.0, 6.5));
+        IceLich lich = phylactery.soul(helper.getLevel()).raise(helper.getLevel(), helper.absoluteVec(new net.minecraft.world.phys.Vec3(4.5, 1.0, 3.5)), player);
+        helper.assertTrue(lich != null && lich.getTarget() == player, "the lich hunts the player");
+        // Well outside the painted arena: plains, not cold. Twelve blocks is inside the leash.
+        helper.runAfterDelay(20, () -> {
+            net.minecraft.world.phys.Vec3 out = helper.absoluteVec(new net.minecraft.world.phys.Vec3(4.5, 1.0, 18.5));
+            player.moveTo(out.x, out.y, out.z, 0.0F, 0.0F);
+        });
+        helper.runAfterDelay(60, () -> helper.assertTrue(lich.isAlive(), "a moment outside is not enough to lose it"));
+        helper.runAfterDelay(20 + 20 * (IceLich.OUT_OF_COLD_LIMIT + 4), () -> {
+            helper.assertFalse(lich.isAlive(), "ten seconds out of the cold and the lich should have withdrawn");
+            player.discard();
+            helper.killAllEntities();
+            helper.succeed();
+        });
+    }
+
     // Built well off to the side of the test grid, so the crypts can't reach, or shade, another test's arena.
     @GameTest(template = ARENA, timeoutTicks = 100, batch = "cryptGen")
     public static void cryptBuildsTheSameWayRoundInEveryOrientation(GameTestHelper helper) {
