@@ -1,4 +1,5 @@
-"""Writes the empty 9x7x9 GameTest arena structure. Run from the repo root."""
+"""Writes the empty GameTest arena structures: the 9x7x9 arena, and the 31x24x31 sky arena that a flying
+Pegasus needs. Run from the repo root."""
 import gzip
 import struct
 
@@ -21,12 +22,19 @@ def compound_list(items):
 
 
 air = tag(8, "Name", name("minecraft:air")) + b"\x00"
-root = (tag(3, "DataVersion", struct.pack(">i", 3955))
-        + tag(9, "size", int_list([9, 7, 9]))
-        + tag(9, "palette", compound_list([air]))
-        + tag(9, "blocks", compound_list([]))
-        + tag(9, "entities", compound_list([]))
-        + b"\x00")
-with gzip.open("src/main/resources/data/wildspellmobs/structure/arena.nbt", "wb") as f:
-    f.write(b"\x0a" + name("") + root)
-print("arena written")
+
+
+def write(path, size):
+    root = (tag(3, "DataVersion", struct.pack(">i", 3955))
+            + tag(9, "size", int_list(size))
+            + tag(9, "palette", compound_list([air]))
+            + tag(9, "blocks", compound_list([]))
+            + tag(9, "entities", compound_list([]))
+            + b"\x00")
+    with gzip.open(path, "wb") as f:
+        f.write(b"\x0a" + name("") + root)
+
+
+write("src/main/resources/data/wildspellmobs/structure/arena.nbt", [9, 7, 9])
+write("src/main/resources/data/wildspellmobs/structure/sky_arena.nbt", [31, 24, 31])
+print("arenas written")

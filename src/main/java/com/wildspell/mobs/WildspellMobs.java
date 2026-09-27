@@ -15,6 +15,7 @@ import com.wildspell.mobs.entity.FrozenZombie;
 import com.wildspell.mobs.entity.IceLich;
 import com.wildspell.mobs.entity.LichWisp;
 import com.wildspell.mobs.entity.LuminousMoth;
+import com.wildspell.mobs.entity.Pegasus;
 import com.wildspell.mobs.entity.RimeSkull;
 import com.wildspell.mobs.item.FrostboundStaffItem;
 import com.wildspell.mobs.item.SoulseekerItem;
@@ -175,6 +176,15 @@ public class WildspellMobs {
                     .clientTrackingRange(8)
                     .build("electric_eel"));
 
+    public static final DeferredHolder<EntityType<?>, EntityType<Pegasus>> PEGASUS = ENTITY_TYPES.register("pegasus",
+            () -> EntityType.Builder.of(Pegasus::new, MobCategory.CREATURE)
+                    // A horse's, scaled with the model (1.25 against the horse's 1.1).
+                    .sized(1.587F, 1.818F)
+                    .eyeHeight(1.727F)
+                    .passengerAttachments(1.64F)
+                    .clientTrackingRange(10)
+                    .build("pegasus"));
+
     /** The lich's phylactery, on the altar of its crypt (see PhylacteryBlockEntity). */
     public static final DeferredHolder<net.minecraft.world.level.block.Block, PhylacteryBlock> FROZEN_PHYLACTERY_BLOCK = BLOCKS.register("frozen_phylactery",
             () -> new PhylacteryBlock(BlockBehaviour.Properties.of()
@@ -257,6 +267,9 @@ public class WildspellMobs {
     public static final DeferredItem<DeferredSpawnEggItem> ELECTRIC_EEL_SPAWN_EGG = ITEMS.register("electric_eel_spawn_egg",
             () -> new DeferredSpawnEggItem(ELECTRIC_EEL, 0x3A4034, 0xE8A23A, new Item.Properties()));
 
+    public static final DeferredItem<DeferredSpawnEggItem> PEGASUS_SPAWN_EGG = ITEMS.register("pegasus_spawn_egg",
+            () -> new DeferredSpawnEggItem(PEGASUS, 0xF4F1E8, 0xE8C766, new Item.Properties()));
+
     public WildspellMobs(IEventBus modBus, ModContainer container) {
         ENTITY_TYPES.register(modBus);
         ITEMS.register(modBus);
@@ -292,6 +305,7 @@ public class WildspellMobs {
         event.put(ICE_LICH.get(), IceLich.createAttributes().build());
         event.put(LUMINOUS_MOTH.get(), LuminousMoth.createAttributes().build());
         event.put(ELECTRIC_EEL.get(), ElectricEel.createAttributes().build());
+        event.put(PEGASUS.get(), Pegasus.createAttributes().build());
     }
 
     private static void registerSpawnPlacements(RegisterSpawnPlacementsEvent event) {
@@ -304,6 +318,8 @@ public class WildspellMobs {
                 LuminousMoth::checkMothSpawnRules, RegisterSpawnPlacementsEvent.Operation.REPLACE);
         event.register(ELECTRIC_EEL.get(), SpawnPlacementTypes.IN_WATER, Heightmap.Types.MOTION_BLOCKING_NO_LEAVES,
                 ElectricEel::checkEelSpawnRules, RegisterSpawnPlacementsEvent.Operation.REPLACE);
+        event.register(PEGASUS.get(), SpawnPlacementTypes.ON_GROUND, Heightmap.Types.MOTION_BLOCKING_NO_LEAVES,
+                Pegasus::checkPegasusSpawnRules, RegisterSpawnPlacementsEvent.Operation.REPLACE);
     }
 
     private static void addToCreativeTabs(BuildCreativeModeTabContentsEvent event) {
@@ -313,6 +329,7 @@ public class WildspellMobs {
             event.accept(ICE_LICH_SPAWN_EGG);
             event.accept(LUMINOUS_MOTH_SPAWN_EGG);
             event.accept(ELECTRIC_EEL_SPAWN_EGG);
+            event.accept(PEGASUS_SPAWN_EGG);
         } else if (event.getTabKey() == CreativeModeTabs.INGREDIENTS) {
             event.accept(RIME_SHARD);
             event.accept(ENCHANTED_ICE_CRYSTAL);

@@ -49,5 +49,7 @@
   "block.wildspellmobs.moth_glow": "Moth Glow",
   "entity.wildspellmobs.electric_eel": "Electric Eel",
   "item.wildspellmobs.electric_eel_spawn_egg": "Electric Eel Spawn Egg",
-  "death.attack.wildspellmobs.eel_shock": "%1$s was electrocuted by %2$s"
+  "death.attack.wildspellmobs.eel_shock": "%1$s was electrocuted by %2$s",
+  "entity.wildspellmobs.pegasus": "Pegasus",
+  "item.wildspellmobs.pegasus_spawn_egg": "Pegasus Spawn Egg"
 }
