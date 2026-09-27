@@ -338,14 +338,35 @@ public class PhylacteryBlockEntity extends BlockEntity {
         Vec3 center = Vec3.atCenterOf(this.worldPosition);
         for (Player player : near) {
             if (player.distanceToSqr(center) < AMBUSH_RANGE * AMBUSH_RANGE && !crypt.contains(player.position())
-                    && level.getBiome(player.blockPosition()).is(ZombieFreezing.FREEZES_ZOMBIES) && level.random.nextDouble() < chance) {
-                Vec3 spot = findAmbushSpot(level, player);
-                if (spot != null) {
-                    soul.raise(level, spot, player);
-                    return;
+                    && level.getBiome(player.blockPosition()).is(ZombieFreezing.FREEZES_ZOMBIES)) {
+                if (level.random.nextDouble() < chance) {
+                    Vec3 spot = findAmbushSpot(level, player);
+                    if (spot != null) {
+                        soul.raise(level, spot, player);
+                        return;
+                    }
+                } else if (level.random.nextDouble() < PRESENCE_CHANCE) {
+                    haunt(level, player);
                 }
             }
         }
+    }
+
+    /** Chance, each second a player is in ambush range, of a sign that something is watching. */
+    public static final double PRESENCE_CHANCE = 0.05;
+
+    /**
+     * The lich is near, and the caves say so: a soul's whisper from behind and a drift of ice motes
+     * where nothing stands. Not an attack; a promise of one.
+     */
+    static void haunt(ServerLevel level, Player player) {
+        float yaw = player.getYRot() + 180.0F + (level.random.nextFloat() - 0.5F) * 90.0F;
+        double distance = 4.0 + level.random.nextDouble() * 4.0;
+        double x = player.getX() - Mth.sin(yaw * Mth.DEG_TO_RAD) * distance;
+        double z = player.getZ() + Mth.cos(yaw * Mth.DEG_TO_RAD) * distance;
+        double y = player.getEyeY();
+        level.sendParticles(WildspellMobs.FROST_MOTE.get(), x, y, z, 10, 0.5, 0.6, 0.5, 0.01);
+        level.playSound(null, x, y, z, SoundEvents.SOUL_ESCAPE.value(), SoundSource.HOSTILE, 1.2F, 0.4F + level.random.nextFloat() * 0.2F);
     }
 
     /** An open spot 10-16 blocks behind the player, where they won't see the lich rise. */
