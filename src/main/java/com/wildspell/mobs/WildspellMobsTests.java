@@ -631,6 +631,32 @@ public class WildspellMobsTests {
         });
     }
 
+    /**
+     * A zombie that steps out of the cold (the cave biome's edge or roof, which a chase crosses all the
+     * time) loses its chill only as fast as it gained it; only fire clears it outright. Babies are
+     * zombies too: nothing here checks age.
+     */
+    @GameTest(template = ARENA, timeoutTicks = 120)
+    public static void chillFadesOutsideTheColdButFireClearsIt(GameTestHelper helper) {
+        shade(helper);
+        Zombie zombie = helper.spawn(EntityType.ZOMBIE, 2.5F, 1.0F, 4.5F);
+        zombie.setNoAi(true);
+        zombie.setBaby(true);
+        zombie.getPersistentData().putInt("wildspellmobs:chill", 100);
+        Zombie burning = helper.spawn(EntityType.ZOMBIE, 6.5F, 1.0F, 4.5F);
+        burning.setNoAi(true);
+        burning.getPersistentData().putInt("wildspellmobs:chill", 100);
+        burning.setRemainingFireTicks(400);
+        helper.runAfterDelay(45, () -> {
+            int chill = zombie.getPersistentData().getInt("wildspellmobs:chill");
+            helper.assertTrue(chill > 40 && chill < 100, "out of the cold the chill fades, not vanishes: " + chill);
+            helper.assertTrue(zombie.isBaby(), "still a baby");
+            helper.assertFalse(burning.getPersistentData().contains("wildspellmobs:chill"), "fire clears it outright");
+            helper.killAllEntities();
+            helper.succeed();
+        });
+    }
+
     // Built well off to the side of the test grid, so the crypts can't reach, or shade, another test's arena.
     @GameTest(template = ARENA, timeoutTicks = 100, batch = "cryptGen")
     public static void cryptBuildsTheSameWayRoundInEveryOrientation(GameTestHelper helper) {

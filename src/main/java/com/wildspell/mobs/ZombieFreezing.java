@@ -17,7 +17,8 @@ import net.neoforged.neoforge.event.tick.EntityTickEvent;
 /**
  * Zombies that linger in a freezing biome (the Frosted Caves) turn into Frozen Zombies, the way
  * skeletons in powder snow turn into strays: after a few seconds they start to shiver and frost
- * over, then crack into their frozen form. Leaving the biome thaws the progress away.
+ * over, then crack into their frozen form. Leaving the biome lets the progress fade as fast as it built;
+ * fire thaws it away at once.
  *
  * <p>Zombies are checked every {@link #CHECK_INTERVAL} ticks (staggered by entity id) rather than
  * every tick, so a crowd of zombies costs a tenth of the biome lookups and save-data writes.
@@ -43,10 +44,24 @@ public final class ZombieFreezing {
         }
         CompoundTag data = zombie.getPersistentData();
         int chill = data.getInt(CHILL);
-        // Around a cleansed crypt the cold has lost its hold on the dead; and nothing freezes while it burns.
-        if (!level.getBiome(zombie.blockPosition()).is(FREEZES_ZOMBIES) || zombie.isOnFire() || LichSouls.isCleansedZone(level, zombie.blockPosition())) {
+        // Nothing freezes while it burns: fire thaws the chill away at once.
+        if (zombie.isOnFire()) {
             if (chill > 0) {
                 data.remove(CHILL);
+            }
+            return;
+        }
+        // Out of the cold (the cave biome is three-dimensional, so a zombie chasing along its edge or roof
+        // dips out constantly), or around a cleansed crypt where the cold has lost its hold, the chill
+        // fades as fast as it built rather than vanishing, so a zombie that mostly lingers still freezes.
+        if (!level.getBiome(zombie.blockPosition()).is(FREEZES_ZOMBIES) || LichSouls.isCleansedZone(level, zombie.blockPosition())) {
+            if (chill > 0) {
+                chill -= CHECK_INTERVAL;
+                if (chill <= 0) {
+                    data.remove(CHILL);
+                } else {
+                    data.putInt(CHILL, chill);
+                }
             }
             return;
         }
