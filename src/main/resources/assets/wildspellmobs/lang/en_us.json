@@ -32,7 +32,7 @@
   "item.wildspellmobs.frozen_phylactery.fire": "Only fire can destroy it.",
   "item.wildspellmobs.soulseeker.none": "The shard lies still. The soul it was bound to is gone.",
   "item.wildspellmobs.soulseeker.elsewhere": "The shard strains toward another world.",
-  "item.wildspellmobs.soulseeker.unbound": "Bound to no soul.",
+  "item.wildspellmobs.soulseeker.unbound": "Bound to no soul. Its needle drifts.",
   "message.wildspellmobs.phylactery_taken": "The phylactery is torn from its altar. The lich will follow it anywhere.",
   "message.wildspellmobs.phylactery_burned": "The phylactery burns! The lich's last form rises from the flames.",
   "message.wildspellmobs.lich_fallen": "The lich is destroyed. Its hold on the caves is breaking.",

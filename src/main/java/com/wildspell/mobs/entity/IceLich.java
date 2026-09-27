@@ -680,7 +680,7 @@ public class IceLich extends Monster implements RangedAttackMob, GeoEntity {
             this.hunted = bearer.getUUID();
         }
         if (soul != null && soul.inAltar()) {
-            if (prey != null && prey.distanceToSqr(Vec3.atCenterOf(soul.anchor())) > PhylacteryBlockEntity.LEASH * PhylacteryBlockEntity.LEASH) {
+            if (prey != null && prey.distanceToSqr(Vec3.atCenterOf(soul.anchor())) > PhylacteryBlockEntity.leash() * PhylacteryBlockEntity.leash()) {
                 this.retreat();
                 return;
             }

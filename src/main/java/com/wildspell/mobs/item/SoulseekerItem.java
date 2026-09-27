@@ -77,7 +77,7 @@ public class SoulseekerItem extends Item {
         aim(server, stack);
         GlobalPos target = target(server, stack);
         if (target == null || target.dimension() != level.dimension()) {
-            String why = target == null ? "none" : "elsewhere";
+            String why = !stack.has(WildspellMobs.SOUL.get()) ? "unbound" : target == null ? "none" : "elsewhere";
             player.displayClientMessage(Component.translatable("item.wildspellmobs.soulseeker." + why), true);
             level.playSound(null, player.blockPosition(), SoundEvents.AMETHYST_BLOCK_RESONATE, SoundSource.PLAYERS, 1.0F, 0.6F);
             return InteractionResultHolder.consume(stack);

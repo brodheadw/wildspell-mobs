@@ -48,7 +48,7 @@ import net.minecraft.world.phys.Vec3;
  *       can be taken, as a {@link PhylacteryItem}; only fire destroys it.</li>
  * </ul>
  *
- * <p>All the work happens once a second, and only with a player within {@link #AMBUSH_RANGE}; the
+ * <p>All the work happens once a second, and only with a player within {@link #NEAR}; the
  * crypt's blocks are only touched while all its chunks are loaded, so the phylactery never loads
  * chunks itself.
  */
@@ -60,10 +60,18 @@ public class PhylacteryBlockEntity extends BlockEntity {
     /** The crypt floor is this far below the phylactery; its ceiling this far above. */
     public static final int CRYPT_BELOW = 3;
     public static final int CRYPT_ABOVE = 6;
-    /** A hunting lich gives up and goes home once its prey is this far from the phylactery. */
-    public static final double LEASH = 80.0;
-    /** Players within this range of the phylactery can be ambushed; beyond it, the phylactery idles. */
-    public static final double AMBUSH_RANGE = 64.0;
+    /** Players within this range of the phylactery wake its crypt; beyond it, the phylactery idles. */
+    public static final double NEAR = 64.0;
+
+    /** How far from its crypt a lich can sense and ambush a player (config). */
+    public static double ambushRange() {
+        return SpawnBalance.LICH_AMBUSH_RANGE.get();
+    }
+
+    /** A hunting lich gives up and goes home once its prey is out of that same range. */
+    public static double leash() {
+        return ambushRange();
+    }
     /** Ticks for the lich to re-form after its soul gets home; much quicker while the crypt is awake. */
     public static final int REFORM_TICKS = 400;
     public static final int REFORM_TICKS_AWAKE = 100;
@@ -192,16 +200,13 @@ public class PhylacteryBlockEntity extends BlockEntity {
     private void secondTick(ServerLevel level) {
         LichSouls.Soul soul = this.soul(level);
         IceLich lich = soul.findLich(level);
-        List<Player> near = level.getEntitiesOfClass(Player.class, new AABB(this.worldPosition).inflate(AMBUSH_RANGE), PhylacteryBlockEntity::isPrey);
+        List<Player> near = level.getEntitiesOfClass(Player.class, new AABB(this.worldPosition).inflate(NEAR), PhylacteryBlockEntity::isPrey);
         if (near.isEmpty()) {
             return;
         }
         AABB crypt = this.cryptBounds();
         if (this.cryptLoaded(level)) {
             this.tendCrypt(level, soul, lich, near, crypt);
-        }
-        if (!this.awake && soul.dormant()) {
-            this.tryAmbush(level, soul, near, crypt);
         }
     }
 
@@ -325,27 +330,90 @@ public class PhylacteryBlockEntity extends BlockEntity {
         return true;
     }
 
-    /** Very rarely, rise behind a player roaming the Frosted Caves nearby. */
-    private void tryAmbush(ServerLevel level, LichSouls.Soul soul, List<Player> near, AABB crypt) {
-        if (soul.ambushCooldown() > 0) {
-            soul.coolAmbush();
+    /**
+     * Once a second, from the world's soul data (so no crypt need be loaded): every player roaming the
+     * Frosted Caves is claimed by the nearest crypt within {@link #ambushRange()} whose lich is dormant, or
+     * idle in its unloaded crypt (the old body vanishes as a stale copy when next loaded), and that
+     * crypt's lich either rises behind them or, far more often, lets the caves give a sign of it. One
+     * lich to a player, however many crypts a patch of caves holds.
+     */
+    static void ambushFromAfar(ServerLevel level, List<LichSouls.Soul> souls) {
+        ambushFromAfar(level, souls, level.players());
+    }
+
+    /** As above, choosing among {@code candidates} (the tests' mock players are not in level.players()). */
+    public static void ambushFromAfar(ServerLevel level, List<LichSouls.Soul> souls, List<? extends Player> candidates) {
+        List<LichSouls.Soul> waiting = new java.util.ArrayList<>();
+        for (LichSouls.Soul soul : souls) {
+            if (soul.dimension() != level.dimension() || !soul.canStalk(level)) {
+                continue;
+            }
+            if (level.isLoaded(soul.anchor()) && level.getBlockEntity(soul.anchor()) instanceof PhylacteryBlockEntity crypt && crypt.isAwake()) {
+                continue;
+            }
+            waiting.add(soul);
+        }
+        if (waiting.isEmpty()) {
             return;
         }
-        if (!canRaise(level)) {
-            return;
+        double range = ambushRange();
+        java.util.Map<LichSouls.Soul, List<Player>> prey = new java.util.HashMap<>();
+        for (Player player : candidates) {
+            if (!isPrey(player) || !level.getBiome(player.blockPosition()).is(ZombieFreezing.FREEZES_ZOMBIES)) {
+                continue;
+            }
+            LichSouls.Soul nearest = null;
+            double best = range * range;
+            for (LichSouls.Soul soul : waiting) {
+                double d2 = player.distanceToSqr(Vec3.atCenterOf(soul.anchor()));
+                if (d2 < best && !cryptBounds(soul.crypt(), soul.cryptFacing()).contains(player.position())) {
+                    best = d2;
+                    nearest = soul;
+                }
+            }
+            if (nearest != null) {
+                prey.computeIfAbsent(nearest, k -> new java.util.ArrayList<>()).add(player);
+            }
         }
         double chance = SpawnBalance.LICH_AMBUSH_CHANCE.get();
-        Vec3 center = Vec3.atCenterOf(this.worldPosition);
-        for (Player player : near) {
-            if (player.distanceToSqr(center) < AMBUSH_RANGE * AMBUSH_RANGE && !crypt.contains(player.position())
-                    && level.getBiome(player.blockPosition()).is(ZombieFreezing.FREEZES_ZOMBIES) && level.random.nextDouble() < chance) {
-                Vec3 spot = findAmbushSpot(level, player);
-                if (spot != null) {
-                    soul.raise(level, spot, player);
-                    return;
+        for (java.util.Map.Entry<LichSouls.Soul, List<Player>> entry : prey.entrySet()) {
+            LichSouls.Soul soul = entry.getKey();
+            if (soul.ambushCooldown() > 0) {
+                soul.coolAmbush();
+                continue;
+            }
+            if (!canRaise(level)) {
+                continue;
+            }
+            for (Player player : entry.getValue()) {
+                if (level.random.nextDouble() < chance) {
+                    Vec3 spot = findAmbushSpot(level, player);
+                    if (spot != null) {
+                        soul.raise(level, spot, player);
+                        break;
+                    }
+                } else if (level.random.nextDouble() < PRESENCE_CHANCE) {
+                    haunt(level, player);
                 }
             }
         }
+    }
+
+    /** Chance, each second a player is in ambush range, of a sign that something is watching. */
+    public static final double PRESENCE_CHANCE = 0.05;
+
+    /**
+     * The lich is near, and the caves say so: a soul's whisper from behind and a drift of ice motes
+     * where nothing stands. Not an attack; a promise of one.
+     */
+    static void haunt(ServerLevel level, Player player) {
+        float yaw = player.getYRot() + 180.0F + (level.random.nextFloat() - 0.5F) * 90.0F;
+        double distance = 4.0 + level.random.nextDouble() * 4.0;
+        double x = player.getX() - Mth.sin(yaw * Mth.DEG_TO_RAD) * distance;
+        double z = player.getZ() + Mth.cos(yaw * Mth.DEG_TO_RAD) * distance;
+        double y = player.getEyeY();
+        level.sendParticles(WildspellMobs.FROST_MOTE.get(), x, y, z, 10, 0.5, 0.6, 0.5, 0.01);
+        level.playSound(null, x, y, z, SoundEvents.SOUL_ESCAPE.value(), SoundSource.HOSTILE, 1.2F, 0.4F + level.random.nextFloat() * 0.2F);
     }
 
     /** An open spot 10-16 blocks behind the player, where they won't see the lich rise. */
