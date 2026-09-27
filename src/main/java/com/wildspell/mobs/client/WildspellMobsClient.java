@@ -41,6 +41,7 @@ public class WildspellMobsClient {
         event.registerLayerDefinition(FrozenZombieModel.CRUST_LAYER, FrozenZombieModel::createCrustLayer);
         event.registerLayerDefinition(LuminousMothModel.LAYER, LuminousMothModel::createBodyLayer);
         event.registerLayerDefinition(ElectricEelModel.LAYER, ElectricEelModel::createBodyLayer);
+        event.registerLayerDefinition(PegasusModel.LAYER, PegasusModel::createBodyLayer);
     }
 
     @SubscribeEvent
@@ -55,6 +56,7 @@ public class WildspellMobsClient {
                 context -> new GlowSpriteRenderer<>(context, WildspellMobs.id("textures/entity/frost_orb.png"), 1.1F));
         event.registerEntityRenderer(WildspellMobs.LUMINOUS_MOTH.get(), LuminousMothRenderer::new);
         event.registerEntityRenderer(WildspellMobs.ELECTRIC_EEL.get(), ElectricEelRenderer::new);
+        event.registerEntityRenderer(WildspellMobs.PEGASUS.get(), PegasusRenderer::new);
     }
 
     @SubscribeEvent

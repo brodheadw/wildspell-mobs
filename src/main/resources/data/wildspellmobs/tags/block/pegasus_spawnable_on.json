@@ -1,0 +1,9 @@
+{
+  "values": [
+    "#minecraft:animals_spawnable_on",
+    {
+      "id": "#aether:aether_animals_spawnable_on",
+      "required": false
+    }
+  ]
+}
