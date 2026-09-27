@@ -51,5 +51,10 @@
   "item.wildspellmobs.electric_eel_spawn_egg": "Electric Eel Spawn Egg",
   "death.attack.wildspellmobs.eel_shock": "%1$s was electrocuted by %2$s",
   "entity.wildspellmobs.pegasus": "Pegasus",
-  "item.wildspellmobs.pegasus_spawn_egg": "Pegasus Spawn Egg"
+  "item.wildspellmobs.pegasus_spawn_egg": "Pegasus Spawn Egg",
+  "block.wildspellmobs.flytrap": "Flytrap",
+  "block.wildspellmobs.flytrap_stem": "Flytrap Stem",
+  "item.wildspellmobs.flytrap_sprout": "Flytrap Sprout",
+  "entity.wildspellmobs.flytrap_head": "Flytrap",
+  "item.wildspellmobs.trap_jaw": "Trap Jaw"
 }

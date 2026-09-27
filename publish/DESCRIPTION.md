@@ -49,6 +49,15 @@ A great winged horse, a little bigger than a horse, grazing the meadows of the A
 - It never takes fall damage, so walking off the edge of an island is a glide, not a fall.
 - Wild ones sometimes spread their wings and circle up over the meadow before coming back down, and take to the air when struck.
 
+## Flytrap
+A snapping flytrap of the jungle floor and the Lush Caves. It never moves, but its jaws turn to follow anything that does.
+- It grows like a sapling, in three stages. A sprout's tiny jaws only catch moths, bees and other small things. A young plant is about your height and will snap at you. A grown one towers four blocks high, with a big head on top and two smaller ones on branches either side.
+- Come within reach and a head rears back, flings its jaws wide and lunges. If it catches you it clamps on for a moment, dragging you in and holding you all but still.
+- It feels movement rather than seeing you. Stand still and it leaves you be; sneak and you can slip right past it. Hit it, though, and it knows where you are.
+- It snaps at anything that moves, not just you: mobs that wander too close get the same.
+- Fire is its bane: it catches alight at a touch and burns twice as badly. A sword does the job too: kill any one of its heads and the whole plant comes down. If it has hold of a friend, use shears on it to cut them free.
+- Break it and you get a **Flytrap Sprout** to plant your own, and from a grown plant, **Trap Jaws**.
+
 ## Drops
 - **Enchanted Ice Crystal:** YUNG's Enchanted Ice now drops one when mined normally, on top of its burst of experience. Silk Touch still gives the block.
 - **Ice:** YUNG's Ice Cubes now shatter into Ice when killed.
@@ -58,7 +67,7 @@ Creepers and other monsters are thinned out underground, including a local cap s
 
 ## Requirements
 - NeoForge 1.21.1
-- **GeckoLib** (the Ice Lich's model and animations)
+- **GeckoLib** (the Ice Lich's and the Flytrap's models and animations)
 - **YUNG's Cave Biomes** (optional, but it's where the cold-cave mobs spawn and where the lich's crypts generate). Without it you still get the Luminous Moth, the spawn eggs and the cave spawn balancing.
 - **Creeper Overhaul** (optional): Snowy Creepers in the Frosted Caves.
 
