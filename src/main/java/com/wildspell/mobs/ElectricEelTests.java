@@ -146,6 +146,36 @@ public class ElectricEelTests {
      * A stone basin (x 1-6, z 1-7) three blocks deep in water, with a dry stone bank from x = 7
      * whose top is at y = 4.
      */
+    /**
+     * The lurk goal updates every tick, and on the odd ticks the goal selector doesn't ask
+     * canContinueToUse first. So a den that the goal itself gave up on, or that was cleared under
+     * it, used to crash the next tick with a null position (seen in the pack: "Ticking entity").
+     * Which tick is the unguarded one depends on the eel's age plus its id, so two eels spawned
+     * together (consecutive ids) cover both.
+     */
+    @GameTest(template = ARENA, timeoutTicks = 300, batch = "eelDen")
+    public static void eelSurvivesLosingItsDen(GameTestHelper helper) {
+        pool(helper);
+        ElectricEel[] eels = new ElectricEel[2];
+        eels[0] = helper.spawn(WildspellMobs.ELECTRIC_EEL.get(), 2.5F, 2.0F, 3.5F);
+        eels[1] = helper.spawn(WildspellMobs.ELECTRIC_EEL.get(), 4.5F, 2.0F, 5.5F);
+        helper.assertTrue((eels[0].getId() + eels[1].getId()) % 2 == 1, "the two eels tick on opposite parities");
+        // The lurk goal only starts once its cooldown (100 ticks from spawn) has run down.
+        helper.runAfterDelay(120, () -> {
+            eels[0].setDen(helper.absolutePos(new BlockPos(1, 1, 1)));
+            eels[1].setDen(helper.absolutePos(new BlockPos(5, 1, 7)));
+        });
+        helper.runAfterDelay(123, () -> {
+            helper.assertTrue(eels[0].getNavigation().isInProgress() || eels[1].getNavigation().isInProgress(), "the lurk goal set off for the den");
+            eels[0].setDen(null);
+            eels[1].setDen(null);
+        });
+        helper.runAfterDelay(160, () -> {
+            helper.assertTrue(eels[0].isAlive() && eels[1].isAlive(), "both eels are still with us");
+            helper.succeed();
+        });
+    }
+
     private static void pool(GameTestHelper helper) {
         for (int x = 0; x <= 8; ++x) {
             for (int z = 0; z <= 8; ++z) {

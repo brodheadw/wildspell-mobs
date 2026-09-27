@@ -604,6 +604,11 @@ public class ElectricEel extends WaterAnimal {
                 eel.setDeltaMovement(eel.getDeltaMovement().scale(0.5));
                 return;
             }
+            // The goal ticks on the odd ticks without canContinueToUse being asked (it updates every
+            // tick), so the den it gave up on below can already be gone here; the selector stops it next tick.
+            if (eel.den == null) {
+                return;
+            }
             Vec3 den = spot(eel.den);
             Vec3 mouth = spot(this.mouth());
             if (eel.position().distanceToSqr(den) < 0.1) {
