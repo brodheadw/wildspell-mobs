@@ -57,8 +57,9 @@ public final class SpawnBalance {
 
     public static final ModConfigSpec.IntValue LICH_AMBUSH_RANGE = BUILDER
             .comment("How far (blocks) from its crypt an Ice Lich can sense a player in the Frosted Caves and rise behind them.",
-                    "The crypt need not be loaded. A hunting lich gives up once its prey is 64 blocks further out than this.")
-            .defineInRange("lichAmbushRange", 320, 16, 2048);
+                    "The crypt need not be loaded, and only the nearest crypt to a player stalks them, so one lich haunts a",
+                    "whole Frosted Caves patch. A hunting lich gives up once its prey is 64 blocks further out than this.")
+            .defineInRange("lichAmbushRange", 1024, 16, 4096);
 
     static final ModConfigSpec SPEC = BUILDER.build();
 

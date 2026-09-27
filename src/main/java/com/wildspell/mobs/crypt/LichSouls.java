@@ -103,10 +103,17 @@ public class LichSouls extends SavedData {
         MinecraftServer server = event.getServer();
         LichSouls souls = get(server);
         long time = server.overworld().getGameTime();
-        for (Soul soul : List.copyOf(souls.souls.values())) {
+        List<Soul> all = List.copyOf(souls.souls.values());
+        for (Soul soul : all) {
             ServerLevel level = server.getLevel(soul.dimension);
             if (level != null) {
                 soul.tick(level, time);
+            }
+        }
+        // From here, not the phylacteries, so no crypt need be loaded for a lich to sense a player far off.
+        if (time % 20 == 7) {
+            for (ServerLevel level : server.getAllLevels()) {
+                PhylacteryBlockEntity.ambushFromAfar(level, all);
             }
         }
     }
@@ -363,10 +370,7 @@ public class LichSouls extends SavedData {
             if (this.soulTicks > 0 && --this.soulTicks == 0) {
                 this.changed();
             }
-            if ((time + this.id.hashCode()) % 20 == 0) {
-                // From here, not the phylactery, so the crypt need not be loaded for the lich to sense a player far off.
-                PhylacteryBlockEntity.ambushFromAfar(level, this);
-            }
+
             if (this.reformTicks > 0 && --this.reformTicks == 0) {
                 this.reform(level);
             }
