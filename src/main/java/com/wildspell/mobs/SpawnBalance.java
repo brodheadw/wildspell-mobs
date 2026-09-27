@@ -55,6 +55,11 @@ public final class SpawnBalance {
                     "caves give signs (a whisper behind you, a drift of ice motes). 0 = never.")
             .defineInRange("lichAmbushChance", 0.004, 0.0, 1.0);
 
+    public static final ModConfigSpec.IntValue LICH_AMBUSH_RANGE = BUILDER
+            .comment("How far (blocks) from its crypt an Ice Lich can sense a player in the Frosted Caves and rise behind them.",
+                    "The crypt need not be loaded. A hunting lich gives up once its prey is 64 blocks further out than this.")
+            .defineInRange("lichAmbushRange", 320, 16, 2048);
+
     static final ModConfigSpec SPEC = BUILDER.build();
 
     // Spawning probes thousands of spots per tick; count neighbours once per chunk section per tick.

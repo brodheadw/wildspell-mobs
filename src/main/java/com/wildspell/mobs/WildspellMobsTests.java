@@ -557,6 +557,12 @@ public class WildspellMobsTests {
         SpawnBalance.LICH_AMBUSH_CHANCE.set(1.0);
         // There's no teardown hook, so put the config back before the timeout whether or not it passes.
         helper.runAtTickTime(150, () -> SpawnBalance.LICH_AMBUSH_CHANCE.set(chance));
+        // The roll runs from the soul's tick over level.players(), which a mock player is not in: hand it the player.
+        helper.onEachTick(() -> {
+            if (helper.getTick() % 20 == 5) {
+                PhylacteryBlockEntity.ambushFromAfar(helper.getLevel(), phylactery.soul(helper.getLevel()), java.util.List.of(player));
+            }
+        });
         helper.succeedWhen(() -> {
             java.util.List<IceLich> liches = helper.getLevel().getEntitiesOfClass(IceLich.class, player.getBoundingBox().inflate(24.0));
             helper.assertTrue(liches.size() == 1, "no ambush yet");
@@ -565,6 +571,40 @@ public class WildspellMobsTests {
             helper.assertTrue(lich.distanceTo(player) >= 9.0, "rose right on top of the player: " + lich.distanceTo(player));
             SpawnBalance.LICH_AMBUSH_CHANCE.set(chance);
             player.discard();
+        });
+    }
+
+    /** The ambush range is a config value and a hard edge: outside it, nothing rises however sure the roll. */
+    @GameTest(template = ARENA, timeoutTicks = 160, batch = "lichAmbushRange")
+    public static void lichRespectsItsAmbushRange(GameTestHelper helper) {
+        paintFrostedCaves(helper);
+        placePhylactery(helper, new BlockPos(4, 1, 0), net.minecraft.core.Direction.NORTH);
+        net.minecraft.world.entity.player.Player player = addMockPlayer(helper, new net.minecraft.world.phys.Vec3(4.5, 1.0, 6.5));
+        double chance = SpawnBalance.LICH_AMBUSH_CHANCE.get();
+        int range = SpawnBalance.LICH_AMBUSH_RANGE.get();
+        SpawnBalance.LICH_AMBUSH_CHANCE.set(1.0);
+        SpawnBalance.LICH_AMBUSH_RANGE.set(4);
+        helper.assertTrue(PhylacteryBlockEntity.leash() == 4.0 + PhylacteryBlockEntity.LEASH_BEYOND_RANGE, "the leash follows the range");
+        Runnable restore = () -> {
+            SpawnBalance.LICH_AMBUSH_CHANCE.set(chance);
+            SpawnBalance.LICH_AMBUSH_RANGE.set(range);
+        };
+        helper.runAtTickTime(150, restore);
+        PhylacteryBlockEntity phylactery = (PhylacteryBlockEntity) helper.getBlockEntity(new BlockPos(4, 1, 0));
+        helper.onEachTick(() -> {
+            if (helper.getTick() % 20 == 5) {
+                PhylacteryBlockEntity.ambushFromAfar(helper.getLevel(), phylactery.soul(helper.getLevel()), java.util.List.of(player));
+            }
+        });
+        helper.runAfterDelay(100, () -> {
+            try {
+                helper.assertTrue(helper.getLevel().getEntitiesOfClass(IceLich.class, player.getBoundingBox().inflate(24.0)).isEmpty(),
+                        "six blocks out with a range of four, and something rose");
+            } finally {
+                restore.run();
+                player.discard();
+            }
+            helper.succeed();
         });
     }
 

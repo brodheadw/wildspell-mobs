@@ -363,6 +363,10 @@ public class LichSouls extends SavedData {
             if (this.soulTicks > 0 && --this.soulTicks == 0) {
                 this.changed();
             }
+            if ((time + this.id.hashCode()) % 20 == 0) {
+                // From here, not the phylactery, so the crypt need not be loaded for the lich to sense a player far off.
+                PhylacteryBlockEntity.ambushFromAfar(level, this);
+            }
             if (this.reformTicks > 0 && --this.reformTicks == 0) {
                 this.reform(level);
             }
@@ -399,7 +403,7 @@ public class LichSouls extends SavedData {
             if (prey == null && this.carrier != null && level.getEntity(this.carrier) instanceof Player bearer) {
                 prey = bearer;
             }
-            if (prey != null && (!PhylacteryBlockEntity.isPrey(prey) || this.inAltar && prey.distanceToSqr(Vec3.atCenterOf(this.anchor)) > PhylacteryBlockEntity.LEASH * PhylacteryBlockEntity.LEASH)) {
+            if (prey != null && (!PhylacteryBlockEntity.isPrey(prey) || this.inAltar && prey.distanceToSqr(Vec3.atCenterOf(this.anchor)) > PhylacteryBlockEntity.leash() * PhylacteryBlockEntity.leash())) {
                 prey = null;
             }
             if (prey == null && this.inAltar && level.getBlockEntity(this.anchor) instanceof PhylacteryBlockEntity crypt) {
