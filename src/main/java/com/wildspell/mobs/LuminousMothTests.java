@@ -99,6 +99,30 @@ public class LuminousMothTests {
         });
     }
 
+    @GameTest(template = ARENA, timeoutTicks = 200, batch = "mothFlee")
+    public static void aMothInFlightFleesAPlayer(GameTestHelper helper) {
+        LuminousMoth moth = helper.spawn(WildspellMobs.LUMINOUS_MOTH.get(), 4.5F, 4.0F, 4.5F);
+        Player player = addMockPlayer(helper, new Vec3(2.0, 1.0, 4.5));
+        double start = moth.distanceTo(player);
+        helper.runAfterDelay(40, () -> {
+            double now = moth.distanceTo(player);
+            helper.assertTrue(now > LuminousMoth.FLEE_RADIUS, "in two seconds the moth only got from " + start + " to " + now + " blocks off");
+            succeedAndLeave(helper, player);
+        });
+    }
+
+    // Own batch: a lure next door would draw the fleeing moth to it.
+    @GameTest(template = ARENA, timeoutTicks = 200, batch = "mothLureStay")
+    public static void aMothStaysNearAPlayerWithASporeBlossom(GameTestHelper helper) {
+        LuminousMoth moth = helper.spawn(WildspellMobs.LUMINOUS_MOTH.get(), 4.5F, 3.0F, 4.5F);
+        Player player = addMockPlayer(helper, new Vec3(2.0, 1.0, 4.5));
+        player.setItemInHand(InteractionHand.MAIN_HAND, new ItemStack(Items.SPORE_BLOSSOM));
+        helper.runAfterDelay(60, () -> {
+            helper.assertTrue(moth.distanceTo(player) < 4.0, "fled a player holding a lure: " + moth.distanceTo(player));
+            succeedAndLeave(helper, player);
+        });
+    }
+
     @GameTest(template = ARENA, timeoutTicks = 1600, batch = "mothSneak")
     public static void sneakingPastLeavesAPerchedMothBe(GameTestHelper helper) {
         watchAPerchedMoth(helper, true, (moth, walkedTicks) -> {
@@ -220,7 +244,8 @@ public class LuminousMothTests {
         }
         LuminousMoth moth = helper.spawn(WildspellMobs.LUMINOUS_MOTH.get(), 4.5F, 2.5F, 4.5F);
         Player player = addMockPlayer(helper, new Vec3(0.5, 1.1, 0.5));
-        player.setShiftKeyDown(sneaking);
+        // Sneaking until it settles: a moth in flight flees anyone walking this close.
+        player.setShiftKeyDown(true);
         int[] walked = {-1};
         helper.runAtTickTime(1590, () -> helper.fail("moth never settled; at " + helper.relativeVec(moth.position()) + " alive=" + moth.isAlive()
                 + " nearby=" + helper.getLevel().getEntitiesOfClass(net.minecraft.world.entity.LivingEntity.class, moth.getBoundingBox().inflate(4)).stream()
@@ -231,6 +256,7 @@ public class LuminousMothTests {
                     return;
                 }
                 walked[0] = 0;
+                player.setShiftKeyDown(sneaking);
             }
             // Pace along a line about two and a half blocks from where the moth sat down.
             Vec3 perch = moth.position();
