@@ -657,6 +657,44 @@ public class WildspellMobsTests {
         });
     }
 
+    /**
+     * A lich left standing in its crypt, then the crypt unloaded, used to keep its soul "up" forever, so
+     * it never stalked anyone again. Now the soul raises a fresh body behind the player, and the old one,
+     * refused by its soul when next it checks in, vanishes as a stale copy.
+     */
+    @GameTest(template = ARENA, timeoutTicks = 200, batch = "lichBodyAway")
+    public static void lichIdleInAnUnloadedCryptStillStalks(GameTestHelper helper) {
+        paintFrostedCaves(helper);
+        PhylacteryBlockEntity phylactery = placePhylactery(helper, new BlockPos(4, 1, 0), net.minecraft.core.Direction.NORTH);
+        net.minecraft.world.entity.player.Player player = addMockPlayer(helper, new net.minecraft.world.phys.Vec3(4.5, 1.0, 6.5));
+        com.wildspell.mobs.crypt.LichSouls.Soul soul = phylactery.soul(helper.getLevel());
+        IceLich old = soul.raise(helper.getLevel(), helper.absoluteVec(new net.minecraft.world.phys.Vec3(4.5, 1.0, 1.5)), null);
+        helper.assertTrue(old != null && old.getUUID().equals(phylactery.lichId()), "the first body is on record");
+        old.setNoAi(true);
+        double chance = SpawnBalance.LICH_AMBUSH_CHANCE.get();
+        SpawnBalance.LICH_AMBUSH_CHANCE.set(1.0);
+        com.wildspell.mobs.crypt.LichSouls.ASSUME_BODY_AWAY_FOR_TEST = true;
+        Runnable restore = () -> {
+            SpawnBalance.LICH_AMBUSH_CHANCE.set(chance);
+            com.wildspell.mobs.crypt.LichSouls.ASSUME_BODY_AWAY_FOR_TEST = false;
+        };
+        helper.runAtTickTime(190, restore);
+        helper.onEachTick(() -> {
+            if (helper.getTick() % 20 == 5) {
+                PhylacteryBlockEntity.ambushFromAfar(helper.getLevel(), java.util.List.of(soul), java.util.List.of(player));
+            }
+        });
+        helper.succeedWhen(() -> {
+            java.util.UUID now = phylactery.lichId();
+            helper.assertTrue(now != null && !now.equals(old.getUUID()), "no fresh body has risen");
+            helper.assertTrue(helper.getLevel().getEntity(now) instanceof IceLich fresh && fresh.getTarget() == player, "the fresh body isn't hunting the player");
+            helper.assertFalse(old.isAlive(), "the old body should have vanished as a stale copy");
+            restore.run();
+            player.discard();
+            helper.killAllEntities();
+        });
+    }
+
     // Built well off to the side of the test grid, so the crypts can't reach, or shade, another test's arena.
     @GameTest(template = ARENA, timeoutTicks = 100, batch = "cryptGen")
     public static void cryptBuildsTheSameWayRoundInEveryOrientation(GameTestHelper helper) {

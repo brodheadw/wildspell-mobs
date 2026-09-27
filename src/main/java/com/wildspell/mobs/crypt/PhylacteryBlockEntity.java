@@ -334,7 +334,8 @@ public class PhylacteryBlockEntity extends BlockEntity {
 
     /**
      * Once a second, from the world's soul data (so no crypt need be loaded): every player roaming the
-     * Frosted Caves is claimed by the nearest dormant crypt within {@link #ambushRange()}, and that
+     * Frosted Caves is claimed by the nearest crypt within {@link #ambushRange()} whose lich is dormant, or
+     * idle in its unloaded crypt (the old body vanishes as a stale copy when next loaded), and that
      * crypt's lich either rises behind them or, far more often, lets the caves give a sign of it. One
      * lich to a player, however many crypts a patch of caves holds.
      */
@@ -346,7 +347,7 @@ public class PhylacteryBlockEntity extends BlockEntity {
     public static void ambushFromAfar(ServerLevel level, List<LichSouls.Soul> souls, List<? extends Player> candidates) {
         List<LichSouls.Soul> waiting = new java.util.ArrayList<>();
         for (LichSouls.Soul soul : souls) {
-            if (soul.dimension() != level.dimension() || !soul.inAltar() || !soul.dormant()) {
+            if (soul.dimension() != level.dimension() || !soul.canStalk(level)) {
                 continue;
             }
             if (level.isLoaded(soul.anchor()) && level.getBlockEntity(soul.anchor()) instanceof PhylacteryBlockEntity crypt && crypt.isAwake()) {

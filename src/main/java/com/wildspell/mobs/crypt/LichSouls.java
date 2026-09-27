@@ -49,6 +49,8 @@ public class LichSouls extends SavedData {
     private static final String NAME = "wildspellmobs_lich_souls";
     /** Ticks a lich can go unfound (while its phylactery's area is loaded) before its soul stops waiting for it. */
     private static final int MISSING_LIMIT = 60 * 20;
+    /** Tests: treat every soul's body as lying in an unloaded crypt (the arena is always loaded). */
+    public static boolean ASSUME_BODY_AWAY_FOR_TEST = false;
     /** Radius around a cleansed crypt where Frozen Zombies don't freeze and Rime Skulls don't spawn. */
     public static final double SAFE_RADIUS = 64.0;
 
@@ -188,6 +190,22 @@ public class LichSouls extends SavedData {
         /** No body, no soul in flight and no re-forming under way: the lich is waiting to rise. */
         public boolean dormant() {
             return this.lichId == null && this.soulTicks <= 0 && this.reformTicks < 0 && !this.burned;
+        }
+
+        /**
+         * Whether this soul can rise behind a player far off: dormant, or its body is on record but
+         * lies idle in its unloaded crypt (nowhere loaded, home not loaded). Raising a new body then
+         * makes the old one a stale copy, which vanishes when its chunk is next loaded.
+         */
+        public boolean canStalk(ServerLevel level) {
+            if (!this.inAltar || this.burned || this.reformTicks >= 0 || this.soulTicks > 0) {
+                return false;
+            }
+            if (this.lichId == null) {
+                return true;
+            }
+            boolean bodyAway = ASSUME_BODY_AWAY_FOR_TEST || (this.findLich(level) == null && !level.isLoaded(this.anchor));
+            return bodyAway;
         }
 
         private void changed() {
