@@ -560,7 +560,7 @@ public class WildspellMobsTests {
         // The roll runs from the soul's tick over level.players(), which a mock player is not in: hand it the player.
         helper.onEachTick(() -> {
             if (helper.getTick() % 20 == 5) {
-                PhylacteryBlockEntity.ambushFromAfar(helper.getLevel(), phylactery.soul(helper.getLevel()), java.util.List.of(player));
+                PhylacteryBlockEntity.ambushFromAfar(helper.getLevel(), java.util.List.of(phylactery.soul(helper.getLevel())), java.util.List.of(player));
             }
         });
         helper.succeedWhen(() -> {
@@ -593,7 +593,7 @@ public class WildspellMobsTests {
         PhylacteryBlockEntity phylactery = (PhylacteryBlockEntity) helper.getBlockEntity(new BlockPos(4, 1, 0));
         helper.onEachTick(() -> {
             if (helper.getTick() % 20 == 5) {
-                PhylacteryBlockEntity.ambushFromAfar(helper.getLevel(), phylactery.soul(helper.getLevel()), java.util.List.of(player));
+                PhylacteryBlockEntity.ambushFromAfar(helper.getLevel(), java.util.List.of(phylactery.soul(helper.getLevel())), java.util.List.of(player));
             }
         });
         helper.runAfterDelay(100, () -> {
@@ -605,6 +605,29 @@ public class WildspellMobsTests {
                 player.discard();
             }
             helper.succeed();
+        });
+    }
+
+    /** Two crypts in reach: the nearer one's lich rises, the other stays dormant. One lich to a player. */
+    @GameTest(template = ARENA, timeoutTicks = 200, batch = "lichNearestCrypt")
+    public static void nearestCryptClaimsThePlayer(GameTestHelper helper) {
+        paintFrostedCaves(helper);
+        PhylacteryBlockEntity far = placePhylactery(helper, new BlockPos(1, 1, 0), net.minecraft.core.Direction.NORTH);
+        PhylacteryBlockEntity near = placePhylactery(helper, new BlockPos(7, 1, 0), net.minecraft.core.Direction.NORTH);
+        net.minecraft.world.entity.player.Player player = addMockPlayer(helper, new net.minecraft.world.phys.Vec3(7.5, 1.0, 7.5));
+        double chance = SpawnBalance.LICH_AMBUSH_CHANCE.get();
+        SpawnBalance.LICH_AMBUSH_CHANCE.set(1.0);
+        helper.runAtTickTime(190, () -> SpawnBalance.LICH_AMBUSH_CHANCE.set(chance));
+        helper.onEachTick(() -> {
+            if (helper.getTick() % 20 == 5) {
+                PhylacteryBlockEntity.ambushFromAfar(helper.getLevel(), java.util.List.of(far.soul(helper.getLevel()), near.soul(helper.getLevel())), java.util.List.of(player));
+            }
+        });
+        helper.succeedWhen(() -> {
+            helper.assertTrue(near.lichId() != null, "the nearer crypt's lich has not risen");
+            helper.assertTrue(far.lichId() == null, "the farther crypt's lich rose too");
+            SpawnBalance.LICH_AMBUSH_CHANCE.set(chance);
+            player.discard();
         });
     }
 

@@ -333,52 +333,69 @@ public class PhylacteryBlockEntity extends BlockEntity {
     }
 
     /**
-     * Once a second, from the soul's own tick (so the crypt need not be loaded): rise behind a player
-     * roaming the Frosted Caves within {@link #ambushRange()} of the phylactery, or, far more often,
-     * give a sign that something is watching.
+     * Once a second, from the world's soul data (so no crypt need be loaded): every player roaming the
+     * Frosted Caves is claimed by the nearest dormant crypt within {@link #ambushRange()}, and that
+     * crypt's lich either rises behind them or, far more often, lets the caves give a sign of it. One
+     * lich to a player, however many crypts a patch of caves holds.
      */
-    static void ambushFromAfar(ServerLevel level, LichSouls.Soul soul) {
-        ambushFromAfar(level, soul, level.players());
+    static void ambushFromAfar(ServerLevel level, List<LichSouls.Soul> souls) {
+        ambushFromAfar(level, souls, level.players());
     }
 
     /** As above, choosing among {@code candidates} (the tests' mock players are not in level.players()). */
-    public static void ambushFromAfar(ServerLevel level, LichSouls.Soul soul, List<? extends Player> candidates) {
-        if (!soul.inAltar() || !soul.dormant()) {
-            return;
+    public static void ambushFromAfar(ServerLevel level, List<LichSouls.Soul> souls, List<? extends Player> candidates) {
+        List<LichSouls.Soul> waiting = new java.util.ArrayList<>();
+        for (LichSouls.Soul soul : souls) {
+            if (soul.dimension() != level.dimension() || !soul.inAltar() || !soul.dormant()) {
+                continue;
+            }
+            if (level.isLoaded(soul.anchor()) && level.getBlockEntity(soul.anchor()) instanceof PhylacteryBlockEntity crypt && crypt.isAwake()) {
+                continue;
+            }
+            waiting.add(soul);
         }
-        if (level.isLoaded(soul.anchor()) && level.getBlockEntity(soul.anchor()) instanceof PhylacteryBlockEntity crypt && crypt.isAwake()) {
+        if (waiting.isEmpty()) {
             return;
         }
         double range = ambushRange();
-        Vec3 center = Vec3.atCenterOf(soul.anchor());
-        AABB crypt = cryptBounds(soul.crypt(), soul.cryptFacing());
-        List<Player> near = new java.util.ArrayList<>();
+        java.util.Map<LichSouls.Soul, List<Player>> prey = new java.util.HashMap<>();
         for (Player player : candidates) {
-            if (isPrey(player) && player.distanceToSqr(center) < range * range && !crypt.contains(player.position())
-                    && level.getBiome(player.blockPosition()).is(ZombieFreezing.FREEZES_ZOMBIES)) {
-                near.add(player);
+            if (!isPrey(player) || !level.getBiome(player.blockPosition()).is(ZombieFreezing.FREEZES_ZOMBIES)) {
+                continue;
+            }
+            LichSouls.Soul nearest = null;
+            double best = range * range;
+            for (LichSouls.Soul soul : waiting) {
+                double d2 = player.distanceToSqr(Vec3.atCenterOf(soul.anchor()));
+                if (d2 < best && !cryptBounds(soul.crypt(), soul.cryptFacing()).contains(player.position())) {
+                    best = d2;
+                    nearest = soul;
+                }
+            }
+            if (nearest != null) {
+                prey.computeIfAbsent(nearest, k -> new java.util.ArrayList<>()).add(player);
             }
         }
-        if (near.isEmpty()) {
-            return;
-        }
-        if (soul.ambushCooldown() > 0) {
-            soul.coolAmbush();
-            return;
-        }
-        if (!canRaise(level)) {
-            return;
-        }
         double chance = SpawnBalance.LICH_AMBUSH_CHANCE.get();
-        for (Player player : near) {
-            if (level.random.nextDouble() < chance) {
-                Vec3 spot = findAmbushSpot(level, player);
-                if (spot != null) {
-                    soul.raise(level, spot, player);
-                    return;
+        for (java.util.Map.Entry<LichSouls.Soul, List<Player>> entry : prey.entrySet()) {
+            LichSouls.Soul soul = entry.getKey();
+            if (soul.ambushCooldown() > 0) {
+                soul.coolAmbush();
+                continue;
+            }
+            if (!canRaise(level)) {
+                continue;
+            }
+            for (Player player : entry.getValue()) {
+                if (level.random.nextDouble() < chance) {
+                    Vec3 spot = findAmbushSpot(level, player);
+                    if (spot != null) {
+                        soul.raise(level, spot, player);
+                        break;
+                    }
+                } else if (level.random.nextDouble() < PRESENCE_CHANCE) {
+                    haunt(level, player);
                 }
-            } else if (level.random.nextDouble() < PRESENCE_CHANCE) {
-                haunt(level, player);
             }
         }
     }
