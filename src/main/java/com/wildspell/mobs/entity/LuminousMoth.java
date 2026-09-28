@@ -16,6 +16,7 @@ import net.minecraft.network.syncher.SynchedEntityData;
 import net.minecraft.sounds.SoundEvent;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.tags.TagKey;
+import net.minecraft.util.Mth;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
@@ -29,7 +30,7 @@ import net.minecraft.world.entity.MoverType;
 import net.minecraft.world.entity.PathfinderMob;
 import net.minecraft.world.entity.ai.attributes.AttributeSupplier;
 import net.minecraft.world.entity.ai.attributes.Attributes;
-import net.minecraft.world.entity.ai.control.FlyingMoveControl;
+import net.minecraft.world.entity.ai.control.MoveControl;
 import net.minecraft.world.entity.ai.goal.Goal;
 import net.minecraft.world.entity.ai.navigation.FlyingPathNavigation;
 import net.minecraft.world.entity.ai.navigation.PathNavigation;
@@ -70,7 +71,7 @@ public class LuminousMoth extends PathfinderMob {
     public static final TagKey<Block> PERCHES = TagKey.create(Registries.BLOCK, WildspellMobs.id("luminous_moth_perches"));
 
     /** Light the moth carries with it. */
-    public static final int TRAIL_LIGHT = 8;
+    public static final int TRAIL_LIGHT = 12;
     /** Light at a released moth's home, and at the points around it. */
     public static final int HOME_LIGHT = 15;
     public static final int RING_LIGHT = 11;
@@ -79,16 +80,23 @@ public class LuminousMoth extends PathfinderMob {
     /** Released in light this bright or brighter, a moth doesn't take the spot as its home. */
     public static final int DARK_BELOW = 8;
     /** How far a moth brightens moss, and keeps brightened moss from fading. */
-    public static final int MOSS_RADIUS = 3;
-    public static final int KEEPS_MOSS_LIT = 6;
+    public static final int MOSS_RADIUS = 2;
+    public static final int KEEPS_MOSS_LIT = 4;
+    /** A perched moth brightens one more patch of moss this often. */
+    private static final int MOSS_INTERVAL = 200;
 
     /** How near something must be to disturb a perched moth, if it's moving. */
-    public static final double DISTURB_RADIUS = 3.5;
+    public static final double DISTURB_RADIUS = 5.0;
     /** How near a still (or sneaking) player can come before the moth flies anyway. */
     public static final double STARTLE_RADIUS = 1.5;
     public static final double SNEAK_STARTLE_RADIUS = 1.0;
     /** Movement over a disturbance check (four ticks) that counts as moving: about a slow walk. */
     private static final double MOVED = 0.15;
+    /** How near a player (without a lure) can come to a moth in flight before it flees. */
+    public static final double FLEE_RADIUS = 6.0;
+    public static final double SNEAK_FLEE_RADIUS = 3.0;
+    /** Speed modifier of a fleeing moth: faster than a sprinting player. */
+    private static final double FLEE_SPEED = 2.0;
 
     @Nullable
     private BlockPos home;
@@ -102,7 +110,7 @@ public class LuminousMoth extends PathfinderMob {
 
     public LuminousMoth(EntityType<? extends LuminousMoth> type, Level level) {
         super(type, level);
-        this.moveControl = new FlyingMoveControl(this, 20, true);
+        this.moveControl = new MothMoveControl(this);
         this.setNoGravity(true);
         this.setPathfindingMalus(PathType.WATER, -1.0F);
         this.setPathfindingMalus(PathType.WATER_BORDER, 16.0F);
@@ -191,19 +199,12 @@ public class LuminousMoth extends PathfinderMob {
         this.goalSelector.addGoal(5, new FlutterGoal());
     }
 
-    /** Allay-style flight: steady acceleration toward the move target, air drag, no gravity. */
+    /** Flight: MothMoveControl thrusts the moth; here it only moves and meets air drag. No gravity. */
     @Override
     public void travel(Vec3 travelVector) {
         if (this.isControlledByLocalInstance()) {
-            if (this.isInWater() || this.isInLava()) {
-                this.moveRelative(0.02F, travelVector);
-                this.move(MoverType.SELF, this.getDeltaMovement());
-                this.setDeltaMovement(this.getDeltaMovement().scale(0.8));
-            } else {
-                this.moveRelative(this.getSpeed(), travelVector);
-                this.move(MoverType.SELF, this.getDeltaMovement());
-                this.setDeltaMovement(this.getDeltaMovement().scale(0.91));
-            }
+            this.move(MoverType.SELF, this.getDeltaMovement());
+            this.setDeltaMovement(this.getDeltaMovement().scale(this.isInWater() || this.isInLava() ? 0.8 : 0.91));
         }
         this.calculateEntityAnimation(false);
     }
@@ -231,10 +232,18 @@ public class LuminousMoth extends PathfinderMob {
                     this.flush(disturber.position());
                 }
             }
-        } else if (this.random.nextInt(3) == 0) {
-            // A moth's flight jinks: sharp random sideways kicks and dips on top of wherever it's going.
-            this.setDeltaMovement(this.getDeltaMovement().add((this.random.nextDouble() - 0.5) * 0.06,
-                    (this.random.nextDouble() - 0.5) * 0.05, (this.random.nextDouble() - 0.5) * 0.06));
+        } else {
+            if (this.tickCount % 4 == 0) {
+                Player threat = this.findThreat();
+                if (threat != null) {
+                    this.flee(threat.position());
+                }
+            }
+            if (this.random.nextInt(3) == 0) {
+                // A moth's flight jinks: sharp random sideways kicks and dips on top of wherever it's going.
+                this.setDeltaMovement(this.getDeltaMovement().add((this.random.nextDouble() - 0.5) * 0.12,
+                        (this.random.nextDouble() - 0.5) * 0.1, (this.random.nextDouble() - 0.5) * 0.12));
+            }
         }
         if (this.tickCount % 5 == 0) {
             this.glowAt(this.blockPosition(), TRAIL_LIGHT, false);
@@ -270,6 +279,32 @@ public class LuminousMoth extends PathfinderMob {
         this.lastSeen.clear();
         this.lastSeen.putAll(seen);
         return disturber;
+    }
+
+    /** The nearest player a moth in flight should flee: anyone close without a lure, sneakers only closer. */
+    @Nullable
+    private Player findThreat() {
+        Player threat = null;
+        double best = Double.MAX_VALUE;
+        for (Player player : this.level().getEntitiesOfClass(Player.class, this.getBoundingBox().inflate(FLEE_RADIUS),
+                p -> p.isAlive() && !p.isSpectator() && !holdsLure(p))) {
+            double distance = this.distanceTo(player);
+            if (distance < (player.isShiftKeyDown() ? SNEAK_FLEE_RADIUS : FLEE_RADIUS) && distance < best) {
+                best = distance;
+                threat = player;
+            }
+        }
+        return threat;
+    }
+
+    /** Keep fleeing {@code from}: a flush if it isn't already running, else a fresh start on the escape. */
+    private void flee(Vec3 from) {
+        if (this.flushTicks <= 0) {
+            this.flush(from);
+        } else {
+            this.flushFrom = from;
+            this.flushTicks = Math.max(this.flushTicks, 30);
+        }
     }
 
     /** Take off in a hurry, away from {@code from}. */
@@ -326,16 +361,17 @@ public class LuminousMoth extends PathfinderMob {
         return this.home != null && this.isAlive() && this.home.closerThan(pos, HOME_RADIUS + 3);
     }
 
-    /** Brightens a few moss blocks near the moth, the nearer the likelier. */
+    /** Brightens the moss the moth sits on, if any, and perhaps one more block close by. */
     public void brightenMoss() {
         Level level = this.level();
         BlockPos origin = this.blockPosition();
-        for (int i = 0; i < 4; ++i) {
-            BlockPos pos = origin.offset(this.random.nextInt(2 * MOSS_RADIUS + 1) - MOSS_RADIUS,
-                    this.random.nextInt(2 * MOSS_RADIUS + 1) - MOSS_RADIUS - 1, this.random.nextInt(2 * MOSS_RADIUS + 1) - MOSS_RADIUS);
-            if (level.isLoaded(pos)) {
-                LuminousMoss.brighten(level, pos);
-            }
+        for (int down = 0; down <= 2; ++down) {
+            LuminousMoss.brighten(level, origin.below(down));
+        }
+        BlockPos pos = origin.offset(this.random.nextInt(2 * MOSS_RADIUS + 1) - MOSS_RADIUS,
+                this.random.nextInt(2 * MOSS_RADIUS + 1) - MOSS_RADIUS - 1, this.random.nextInt(2 * MOSS_RADIUS + 1) - MOSS_RADIUS);
+        if (level.isLoaded(pos)) {
+            LuminousMoss.brighten(level, pos);
         }
     }
 
@@ -603,7 +639,7 @@ public class LuminousMoth extends PathfinderMob {
                     moth.yBodyRot = yaw;
                     moth.yHeadRot = yaw;
                 }
-                if (this.ticks % 20 == 0) {
+                if (this.ticks % MOSS_INTERVAL == 0) {
                     moth.brightenMoss();
                 }
                 return;
@@ -713,6 +749,8 @@ public class LuminousMoth extends PathfinderMob {
     /** Flushed: dart away from whatever disturbed it in quick zigzags, climbing at first. */
     private class FlushGoal extends Goal {
         private int repickTicks;
+        @Nullable
+        private Vec3 target;
 
         FlushGoal() {
             this.setFlags(EnumSet.of(Goal.Flag.MOVE));
@@ -726,6 +764,7 @@ public class LuminousMoth extends PathfinderMob {
         @Override
         public void start() {
             this.repickTicks = 0;
+            this.target = null;
             LuminousMoth.this.getNavigation().stop();
         }
 
@@ -736,10 +775,19 @@ public class LuminousMoth extends PathfinderMob {
 
         @Override
         public void tick() {
-            if (--this.repickTicks > 0) {
-                return;
+            LuminousMoth moth = LuminousMoth.this;
+            if (--this.repickTicks <= 0) {
+                this.repickTicks = 5 + moth.random.nextInt(6);
+                this.target = this.pick();
             }
-            this.repickTicks = 5 + LuminousMoth.this.random.nextInt(6);
+            // The move control only pushes on ticks it's asked to, so ask every tick.
+            if (this.target != null) {
+                moth.getMoveControl().setWantedPosition(this.target.x, this.target.y, this.target.z, FLEE_SPEED);
+            }
+        }
+
+        @Nullable
+        private Vec3 pick() {
             LuminousMoth moth = LuminousMoth.this;
             Vec3 away = moth.position().subtract(moth.flushFrom).multiply(1.0, 0.0, 1.0);
             away = away.lengthSqr() < 1.0E-4 ? new Vec3(moth.random.nextDouble() - 0.5, 0.0, moth.random.nextDouble() - 0.5) : away;
@@ -748,14 +796,14 @@ public class LuminousMoth extends PathfinderMob {
                 // Away, swerving up to ~70 degrees either side, and upward early in the escape.
                 double swerve = (moth.random.nextDouble() - 0.5) * 2.4;
                 Vec3 heading = away.yRot((float) swerve);
-                double distance = 1.5 + moth.random.nextDouble() * 1.5;
+                double distance = 3.0 + moth.random.nextDouble() * 2.0;
                 double lift = moth.flushTicks > 30 ? 0.6 + moth.random.nextDouble() : (moth.random.nextDouble() - 0.5) * 1.2;
                 Vec3 spot = moth.position().add(heading.scale(distance)).add(0.0, lift, 0.0);
                 if (isOpen(moth.level(), BlockPos.containing(spot)) && ColdEffects.clearPath(moth, moth.position(), spot)) {
-                    moth.getMoveControl().setWantedPosition(spot.x, spot.y, spot.z, 2.0);
-                    return;
+                    return spot;
                 }
             }
+            return null;
         }
     }
 
@@ -790,6 +838,43 @@ public class LuminousMoth extends PathfinderMob {
                     moth.getNavigation().moveTo(spot.x, spot.y, spot.z, 0.8);
                     return;
                 }
+            }
+        }
+    }
+
+    /**
+     * Thrust straight at the wanted position, harder the higher the speed modifier, easing off in
+     * the last block so it doesn't overshoot. Like vanilla's, it only pushes on ticks it was asked
+     * to, so a goal steering by hand sets the target every tick.
+     */
+    private static class MothMoveControl extends MoveControl {
+        /** Thrust per tick per unit of flying speed; against 0.91 drag, flutter (0.8) cruises ~3 blocks/s. */
+        private static final double THRUST = 0.21;
+
+        MothMoveControl(Mob mob) {
+            super(mob);
+        }
+
+        @Override
+        public void tick() {
+            this.mob.setSpeed(0.0F);
+            this.mob.setYya(0.0F);
+            this.mob.setZza(0.0F);
+            if (this.operation != Operation.MOVE_TO) {
+                return;
+            }
+            this.operation = Operation.WAIT;
+            Vec3 to = new Vec3(this.wantedX - this.mob.getX(), this.wantedY - this.mob.getY(), this.wantedZ - this.mob.getZ());
+            double distance = to.length();
+            if (distance < 0.05) {
+                return;
+            }
+            double thrust = Math.min(this.speedModifier * this.mob.getAttributeValue(Attributes.FLYING_SPEED) * THRUST, distance * 0.02);
+            this.mob.setDeltaMovement(this.mob.getDeltaMovement().add(to.scale(thrust / distance)));
+            if (to.horizontalDistanceSqr() > 1.0E-4) {
+                float yaw = (float) (Mth.atan2(to.z, to.x) * (180.0 / Math.PI)) - 90.0F;
+                this.mob.setYRot(this.rotlerp(this.mob.getYRot(), yaw, 40.0F));
+                this.mob.yBodyRot = this.mob.getYRot();
             }
         }
     }
