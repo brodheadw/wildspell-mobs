@@ -22,15 +22,7 @@ import net.minecraft.world.item.TooltipFlag;
 import net.minecraft.world.item.component.LodestoneTracker;
 import net.minecraft.world.level.Level;
 
-/**
- * A scrying focus of rime and enchanted ice bound around a Crown Fragment, a shard of one lich's crown
- * still bound to its soul ({@link WildspellMobs#SOUL}). By sympathy the shard pulls toward where that
- * soul is kept: its needle points to that lich's phylactery, on its altar or wherever it's been carried,
- * like a lodestone compass's. Using it says how far, and whether above or below. Once that lich is
- * destroyed, the pull is gone.
- */
 public class SoulseekerItem extends Item {
-    /** Height differences beyond this read as "above" or "below". */
     private static final int LEVEL_BAND = 8;
     private static final int UPDATE_INTERVAL = 20;
 
@@ -38,14 +30,12 @@ public class SoulseekerItem extends Item {
         super(properties);
     }
 
-    /** Where the needle points: the phylactery of the soul this Soulseeker is bound to, or null once there's none. */
     @Nullable
     private static GlobalPos target(ServerLevel level, ItemStack stack) {
         LichSouls.Soul soul = LichSouls.get(level).soul(stack.get(WildspellMobs.SOUL.get()));
         return soul == null || soul.burned() ? null : GlobalPos.of(soul.dimension(), soul.anchor());
     }
 
-    /** Keeps the needle on the phylactery as it moves; spins once it's gone. */
     private static void aim(ServerLevel level, ItemStack stack) {
         GlobalPos target = target(level, stack);
         LodestoneTracker current = stack.get(DataComponents.LODESTONE_TRACKER);

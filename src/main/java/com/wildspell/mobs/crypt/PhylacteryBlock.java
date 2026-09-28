@@ -2,23 +2,24 @@ package com.wildspell.mobs.crypt;
 
 import com.mojang.serialization.MapCodec;
 import com.wildspell.mobs.WildspellMobs;
+import java.util.UUID;
 import javax.annotation.Nullable;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
-import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.context.BlockPlaceContext;
 import net.minecraft.world.level.BlockGetter;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.BaseEntityBlock;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.HorizontalDirectionalBlock;
+import net.minecraft.world.level.block.Mirror;
 import net.minecraft.world.level.block.RenderShape;
 import net.minecraft.world.level.block.Rotation;
-import net.minecraft.world.level.block.Mirror;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.entity.BlockEntityTicker;
 import net.minecraft.world.level.block.entity.BlockEntityType;
@@ -29,14 +30,6 @@ import net.minecraft.world.level.block.state.properties.DirectionProperty;
 import net.minecraft.world.phys.shapes.CollisionContext;
 import net.minecraft.world.phys.shapes.VoxelShape;
 
-/**
- * The Ice Lich's phylactery, the vessel its soul is bound to, kept on the altar of its crypt. While it
- * stands the lich can't truly die: struck down, its soul flies back here and it re-forms. It can't
- * be moved while any Rime Ward in the crypt still stands ({@link #WARDED}); unwarded, mining it takes
- * it off the altar as a {@link PhylacteryItem}, and only burning that makes the lich mortal.
- *
- * <p>{@link #FACING} points from the altar into the crypt, so the block entity knows where the room is.
- */
 public class PhylacteryBlock extends BaseEntityBlock {
     public static final MapCodec<PhylacteryBlock> CODEC = simpleCodec(PhylacteryBlock::new);
     public static final DirectionProperty FACING = HorizontalDirectionalBlock.FACING;
@@ -58,7 +51,6 @@ public class PhylacteryBlock extends BaseEntityBlock {
         builder.add(FACING, WARDED);
     }
 
-    /** Placed by hand, the crypt lies in front of whoever placed it. */
     @Override
     public BlockState getStateForPlacement(BlockPlaceContext context) {
         return this.defaultBlockState().setValue(FACING, context.getHorizontalDirection().getOpposite());
@@ -89,17 +81,15 @@ public class PhylacteryBlock extends BaseEntityBlock {
         return state.getValue(WARDED) ? 0.0F : super.getDestroyProgress(state, player, level, pos);
     }
 
-    /** Wards hold against mobs that tear through blocks (the Wither) as well as against mining. */
     @Override
     public boolean canEntityDestroy(BlockState state, BlockGetter level, BlockPos pos, Entity entity) {
         return !state.getValue(WARDED) && super.canEntityDestroy(state, level, pos, entity);
     }
 
-    /** Set down from an item, the phylactery makes this its altar, and its lich's soul comes with it. */
     @Override
     public void setPlacedBy(Level level, BlockPos pos, BlockState state, @Nullable LivingEntity placer, ItemStack stack) {
         super.setPlacedBy(level, pos, state, placer, stack);
-        java.util.UUID soul = stack.get(WildspellMobs.SOUL.get());
+        UUID soul = stack.get(WildspellMobs.SOUL.get());
         if (soul != null && level instanceof ServerLevel server && level.getBlockEntity(pos) instanceof PhylacteryBlockEntity phylactery) {
             phylactery.bindSoul(server, soul);
         }

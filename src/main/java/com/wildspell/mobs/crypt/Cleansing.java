@@ -27,40 +27,20 @@ import net.minecraft.world.level.storage.loot.LootTable;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 
-/**
- * What happens when a lich's last form falls: its hold on the caves breaks. The cold of the Frosted
- * Caves is natural (the biome's own), so this undoes only the lich's work:
- * <ul>
- *   <li>the undead it emboldened nearby (Frozen Zombies and Rime Skulls) crumble ({@link #purge}, where
- *       it falls and around its crypt);</li>
- *   <li>the thin frost it spread (snow, powder snow, YUNG's ice sheets) melts back from its crypt;
- *       solid ice stays, so nothing floods;</li>
- *   <li>its crypt goes warm: the soul-fire braziers burn as ordinary fire and its candles are lit, and
- *       its hoard is left on the empty altar;</li>
- *   <li>the souls it bound go free: they linger through the surrounding caves as Frozen Souls, cold
- *       lights hanging in the air;</li>
- *   <li>and the crypt's surroundings become a lasting safe zone ({@link LichSouls#isCleansed}).</li>
- * </ul>
- * The crypt's part waits until the area around it is loaded (see {@link LichSouls.Soul}).
- */
 public final class Cleansing {
-    /** How far around the crypt must be loaded to cleanse it (the frost thaw's reach, and some). */
     public static final int LOADED_RADIUS = 40;
-    /** How far the freed souls' light and the news of it reach. */
     public static final double REACH = 64.0;
     private static final double PURGE_RADIUS = 48.0;
     private static final int FROST_RADIUS = 32;
     private static final int FROST_HEIGHT = 16;
     private static final int SOULS = 40;
     private static final double SOUL_RADIUS = 48.0;
-    /** The lich's frost, which melts when it falls. */
     private static final TagKey<Block> LICH_FROST = TagKey.create(Registries.BLOCK, WildspellMobs.id("lich_frost"));
     private static final ResourceKey<LootTable> HOARD = ResourceKey.create(Registries.LOOT_TABLE, WildspellMobs.id("chests/lich_hoard"));
 
     private Cleansing() {
     }
 
-    /** The cold's undead within reach crumble, and a pulse of warmth rolls out. */
     public static void purge(ServerLevel level, Vec3 at) {
         for (Mob mob : level.getEntitiesOfClass(Mob.class, new AABB(at, at).inflate(PURGE_RADIUS),
                 m -> (m instanceof FrozenZombie || m instanceof RimeSkull) && m.isAlive())) {
@@ -75,7 +55,6 @@ public final class Cleansing {
         level.playSound(null, at.x, at.y, at.z, SoundEvents.FIRECHARGE_USE, SoundSource.HOSTILE, 2.0F, 0.5F);
     }
 
-    /** The crypt at {@code altar}'s share of the cleansing. */
     public static void cleanse(ServerLevel level, BlockPos altar, Direction facing) {
         Vec3 center = Vec3.atCenterOf(altar);
         purge(level, center);
@@ -103,7 +82,6 @@ public final class Cleansing {
         }
     }
 
-    /** Soul-fire gives way to ordinary fire, and every candle is lit. */
     private static void warmCrypt(ServerLevel level, BlockPos altar, Direction facing) {
         for (BlockPos p : PhylacteryBlockEntity.cryptBlocks(altar, facing)) {
             BlockState state = level.getBlockState(p);
@@ -117,7 +95,6 @@ public final class Cleansing {
         }
     }
 
-    /** The lich's hoard, left in a chest on the empty altar. */
     private static void leaveHoard(ServerLevel level, BlockPos altar, Direction facing) {
         if (!level.getBlockState(altar).canBeReplaced()) {
             return;
@@ -126,10 +103,6 @@ public final class Cleansing {
         RandomizableContainer.setBlockEntityLootTable(level, level.random, altar, HOARD);
     }
 
-    /**
-     * The bound souls stream out and linger in the surrounding caves: hanging in open air, a few blocks
-     * under a cave roof, clear of the walls.
-     */
     private static void freeSouls(ServerLevel level, BlockPos altar) {
         Vec3 at = Vec3.atCenterOf(altar);
         level.sendParticles(ParticleTypes.SOUL, at.x, at.y + 1.0, at.z, 120, 1.5, 2.0, 1.5, 0.08);
@@ -146,7 +119,6 @@ public final class Cleansing {
             if (!ColdEffects.isOpen(level, spot, 1)) {
                 continue;
             }
-            // Up to the roof, then back down a little, to hang in the air.
             int climbed = 0;
             while (climbed < 12 && ColdEffects.isOpen(level, spot.above(), 1)) {
                 spot = spot.above();
@@ -160,7 +132,6 @@ public final class Cleansing {
         }
     }
 
-    /** Open air on every side, so a soul doesn't sit against a wall. */
     private static boolean clearAround(ServerLevel level, BlockPos pos) {
         if (!ColdEffects.isOpen(level, pos, 1)) {
             return false;

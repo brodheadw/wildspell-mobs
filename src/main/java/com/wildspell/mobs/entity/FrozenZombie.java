@@ -48,29 +48,15 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.level.ServerLevelAccessor;
 import net.minecraft.world.phys.Vec3;
 
-/**
- * A zombie cased in ice, what a zombie becomes after lingering in the Frosted Caves. It moves slowly
- * and with effort: it drags itself forward, joints crunching and ice chipping off, then seizes up
- * mid-stride for a moment before breaking free again.
- *
- * <p>Variants: some have lost an arm to the cold, and one that froze over standing on an ice block has
- * sunk into it up to the hips. That one is stuck fast, straining against the ice and throwing snowballs;
- * break the ice around it and it pulls free as an ordinary Frozen Zombie. Separately, most have the
- * upper right of the face torn away to the skull, with a glowing socket; one in three kept a whole face.
- */
 public class FrozenZombie extends Zombie implements RangedAttackMob {
     private static final EntityDataAccessor<Boolean> DATA_SEIZED = SynchedEntityData.defineId(FrozenZombie.class, EntityDataSerializers.BOOLEAN);
     private static final EntityDataAccessor<Integer> DATA_VARIANT = SynchedEntityData.defineId(FrozenZombie.class, EntityDataSerializers.INT);
     private static final EntityDataAccessor<Boolean> DATA_WHOLE_FACE = SynchedEntityData.defineId(FrozenZombie.class, EntityDataSerializers.BOOLEAN);
     private static final ResourceLocation SEIZED_SLOWDOWN = WildspellMobs.id("seized");
     private static final ResourceLocation ICEBOUND_STUCK = WildspellMobs.id("icebound");
-    /** How deep an ice-bound zombie sits in its block: its legs are 12 of its 32 pixels, 0.75 blocks. */
     private static final double SUBMERGED = 0.75;
-    /** How close fire has to be to frighten it. */
     private static final double FEAR_RANGE = 4.0;
-    /** Thawing it takes to melt back into a plain zombie: sunlight thaws 1 a tick, fire 2. */
     public static final int THAW_TICKS = 120;
-    /** Held items that frighten it off (torches, flint and steel, and the like). */
     public static final TagKey<Item> SCARY_FIRE = TagKey.create(Registries.ITEM, WildspellMobs.id("frightens_the_cold"));
 
     private static final float SNOWBALL_SPEED = 1.5F;
@@ -81,13 +67,11 @@ public class FrozenZombie extends Zombie implements RangedAttackMob {
 
     private int phaseTicks;
     private int thaw;
-    // Ice-bound only: the ice block it's frozen into, and the spot it's held at.
     @Nullable
     private BlockPos iceBlock;
     @Nullable
     private Vec3 heldAt;
 
-    // Client-side pose snapshot the model holds while seized, so the body freezes mid-stride.
     public float heldLimbSwing;
     public float heldLimbSwingAmount;
     public float heldAgeInTicks;
@@ -116,7 +100,6 @@ public class FrozenZombie extends Zombie implements RangedAttackMob {
         return this.entityData.get(DATA_VARIANT);
     }
 
-    /** True if its face is whole, rather than torn away to the skull. */
     public boolean hasWholeFace() {
         return this.entityData.get(DATA_WHOLE_FACE);
     }
@@ -142,10 +125,6 @@ public class FrozenZombie extends Zombie implements RangedAttackMob {
         this.setNoGravity(variant == ICEBOUND);
     }
 
-    /**
-     * Frozen standing on ice, its legs are locked into it. Otherwise six in ten come through whole and
-     * the rest lose an arm. Either way, one in three keeps a whole face.
-     */
     public void pickVariant() {
         this.pickVariant(true);
     }
@@ -165,7 +144,6 @@ public class FrozenZombie extends Zombie implements RangedAttackMob {
 
     @Override
     public SpawnGroupData finalizeSpawn(ServerLevelAccessor level, DifficultyInstance difficulty, MobSpawnType spawnType, @Nullable SpawnGroupData spawnGroupData) {
-        // Raised by a lich, it comes up out of the ground already free; it never froze standing there.
         this.pickVariant(spawnType != MobSpawnType.MOB_SUMMONED);
         return super.finalizeSpawn(level, difficulty, spawnType, spawnGroupData);
     }
@@ -199,7 +177,6 @@ public class FrozenZombie extends Zombie implements RangedAttackMob {
     @Override
     protected void registerGoals() {
         super.registerGoals();
-        // Outranks the zombie's melee goal and shares its flags, so an ice-bound one only ever throws.
         this.goalSelector.addGoal(1, new SnowballGoal());
         this.goalSelector.addGoal(1, new FleeFireGoal());
     }
@@ -242,7 +219,6 @@ public class FrozenZombie extends Zombie implements RangedAttackMob {
         boolean walking = !this.getNavigation().isDone();
         AttributeInstance speed = this.getAttribute(Attributes.MOVEMENT_SPEED);
         if (this.isSeized()) {
-            // Break free and drag forward, joints crunching.
             this.entityData.set(DATA_SEIZED, false);
             this.phaseTicks = 12 + this.random.nextInt(10);
             speed.removeModifier(SEIZED_SLOWDOWN);
@@ -251,14 +227,12 @@ public class FrozenZombie extends Zombie implements RangedAttackMob {
                 ((ServerLevel) this.level()).sendParticles(ColdEffects.ICE_CHIPS, this.getX(), this.getY(0.4), this.getZ(), 8, 0.25, 0.4, 0.25, 0.08);
             }
         } else {
-            // Seize up mid-stride.
             this.entityData.set(DATA_SEIZED, true);
             this.phaseTicks = 5 + this.random.nextInt(8);
             speed.addOrUpdateTransientModifier(new AttributeModifier(SEIZED_SLOWDOWN, -0.9, AttributeModifier.Operation.ADD_MULTIPLIED_TOTAL));
         }
     }
 
-    /** Keep an ice-bound zombie pinned in its block, straining now and then; free it if the ice is gone. */
     private void holdInIce() {
         if (this.iceBlock == null || this.heldAt == null || !this.level().getBlockState(this.iceBlock).is(BlockTags.ICE)) {
             this.setVariant(NORMAL);
@@ -303,11 +277,6 @@ public class FrozenZombie extends Zombie implements RangedAttackMob {
         return false;
     }
 
-    /**
-     * Sunlight or fire melts the ice off it, dripping and hissing; fully thawed, it's a plain zombie
-     * again, which then burns in the sun as zombies do. Out of both, the cold creeps back. True if it
-     * thawed out this tick (and so is gone).
-     */
     private boolean thawInSunOrFire() {
         boolean burning = this.isOnFire();
         if (!burning && !this.inSunlight()) {
@@ -327,7 +296,6 @@ public class FrozenZombie extends Zombie implements RangedAttackMob {
         if (this.thaw < THAW_TICKS || !EventHooks.canLivingConvert(this, EntityType.ZOMBIE, ticks -> this.thaw = THAW_TICKS - ticks)) {
             return false;
         }
-        // An ice-bound one steps up out of its block as it thaws free.
         Vec3 standAt = this.isIcebound() && this.heldAt != null ? new Vec3(this.getX(), this.heldAt.y + SUBMERGED, this.getZ()) : null;
         int fire = this.getRemainingFireTicks();
         Zombie zombie = this.convertTo(EntityType.ZOMBIE, true);
@@ -345,23 +313,17 @@ public class FrozenZombie extends Zombie implements RangedAttackMob {
         return true;
     }
 
-    /**
-     * Standing in daylight under open sky, out of the rain. Unlike {@link #isSunBurnTick()}, which only
-     * rolls a chance to catch fire, this is steady, so the thaw is too.
-     */
     private boolean inSunlight() {
         return this.level().isDay() && !this.isInWaterRainOrBubble() && this.getLightLevelDependentMagicValue() > 0.5F
                 && this.level().canSeeSky(BlockPos.containing(this.getX(), this.getEyeY(), this.getZ()));
     }
 
-    /** Open flame: fire, lit campfires, torches and lava. */
     public static boolean isOpenFlame(BlockState state) {
         return state.is(BlockTags.FIRE) || state.is(BlockTags.CAMPFIRES) && state.getOptionalValue(BlockStateProperties.LIT).orElse(false)
                 || state.is(Blocks.TORCH) || state.is(Blocks.WALL_TORCH) || state.is(Blocks.SOUL_TORCH) || state.is(Blocks.SOUL_WALL_TORCH)
                 || state.getFluidState().is(FluidTags.LAVA);
     }
 
-    /** The nearest fire it's afraid of: anyone wielding fire, or open flame. */
     @Nullable
     private Vec3 nearestFire() {
         for (LivingEntity other : this.level().getEntitiesOfClass(LivingEntity.class, this.getBoundingBox().inflate(FEAR_RANGE),
@@ -413,7 +375,6 @@ public class FrozenZombie extends Zombie implements RangedAttackMob {
         }
     }
 
-    /** Frozen things fear fire: it backs away from open flame and from anyone wielding fire. */
     private class FleeFireGoal extends Goal {
         @Nullable
         private Path path;
@@ -433,7 +394,6 @@ public class FrozenZombie extends Zombie implements RangedAttackMob {
             if (fire == null) {
                 return false;
             }
-            // In cramped caves a spot "away" is often behind a wall: take the first it can actually reach.
             for (int attempt = 0; attempt < 6; ++attempt) {
                 Vec3 away = DefaultRandomPos.getPosAway(FrozenZombie.this, 8, 4, fire);
                 if (away == null) {

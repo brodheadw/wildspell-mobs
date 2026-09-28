@@ -11,13 +11,6 @@ import net.minecraft.world.level.levelgen.feature.Feature;
 import net.minecraft.world.level.levelgen.feature.FeaturePlaceContext;
 import net.minecraft.world.level.levelgen.feature.configurations.NoneFeatureConfiguration;
 
-/**
- * A few flytraps at mixed stages around the origin (the placed features put it on the jungle floor or
- * a lush cave's floor): sprouts and young plants mostly, and a grown one now and then where it has
- * the headroom. Each one roots only where a flytrap could (grass, moss, mud and other dirt, in air).
- * World generation places blocks without their placement logic, so this builds the grown ones' stems
- * itself and schedules each plant a tick, which gives it its heads once its chunk is live.
- */
 public class FlytrapPatchFeature extends Feature<NoneFeatureConfiguration> {
     private static final int TRIES = 8;
     private static final int SPREAD = 3;
@@ -56,7 +49,6 @@ public class FlytrapPatchFeature extends Feature<NoneFeatureConfiguration> {
         return placed > 0;
     }
 
-    /** The spot a flytrap could root in at this column, a couple of blocks above or below {@code start}. */
     @Nullable
     private BlockPos findGround(WorldGenLevel level, BlockState state, BlockPos start) {
         for (int dy = 2; dy >= -2; --dy) {

@@ -10,12 +10,6 @@ import net.minecraft.client.model.geom.builders.CubeDeformation;
 import net.minecraft.client.model.geom.builders.LayerDefinition;
 import net.minecraft.util.Mth;
 
-/**
- * Zombie model for a body half frozen solid: short, stiff, stop-motion strides with a laboured side
- * to side lean while it moves; while seized the whole pose (head included) freezes mid-stride and
- * only trembles. The one-armed variant hides its arm; the ice-bound one, sunk in ice to the hips,
- * keeps its legs straight and hunches forward, straining.
- */
 public class FrozenZombieModel extends ZombieModel<FrozenZombie> {
     public static final ModelLayerLocation CRUST_LAYER = new ModelLayerLocation(WildspellMobs.id("frozen_zombie"), "crust");
     private static final float GAIT_STEP = 0.7F;
@@ -25,7 +19,6 @@ public class FrozenZombieModel extends ZombieModel<FrozenZombie> {
         super(root);
     }
 
-    /** The ice crust: the zombie mesh inflated slightly, like the drowned's outer layer. */
     public static LayerDefinition createCrustLayer() {
         return LayerDefinition.create(HumanoidModel.createMesh(new CubeDeformation(0.3F), 0.0F), 64, 64);
     }
@@ -51,7 +44,6 @@ public class FrozenZombieModel extends ZombieModel<FrozenZombie> {
             this.rightArm.zRot += Mth.sin(tremble * 1.7F) * 0.025F;
             this.leftArm.zRot -= Mth.sin(tremble * 1.5F) * 0.025F;
         }
-        // Parts are shared by every zombie drawn with this model, so set visibility every frame.
         int variant = zombie.getVariant();
         this.leftArm.visible = variant != FrozenZombie.ONE_ARMED;
         if (variant == FrozenZombie.ICEBOUND) {

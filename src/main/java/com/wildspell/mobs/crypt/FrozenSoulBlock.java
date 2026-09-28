@@ -13,11 +13,6 @@ import net.minecraft.world.phys.shapes.CollisionContext;
 import net.minecraft.world.phys.shapes.Shapes;
 import net.minecraft.world.phys.shapes.VoxelShape;
 
-/**
- * One of the souls a lich held, freed when it fell and lingering in the caves around its crypt: a
- * small, cold light hanging in the air, shedding wisps. Nothing holds it up and nothing can touch it;
- * only Silk Touch can catch one, to hang elsewhere.
- */
 public class FrozenSoulBlock extends Block {
     public static final MapCodec<FrozenSoulBlock> CODEC = simpleCodec(FrozenSoulBlock::new);
     private static final VoxelShape SHAPE = Block.box(5.0, 5.0, 5.0, 11.0, 11.0, 11.0);
@@ -46,7 +41,6 @@ public class FrozenSoulBlock extends Block {
         return true;
     }
 
-    /** Wisps of the soul drift up off it, with a little frost. */
     @Override
     public void animateTick(BlockState state, Level level, BlockPos pos, RandomSource random) {
         double x = pos.getX() + 0.5;

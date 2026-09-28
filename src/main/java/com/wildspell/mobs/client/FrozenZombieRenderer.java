@@ -14,10 +14,6 @@ import net.minecraft.client.renderer.entity.layers.RenderLayer;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.monster.Zombie;
 
-/**
- * A pale, frost-bitten zombie under patches of ice crust: usually with a torn brow showing the skull and
- * a glowing eye socket, sometimes with its face whole.
- */
 public class FrozenZombieRenderer extends AbstractZombieRenderer<FrozenZombie, FrozenZombieModel> {
     private static final ResourceLocation SKIN = WildspellMobs.id("textures/entity/frozen_zombie.png");
     private static final ResourceLocation WHOLE_SKIN = WildspellMobs.id("textures/entity/frozen_zombie_whole.png");
@@ -35,7 +31,6 @@ public class FrozenZombieRenderer extends AbstractZombieRenderer<FrozenZombie, F
                 return EYES;
             }
 
-            // Only the torn socket glows; a whole face has ordinary eyes.
             @Override
             public void render(PoseStack poseStack, MultiBufferSource buffer, int packedLight, FrozenZombie zombie,
                     float limbSwing, float limbSwingAmount, float partialTick, float ageInTicks, float netHeadYaw, float headPitch) {

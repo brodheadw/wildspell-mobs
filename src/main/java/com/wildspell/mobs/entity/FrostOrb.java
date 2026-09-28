@@ -17,11 +17,6 @@ import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
 
-/**
- * The lich's spun-up frost orb: a slow, glowing ball of cold that bursts on whatever it hits, frosting
- * and slowing everything nearby. Like a Ghast's fireball it can be struck back (its type is in
- * {@code #minecraft:redirectable_projectile}), and then it's the lich that gets the burst.
- */
 public class FrostOrb extends AbstractHurtingProjectile {
     private static final float DAMAGE = 6.0F;
     private static final double BURST_RADIUS = 2.5;
@@ -74,7 +69,6 @@ public class FrostOrb extends AbstractHurtingProjectile {
         }
     }
 
-    /** Bursts in a spray of ice: damage, frost and a slow for everything close, except whoever threw it. */
     private void burst(ServerLevel level) {
         Entity owner = this.getOwner();
         level.sendParticles(ColdEffects.ICE_CHIPS, this.getX(), this.getY(), this.getZ(), 50, 0.6, 0.6, 0.6, 0.2);

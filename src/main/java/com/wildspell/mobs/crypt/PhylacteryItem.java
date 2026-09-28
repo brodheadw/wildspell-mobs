@@ -21,19 +21,11 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.phys.Vec3;
 
-/**
- * A phylactery taken off its altar, still holding its lich's soul ({@link WildspellMobs#SOUL}). Only
- * fire destroys it: dropped in lava or flame it burns, and the lich's last form rises there, mortal.
- * Nothing else harms it, it never despawns, and lost to the void it returns to its altar. Wherever it
- * goes, carried or dropped, it keeps its soul's anchor up to date, so the lich re-forms beside it and
- * hunts whoever bears it. Set down on a block, it becomes the lich's altar again.
- */
 public class PhylacteryItem extends BlockItem {
     public PhylacteryItem(Block block, Properties properties) {
         super(block, properties);
     }
 
-    /** A phylactery holding {@code soul}. */
     public static ItemStack bound(UUID soul) {
         ItemStack stack = new ItemStack(WildspellMobs.FROZEN_PHYLACTERY.get());
         stack.set(WildspellMobs.SOUL.get(), soul);
@@ -50,7 +42,6 @@ public class PhylacteryItem extends BlockItem {
         return source.is(DamageTypeTags.IS_FIRE);
     }
 
-    /** Burned: the lich is mortal, and its last form rises from the flames. */
     @Override
     public void onDestroyed(ItemEntity item, DamageSource source) {
         if (item.level() instanceof ServerLevel level) {
@@ -83,7 +74,6 @@ public class PhylacteryItem extends BlockItem {
         return false;
     }
 
-    /** Lost to the void: the phylactery re-forms on its altar. */
     private void returnToAltar(ServerLevel level, LichSouls.Soul soul, ItemEntity item) {
         ServerLevel home = level.getServer().getLevel(soul.cryptDimension());
         if (home == null) {

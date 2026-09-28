@@ -20,15 +20,9 @@ import net.minecraft.world.level.block.state.properties.BooleanProperty;
 import net.minecraft.world.phys.shapes.CollisionContext;
 import net.minecraft.world.phys.shapes.VoxelShape;
 
-/**
- * The stalk of a grown flytrap, above its {@link FlytrapBlock}, the way a big dripleaf's stem stands
- * under its leaf. The lowest segment carries the two branches its side heads sit on. It stands only
- * on the grown plant (or more stem), drops nothing itself, and taking it breaks the whole plant.
- */
 public class FlytrapStemBlock extends Block {
     public static final MapCodec<FlytrapStemBlock> CODEC = simpleCodec(FlytrapStemBlock::new);
     public static final BooleanProperty BRANCHES = BooleanProperty.create("branches");
-    /** How far out along X the branches carry the side heads, and how high up the segment. */
     public static final double BRANCH_REACH = 0.875;
     public static final double BRANCH_HEIGHT = 0.5625;
 
@@ -69,7 +63,6 @@ public class FlytrapStemBlock extends Block {
         return super.updateShape(state, direction, neighborState, level, pos, neighborPos);
     }
 
-    /** The plant's base under a stem segment, or null if the stem stands on nothing of the plant. */
     @Nullable
     public static BlockPos baseOf(BlockGetter level, BlockPos pos) {
         BlockPos below = pos.below();
@@ -85,7 +78,6 @@ public class FlytrapStemBlock extends Block {
         return null;
     }
 
-    /** In creative, the plant goes without dropping anything, as a double plant does. */
     @Override
     public BlockState playerWillDestroy(Level level, BlockPos pos, BlockState state, Player player) {
         BlockPos base = baseOf(level, pos);
@@ -95,7 +87,6 @@ public class FlytrapStemBlock extends Block {
         return super.playerWillDestroy(level, pos, state, player);
     }
 
-    /** Taking any piece of the stem breaks the whole plant, which drops from its base. */
     @Override
     protected void onRemove(BlockState state, Level level, BlockPos pos, BlockState newState, boolean movedByPiston) {
         if (!level.isClientSide && !newState.is(this)) {
