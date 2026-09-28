@@ -110,6 +110,12 @@ The player-facing description is [publish/DESCRIPTION.md](publish/DESCRIPTION.md
   Creeper Overhaul installed, the only ones there are its Snowy Creepers.
 - **Enchanted Ice Crystal**: YUNG's Enchanted Ice drops one when mined without Silk Touch (a global
   loot modifier), on top of its XP. Silk Touch still gives the block.
+- **The magical field**: with [Fundamental Magic](https://github.com/brodheadw/fundamental-magic)
+  installed, a lich's crypt feeds its field by data alone (no code dependency): the Frozen Phylactery
+  (0.5), its Rime Wards (0.3) and freed Frozen Souls (0.2) are essence sources leaning still, so a
+  crypt reads as a strong, unsteady still field to Wildspell Magic's field-sight and Sighting Frame.
+  `data/fundamentalmagic/tags/block/essence_sources.json` and `data_maps/block/essence_strength.json`.
+  Without the engine these files are ignored (one warning line in the log).
 
 ## Layout
 
@@ -187,4 +193,4 @@ looking at the mobs. The world is local-only (under `run/`, gitignored).
 ## Release
 
 Bump `mod_version` in `gradle.properties`, build, and upload the jar as a new version of the Modrinth
-project (NeoForge, 1.21.1, GeckoLib as a required dependency, YUNG's Cave Biomes as an optional one).
+project (NeoForge, 1.21.1, GeckoLib as a required dependency, YUNG's Cave Biomes and Fundamental Magic as optional ones).
