@@ -135,6 +135,8 @@ The player-facing description is [publish/DESCRIPTION.md](publish/DESCRIPTION.md
   - `client/`: models, renderers, the frost mote particle.
 - `src/main/resources/`: textures, sounds, lang, loot tables, biome modifiers and biome tags.
 - `tools/`: generators for the art and sound. Edit these, not the PNG/OGG files directly.
+  - `geckolib_model.py` and `painting.py`: the shared GeckoLib model builder (bones, box-UV packing,
+    keyframes, texel walk) and pixel helpers the model and paint scripts use.
   - `paint_textures.py` (needs Pillow): every texture, including the skull variants and the Frozen
     Zombie skin, painted from scratch.
   - `make_sounds.py` (needs numpy and soundfile): the Frozen Zombie's crunch and shatter sounds, as
