@@ -35,7 +35,6 @@ public class LuminousMothRenderer extends MobRenderer<LuminousMoth, LuminousMoth
         poseStack.scale(SCALE, SCALE, SCALE);
     }
 
-    /** It shines by its own light. */
     @Override
     protected int getBlockLightLevel(LuminousMoth moth, BlockPos pos) {
         return 15;

@@ -23,12 +23,6 @@ import net.minecraft.world.phys.shapes.CollisionContext;
 import net.minecraft.world.phys.shapes.Shapes;
 import net.minecraft.world.phys.shapes.VoxelShape;
 
-/**
- * The light a Luminous Moth sheds: invisible, intangible and replaceable, like vanilla's light block.
- * It checks on a timer that a moth is still keeping it and removes itself if not, so the light
- * follows the moth and never outlives it. A trail glow needs a moth right beside it; an anchored one
- * (around a released moth's home) needs that moth nearby.
- */
 public class MothGlowBlock extends Block {
     public static final IntegerProperty LEVEL = BlockStateProperties.LEVEL;
     public static final BooleanProperty ANCHOR = BooleanProperty.create("anchor");
@@ -40,11 +34,9 @@ public class MothGlowBlock extends Block {
         this.registerDefaultState(this.stateDefinition.any().setValue(LEVEL, LuminousMoth.TRAIL_LIGHT).setValue(ANCHOR, false));
     }
 
-    /** Sets a glow of {@code light} at {@code pos} and starts its keep-alive checks. */
     public static void place(Level level, BlockPos pos, int light, boolean anchor) {
         BlockState state = WildspellMobs.MOTH_GLOW.get().defaultBlockState().setValue(LEVEL, light).setValue(ANCHOR, anchor);
         if (level.getBlockState(pos) != state) {
-            // No neighbour or shape updates: nothing around cares that the air got brighter.
             level.setBlock(pos, state, Block.UPDATE_CLIENTS | Block.UPDATE_KNOWN_SHAPE);
         }
         if (!level.getBlockTicks().hasScheduledTick(pos, state.getBlock())) {

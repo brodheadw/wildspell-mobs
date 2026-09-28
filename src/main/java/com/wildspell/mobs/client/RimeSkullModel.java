@@ -12,10 +12,6 @@ import net.minecraft.client.model.geom.builders.MeshDefinition;
 import net.minecraft.client.model.geom.builders.PartDefinition;
 import net.minecraft.util.Mth;
 
-/**
- * A 9x8x8 skull with a hinged jaw and a crown of short icicles; bobs, chatters and gnashes while it
- * floats. Each skull variant shows its own subset of the crown.
- */
 public class RimeSkullModel extends HierarchicalModel<RimeSkull> {
     public static final ModelLayerLocation LAYER = new ModelLayerLocation(WildspellMobs.id("rime_skull"), "main");
 
@@ -24,9 +20,7 @@ public class RimeSkullModel extends HierarchicalModel<RimeSkull> {
     private final ModelPart jaw;
     private final ModelPart[] spikes = new ModelPart[SPIKES.length];
 
-    // Crown icicles as {x, z, height}, sitting on top of the skull.
     private static final float[][] SPIKES = {{-3.0F, -1.0F, 2.0F}, {-0.5F, -2.5F, 3.0F}, {2.0F, 0.5F, 1.0F}, {0.5F, 2.0F, 2.0F}, {-4.0F, 2.0F, 1.0F}, {3.0F, -2.5F, 2.0F}};
-    // Which icicles each variant wears.
     private static final boolean[][] CROWNS = {
             {true, true, true, true, false, false},
             {false, true, false, true, true, true},

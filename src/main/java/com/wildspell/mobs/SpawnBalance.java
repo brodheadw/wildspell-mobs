@@ -15,14 +15,6 @@ import net.minecraft.world.phys.AABB;
 import net.neoforged.neoforge.common.ModConfigSpec;
 import net.neoforged.neoforge.event.entity.living.MobSpawnEvent;
 
-/**
- * Thins natural hostile spawns in overworld caves. "Underground" means the spawn spot gets no
- * skylight at all, i.e. a cave.
- *
- * <p>The per-spawn chances only change which mobs fill the vanilla monster cap, not how many there
- * are, so the local caps do the real thinning: a cave spot that already has enough hostiles (or
- * creepers) nearby refuses further spawns, pushing the cap's mobs out away from the player.
- */
 public final class SpawnBalance {
     private static final ModConfigSpec.Builder BUILDER = new ModConfigSpec.Builder();
 
@@ -63,7 +55,6 @@ public final class SpawnBalance {
 
     static final ModConfigSpec SPEC = BUILDER.build();
 
-    // Spawning probes thousands of spots per tick; count neighbours once per chunk section per tick.
     private static final Long2ObjectOpenHashMap<int[]> NEARBY = new Long2ObjectOpenHashMap<>();
     private static long nearbyTick = Long.MIN_VALUE;
 
@@ -101,7 +92,6 @@ public final class SpawnBalance {
         }
     }
 
-    /** {hostiles, creepers} within the cap radius of the section containing {@code pos}. */
     private static int[] nearbyHostiles(ServerLevel level, BlockPos pos) {
         long now = level.getGameTime();
         if (now != nearbyTick) {
@@ -121,7 +111,6 @@ public final class SpawnBalance {
         });
     }
 
-    /** Drops cached neighbour counts; gametests call this after spawning mobs mid-tick. */
     static void clearCache() {
         NEARBY.clear();
     }

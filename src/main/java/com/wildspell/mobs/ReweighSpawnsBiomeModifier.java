@@ -15,12 +15,6 @@ import net.minecraft.world.level.biome.MobSpawnSettings;
 import net.neoforged.neoforge.common.world.BiomeModifier;
 import net.neoforged.neoforge.common.world.ModifiableBiomeInfo;
 
-/**
- * Changes the weight and group size of existing spawn entries in the given biomes, e.g. making
- * creepers rare in the Frosted Caves. NeoForge's built-in modifiers always apply adds before
- * removes, so "remove, then add back at a lower weight" can't be expressed with them; this edits
- * the entries in place during the MODIFY phase instead.
- */
 public record ReweighSpawnsBiomeModifier(HolderSet<Biome> biomes, HolderSet<EntityType<?>> entityTypes, int weight, int maxCount)
         implements BiomeModifier {
     public static final MapCodec<ReweighSpawnsBiomeModifier> CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(

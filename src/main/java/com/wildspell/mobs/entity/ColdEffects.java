@@ -20,18 +20,13 @@ import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
 
-/** Effects and world checks shared by the cold mobs, the lich and its phylactery. */
 public final class ColdEffects {
-    /** Shards of ice flying off something that shatters or cracks. */
     public static final BlockParticleOption ICE_CHIPS = new BlockParticleOption(ParticleTypes.BLOCK, Blocks.ICE.defaultBlockState());
 
     private ColdEffects() {
     }
 
-    /**
-     * True if the {@code height} blocks from {@code pos} upward are loaded and empty. Checking
-     * loadedness first means a spot search never forces a chunk to load on the server thread.
-     */
+    // Loadedness first, so a spot search never loads a chunk on the server thread.
     public static boolean isOpen(Level level, BlockPos pos, int height) {
         for (int dy = 0; dy < height; ++dy) {
             BlockPos p = pos.above(dy);
@@ -42,7 +37,6 @@ public final class ColdEffects {
         return true;
     }
 
-    /** True if nothing solid lies on the straight line between two points (flyers steer in straight lines). */
     public static boolean clearPath(Entity mover, Vec3 from, Vec3 to) {
         return mover.level().clip(new ClipContext(from, to, ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, mover)).getType() == HitResult.Type.MISS;
     }
@@ -70,14 +64,12 @@ public final class ColdEffects {
         mob.discard();
     }
 
-    /** Souls and frost billowing up: the lich rising, fleeing or sinking away. */
     public static void soulBurst(ServerLevel level, Vec3 at, double width, double height) {
         level.sendParticles(ParticleTypes.SNOWFLAKE, at.x, at.y, at.z, 40, width, height, width, 0.05);
         level.sendParticles(WildspellMobs.FROST_MOTE.get(), at.x, at.y, at.z, 30, width, height, width, 0.05);
         level.sendParticles(ParticleTypes.SOUL, at.x, at.y, at.z, 20, width, height, width, 0.03);
     }
 
-    /** Shows {@code message} above the hotbar of every player in {@code area}. */
     public static void tellNearby(ServerLevel level, AABB area, Component message) {
         for (Player player : level.getEntitiesOfClass(Player.class, area)) {
             player.displayClientMessage(message, true);

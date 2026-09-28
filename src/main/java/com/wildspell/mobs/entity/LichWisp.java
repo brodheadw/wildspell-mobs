@@ -16,15 +16,8 @@ import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.Vec3;
 
-/**
- * A struck-down lich's soul, flying straight home to its phylactery through rock and all: to its
- * altar, or to wherever it's been carried, following it if it moves. It glows through walls, so a
- * player can follow it. Arriving, it sets the lich re-forming. If its phylactery is in another
- * dimension, or it takes too long, the soul gets home anyway, by ways no one can follow.
- */
 public class LichWisp extends Entity {
     public static final double SPEED = 0.3;
-    /** Ticks before a soul that hasn't arrived simply gets home. */
     public static final int MAX_AGE = 1200;
 
     @Nullable
@@ -74,7 +67,6 @@ public class LichWisp extends Entity {
             this.arrive(level, soul);
             return;
         }
-        // A slight weave, so it reads as a spirit rather than a projectile.
         Vec3 weave = new Vec3(Math.sin(this.tickCount * 0.3) * 0.04, Math.cos(this.tickCount * 0.23) * 0.04, 0.0);
         this.setDeltaMovement(to.normalize().scale(SPEED).add(weave));
         this.setPos(this.position().add(this.getDeltaMovement()));

@@ -38,14 +38,9 @@ import net.minecraft.world.level.ServerLevelAccessor;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.Vec3;
 
-/**
- * A floating, frost-rimed skull. It jitters around its target, lunges with its jaw open, and
- * spits ice shards from range. Flies freely (no gravity) but still collides with terrain.
- */
 public class RimeSkull extends Monster {
     private static final EntityDataAccessor<Boolean> DATA_CHARGING = SynchedEntityData.defineId(RimeSkull.class, EntityDataSerializers.BOOLEAN);
     private static final EntityDataAccessor<Integer> DATA_VARIANT = SynchedEntityData.defineId(RimeSkull.class, EntityDataSerializers.INT);
-    /** Subtle looks a skull can spawn with: frost tint, crack pattern, eye glow and crown layout. */
     public static final int VARIANTS = 3;
 
     private int chargeCooldown = 20;
@@ -54,9 +49,7 @@ public class RimeSkull extends Monster {
 
     private static final byte EVENT_GNASH = 100;
     private static final int CHOMP_TICKS = 5;
-    /** A natural spawn hovers at most this far above whatever is under it. */
     private static final int HOVER_SPAWN_HEIGHT = 3;
-    // Client-side gnash animation: ticks left and how many chomps this gnash has.
     private int gnashTicks;
     private int gnashLength;
 
@@ -90,11 +83,6 @@ public class RimeSkull extends Monster {
         this.entityData.set(DATA_VARIANT, Math.floorMod(variant, VARIANTS));
     }
 
-    /**
-     * Natural spawns: a dark open spot, hovering within a few blocks of something below it. Unlike
-     * ground mobs it doesn't care what that something is, so it spawns over ice too (vanilla lets
-     * nothing but polar bears spawn on ice), and in the cramped ice-floored caverns as well as the open ones.
-     */
     public static boolean checkRimeSkullSpawnRules(EntityType<RimeSkull> type, ServerLevelAccessor level, MobSpawnType spawnType, BlockPos pos, RandomSource random) {
         if (level.getDifficulty() == Difficulty.PEACEFUL || !level.getBlockState(pos).getCollisionShape(level, pos).isEmpty() || !level.getFluidState(pos).isEmpty()
                 || LichSouls.isCleansedZone(level.getLevel(), pos)) {
@@ -156,7 +144,6 @@ public class RimeSkull extends Monster {
             this.clientEffects();
             return;
         }
-        // Undead ice: daylight sets it burning, like a skeleton.
         if (this.isSunBurnTick()) {
             this.igniteForSeconds(8.0F);
         }
@@ -175,7 +162,6 @@ public class RimeSkull extends Monster {
         }
     }
 
-    /** Snap the jaw shut two or three times; the animation and chomp sounds play client-side. */
     private void gnash() {
         this.level().broadcastEntityEvent(this, EVENT_GNASH);
         this.gnashCooldown = 60 + this.random.nextInt(80);
@@ -192,7 +178,6 @@ public class RimeSkull extends Monster {
     }
 
     private void clientEffects() {
-        // Ice motes spilling off the skull and falling away, plus the odd snowflake.
         for (int i = 0; i < 2; ++i) {
             this.level().addParticle(WildspellMobs.FROST_MOTE.get(),
                     this.getX() + (this.random.nextDouble() - 0.5) * 0.7, this.getY() + 0.1 + this.random.nextDouble() * 0.5,
@@ -204,7 +189,6 @@ public class RimeSkull extends Monster {
         }
         if (this.gnashTicks > 0) {
             --this.gnashTicks;
-            // The jaw snaps shut at the end of each chomp.
             if ((this.gnashLength - this.gnashTicks) % CHOMP_TICKS == 0) {
                 this.level().playLocalSound(this.getX(), this.getY(), this.getZ(), SoundEvents.EVOKER_FANGS_ATTACK, SoundSource.HOSTILE,
                         0.7F, 1.5F + this.random.nextFloat() * 0.2F, false);
@@ -212,7 +196,6 @@ public class RimeSkull extends Monster {
         }
     }
 
-    /** Jaw openness 0..1 during a gnash (one open-and-snap per chomp), or -1 when not gnashing. */
     public float gnashOpenness(float partialTick) {
         if (this.gnashTicks <= 0) {
             return -1.0F;
@@ -296,7 +279,6 @@ public class RimeSkull extends Monster {
         }
     }
 
-    /** Lunge at the target's face. The aim locks after a few ticks so the lunge can be dodged. */
     private class ChargeGoal extends Goal {
         private static final int AIM_TICKS = 8;
         private static final int MAX_TICKS = 40;
@@ -364,7 +346,6 @@ public class RimeSkull extends Monster {
         }
     }
 
-    /** Spit an ice shard from mid range. Flagless, so it fires while the skull keeps circling. */
     private class SpitGoal extends Goal {
         @Override
         public boolean canUse() {
@@ -396,7 +377,6 @@ public class RimeSkull extends Monster {
         }
     }
 
-    /** Hover around the target, darting to a new nearby point every second or two. */
     private class CircleTargetGoal extends Goal {
         private int repickTicks;
 
@@ -441,7 +421,6 @@ public class RimeSkull extends Monster {
                 skull.getMoveControl().setWantedPosition(spot.x, spot.y, spot.z, 0.55);
                 return;
             }
-            // Boxed in (usually tucked under a ledge): rise to get a new view, else close in.
             BlockPos above = RimeSkull.this.blockPosition().above(2);
             if (ColdEffects.isOpen(RimeSkull.this.level(), above.below(), 2)) {
                 RimeSkull.this.getMoveControl().setWantedPosition(RimeSkull.this.getX(), RimeSkull.this.getY() + 2.0, RimeSkull.this.getZ(), 0.55);
@@ -451,7 +430,6 @@ public class RimeSkull extends Monster {
         }
     }
 
-    /** Idle drift to a nearby open spot when nothing is being hunted. */
     private class DriftGoal extends Goal {
         DriftGoal() {
             this.setFlags(EnumSet.of(Goal.Flag.MOVE));

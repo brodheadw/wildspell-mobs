@@ -11,7 +11,6 @@ import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 
-/** The Ice Lich's staff: fires a frost shard that stings, frosts over and slows what it hits. */
 public class FrostboundStaffItem extends Item {
     private static final int COOLDOWN_TICKS = 12;
 

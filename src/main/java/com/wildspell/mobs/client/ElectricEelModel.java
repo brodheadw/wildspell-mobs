@@ -12,18 +12,12 @@ import net.minecraft.client.model.geom.builders.MeshDefinition;
 import net.minecraft.client.model.geom.builders.PartDefinition;
 import net.minecraft.util.Mth;
 
-/**
- * A long eel: a blunt head with a hinged jaw, then five body segments tapering to the tail, each
- * hung off the one before so a wave can run down them. Like a real electric eel it has no dorsal
- * fin, just a long ribbon fin under the back half of the body.
- */
 public class ElectricEelModel extends HierarchicalModel<ElectricEel> {
     public static final ModelLayerLocation LAYER = new ModelLayerLocation(WildspellMobs.id("electric_eel"), "main");
 
     private final ModelPart root;
     private final ModelPart head;
     private final ModelPart jaw;
-    /** Front to back: the forebody (which carries the head), four more segments, the tail. */
     private final ModelPart[] segments;
 
     public ElectricEelModel(ModelPart root) {
@@ -82,21 +76,17 @@ public class ElectricEelModel extends HierarchicalModel<ElectricEel> {
     @Override
     public void setupAnim(ElectricEel eel, float limbSwing, float limbSwingAmount, float ageInTicks, float netHeadYaw, float headPitch) {
         this.root.getAllParts().forEach(ModelPart::resetPose);
-        // A wave runs down the body from head to tail, growing as it goes: slow and shallow at rest,
-        // quicker and wider under way. The phase is summed, never a product of time and speed, so it
-        // stays continuous as the speed changes (limbSwing is the distance swum so far).
+        // The phase is summed, never a product of time and speed, so it stays continuous as the speed changes.
         float swim = Math.min(1.0F, limbSwingAmount * 2.0F);
         float phase = ageInTicks * 0.12F + limbSwing * 0.6F + eel.getId();
         float amplitude = 0.1F + 0.3F * swim;
         for (int i = 0; i < this.segments.length; ++i) {
             this.segments[i].yRot = Mth.sin(phase - i * 1.1F) * amplitude * (0.3F + 0.28F * i);
         }
-        // The head holds its line against the wave, and follows where the eel is looking.
         this.head.yRot = -this.segments[0].yRot * 0.7F + netHeadYaw * Mth.DEG_TO_RAD * 0.3F;
         this.segments[0].xRot = headPitch * Mth.DEG_TO_RAD;
         int charge = eel.getCharge();
         if (charge > 0) {
-            // Winding up: the whole length trembles, jaw agape.
             float build = Math.min(1.0F, charge / (float) ElectricEel.CHARGE_TICKS);
             for (int i = 0; i < this.segments.length; ++i) {
                 this.segments[i].zRot = Mth.sin(ageInTicks * 2.7F + i * 1.9F) * 0.12F * build;

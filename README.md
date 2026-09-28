@@ -16,8 +16,8 @@ The player-facing description is [publish/DESCRIPTION.md](publish/DESCRIPTION.md
 - **Ice Lich**: a floating frost-lich boss (GeckoLib model) bound to a **Frozen Phylactery** in a
   crypt generated in the Frosted Caves. Each crypt is dug into solid rock, with one tunnel out that
   opens onto a cave (the site is chosen from the terrain noise, and the mouth is dug through any cave
-  ice). It's built after the caves' decoration, and YUNG's frost sheets are kept off its masonry. Very rarely (`lichAmbushChance`, per second within 64 blocks
-  of a crypt) it rises behind a player and hunts them, blinking after them when it loses sight. It
+  ice). It's built after the caves' decoration, and YUNG's frost sheets are kept off its masonry. Very rarely (`lichAmbushChance`, per second within
+  `lichAmbushRange` of a crypt, 200 blocks by default) it rises behind a player and hunts them, blinking after them when it loses sight. It
   fires frost-shard volleys, sweeps a frost beam that pillars block, channels minions (hit it to break
   the channel; at most 3), spins its staff overhead and looses a **Frost Orb** (a slow burst of cold
   that can be struck back, like a Ghast's fireball), tosses its staff hand to hand now and then (a
@@ -29,7 +29,8 @@ The player-facing description is [publish/DESCRIPTION.md](publish/DESCRIPTION.md
   can't be moved while any of the crypt's four **Rime Wards** stand; unwarded, mining it takes it as an
   item. Only fire destroys it (nothing else harms it, it never despawns, and lost to the void it goes
   back to its altar); while it's carried, the lich re-forms beside it and hunts whoever bears it,
-  anywhere. Burned, the lich's last form rises from the flames, mortal and enraged; only that drops
+  anywhere. Burned, the lich's last form rises from the flames, mortal and enraged (on Peaceful nothing rises and
+  its hold breaks at once); only that, or a lich with no phylactery at all (a spawn egg's), drops
   the **Frostbound Staff** (fires frost shards). Its fall breaks its hold on the caves: nearby Frozen
   Zombies and Rime Skulls crumble, snow and frost melt back from the crypt, its braziers burn as
   ordinary fire and its candles light, its hoard is left in a chest on the altar, the souls it held
@@ -42,7 +43,8 @@ The player-facing description is [publish/DESCRIPTION.md](publish/DESCRIPTION.md
 - **Crown Fragment** and **Soulseeker**: striking the lich down (while it's bound, as a player) leaves a
   Crown Fragment, a shard of its crown still bound to its soul. Bound in Rime Shards, an Enchanted Ice
   Crystal and Frost Lilies it makes the Soulseeker: its needle points to that lich's phylactery,
-  wherever it is, and using it says how far, and whether above or below.
+  wherever it is, and using it says how far, and whether above or below, until the phylactery burns.
+  The binding is the `wildspellmobs:soulseeker` recipe type, so it holds for shift-click and the Crafter.
 - **Luminous Moth**: a small, peaceful glowing moth (ambient) in the Lush Caves
   (`#wildspellmobs:luminous_moth_spawns`). It mostly sits settled on a plant
   (`#wildspellmobs:luminous_moth_perches`), any solid surface or a wall, between short jinking
@@ -122,10 +124,12 @@ The player-facing description is [publish/DESCRIPTION.md](publish/DESCRIPTION.md
 - `src/main/java/com/wildspell/mobs/`: registration (`WildspellMobs`), cave spawn balancing
   (`SpawnBalance`), zombie freezing (`ZombieFreezing`), gametests (`WildspellMobsTests`, `ElectricEelTests`).
   - `entity/`: `RimeSkull`, `FrozenZombie`, `IceLich`, `LichWisp` (its soul in flight), `FrostShard`
-    (every frost projectile), `Frost` (the shared freezing rules), `ElectricEel`, `FlytrapHead`.
+    (every frost projectile), `Frost` (the shared freezing rules), `ElectricEel`, `FlytrapHead`,
+    `ColdEffects` (spot searches and shared effects), `ThrustMoveControl` (the flyers' steering),
+    `MotionSense` (what moved, for the moth and the flytrap).
   - `crypt/`: the crypt structure and its piece, the phylactery block and its block entity (ambushes,
     re-forming, the braziers, the wards).
-  - `item/`: `FrostboundStaffItem`.
+  - `item/`: `FrostboundStaffItem`, `SoulseekerItem` and its recipe type.
   - `moth/`: the moth's glow block, Luminous Moss and the bottled moth; the moth itself is in `entity/`.
   - `flytrap/`: the flytrap's block, its stem and its world-generation patch; its heads are in `entity/`.
   - `client/`: models, renderers, the frost mote particle.
@@ -167,7 +171,8 @@ new drops, and the Luminous Moth (its light following it and clearing up after i
 brightening moss, settling on walls, being flushed but not by a sneaking player, the moss fading,
 following a Spore Blossom, bottling and releasing in the dark), and the Electric Eel (a discharge hits
 everything in the water but nothing ashore, only swimmers in its territory are hunted, fish only when
-hungry, caught and swallowed, leaping at someone on the bank, taking a crevice as its den), and the
+hungry, caught and swallowed, leaping at someone on the bank, taking a crevice as its den, and a
+discharge ending cleanly whatever the tick parity), and the
 Pegasus (gliding down unhurt, a rider climbing and gliding, the wild soar coming back to where it rose,
 tamed ones staying put, spawn ground, breeding, coats saved and inherited), and the Flytrap (growing
 through its stages with the right heads and reach, placed at any stage and withered to air, a sprout

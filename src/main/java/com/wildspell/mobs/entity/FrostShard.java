@@ -15,15 +15,9 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.EntityHitResult;
 import net.minecraft.world.phys.HitResult;
 
-/**
- * Frost projectile: the Rime Skull's spit, an ice-bound Frozen Zombie's snowball, the Ice Lich's volleys and the
- * Frostbound Staff's shot. Light damage, a short slow, and some frost.
- */
 public class FrostShard extends ThrowableItemProjectile {
     private static final byte EVENT_SHATTER = 3;
-    /** Blocks per tick squared; public so throwers can aim for the drop. */
     public static final double GRAVITY = 0.03;
-    /** Frost ticks per hit; fully frozen is 140, and frost thaws by 2 a tick. */
     public static final int SHARD_FROST = 45;
 
     public FrostShard(EntityType<? extends FrostShard> type, Level level) {
@@ -57,7 +51,6 @@ public class FrostShard extends ThrowableItemProjectile {
         }
     }
 
-    /** A lich's shards pass straight through liches and the minions they raised. */
     @Override
     protected boolean canHitEntity(Entity target) {
         return super.canHitEntity(target) && !(this.getOwner() instanceof IceLich && (target instanceof IceLich || IceLich.isMinion(target)));

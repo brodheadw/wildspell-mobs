@@ -9,7 +9,6 @@ import net.minecraft.client.particle.TextureSheetParticle;
 import net.minecraft.client.renderer.LightTexture;
 import net.minecraft.core.particles.SimpleParticleType;
 
-/** A small light-blue ice mote that tumbles downward, drifts, shrinks and fades; always fully lit. */
 public class FrostMoteParticle extends TextureSheetParticle {
     private final SpriteSet sprites;
     private final float startSize;

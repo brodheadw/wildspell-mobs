@@ -20,7 +20,6 @@ import net.minecraft.world.phys.Vec3;
 import net.neoforged.neoforge.gametest.GameTestHolder;
 import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
 
-/** In-world checks for the Electric Eel, run with the rest by ./gradlew runGameTestServer. */
 @GameTestHolder(WildspellMobs.MODID)
 @PrefixGameTestTemplate(false)
 public class ElectricEelTests {
@@ -42,7 +41,6 @@ public class ElectricEelTests {
         ElectricEel eel = helper.spawn(WildspellMobs.ELECTRIC_EEL.get(), 4.5F, 1.2F, 4.5F);
         Pig target = helper.spawn(EntityType.PIG, 5.5F, 2.0F, 4.5F);
         Pig bystander = helper.spawn(EntityType.PIG, 3.5F, 2.0F, 2.5F);
-        // Within the discharge's reach, but on the bank.
         Pig ashore = helper.spawn(EntityType.PIG, 7.5F, 4.0F, 4.5F);
         for (Pig pig : new Pig[] {target, bystander, ashore}) {
             pig.setNoAi(true);
@@ -79,7 +77,6 @@ public class ElectricEelTests {
         ElectricEel eel = helper.spawn(WildspellMobs.ELECTRIC_EEL.get(), 4.5F, 1.2F, 4.5F);
         eel.setFedTicks(0);
         Cod cod = helper.spawn(EntityType.COD, 3.5F, 2.0F, 4.5F);
-        // It catches fish and swallows them; the discharge is for threats.
         helper.onEachTick(() -> helper.assertTrue(eel.getCharge() == 0, "eel wound up a discharge at a fish"));
         helper.succeedWhen(() -> {
             helper.assertTrue(!cod.isAlive(), "hungry eel hasn't caught the cod; target=" + eel.getTarget());
@@ -116,7 +113,6 @@ public class ElectricEelTests {
         helper.getLevel().addFreshEntity(player);
         eel.setTarget(player);
         helper.onEachTick(() -> {
-            // Keep the player planted on the bank, out of reach of a discharge.
             player.moveTo(bank.x, bank.y, bank.z, 90.0F, 0.0F);
             helper.assertTrue(!player.isInWater(), "player on the bank is in the water");
             if (player.getLastDamageSource() != null) {
@@ -130,7 +126,6 @@ public class ElectricEelTests {
     @GameTest(template = ARENA, timeoutTicks = 400, batch = "eelDen")
     public static void eelTakesACreviceForItsDen(GameTestHelper helper) {
         pool(helper);
-        // A nook cut into the far wall at water level, walled on four sides and open to the pool.
         BlockPos nook = new BlockPos(1, 1, 4);
         helper.setBlock(nook.north(), Blocks.STONE);
         helper.setBlock(nook.south(), Blocks.STONE);
@@ -142,17 +137,6 @@ public class ElectricEelTests {
         });
     }
 
-    /**
-     * A stone basin (x 1-6, z 1-7) three blocks deep in water, with a dry stone bank from x = 7
-     * whose top is at y = 4.
-     */
-    /**
-     * The lurk goal updates every tick, and on the odd ticks the goal selector doesn't ask
-     * canContinueToUse first. So a den that the goal itself gave up on, or that was cleared under
-     * it, used to crash the next tick with a null position (seen in the pack: "Ticking entity").
-     * Which tick is the unguarded one depends on the eel's age plus its id, so two eels spawned
-     * together (consecutive ids) cover both.
-     */
     @GameTest(template = ARENA, timeoutTicks = 300, batch = "eelDen")
     public static void eelSurvivesLosingItsDen(GameTestHelper helper) {
         pool(helper);
@@ -160,7 +144,6 @@ public class ElectricEelTests {
         eels[0] = helper.spawn(WildspellMobs.ELECTRIC_EEL.get(), 2.5F, 2.0F, 3.5F);
         eels[1] = helper.spawn(WildspellMobs.ELECTRIC_EEL.get(), 4.5F, 2.0F, 5.5F);
         helper.assertTrue((eels[0].getId() + eels[1].getId()) % 2 == 1, "the two eels tick on opposite parities");
-        // The lurk goal only starts once its cooldown (100 ticks from spawn) has run down.
         helper.runAfterDelay(120, () -> {
             eels[0].setDen(helper.absolutePos(new BlockPos(1, 1, 1)));
             eels[1].setDen(helper.absolutePos(new BlockPos(5, 1, 7)));
@@ -221,7 +204,6 @@ public class ElectricEelTests {
         });
     }
 
-    /** A survival-mode mock player standing in the world (not a ServerPlayer, which needs a connection). */
     private static Player addMockPlayer(GameTestHelper helper, Vec3 at) {
         Player player = helper.makeMockPlayer(GameType.SURVIVAL);
         Vec3 pos = helper.absoluteVec(at);

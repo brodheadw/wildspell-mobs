@@ -12,6 +12,7 @@ import net.minecraft.gametest.framework.GameTest;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.util.RandomSource;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.effect.MobEffects;
@@ -35,11 +36,7 @@ import net.minecraft.world.phys.Vec3;
 import net.neoforged.neoforge.gametest.GameTestHolder;
 import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
 
-/**
- * In-world checks for the Flytrap, run with the rest by ./gradlew runGameTestServer. Its heads bite
- * anything moving near them, so every test that grows one gets a batch of its own, away from other
- * tests' mobs.
- */
+// Heads bite anything moving nearby, so every test that grows one gets a batch of its own.
 @GameTestHolder(WildspellMobs.MODID)
 @PrefixGameTestTemplate(false)
 public class FlytrapTests {
@@ -52,7 +49,6 @@ public class FlytrapTests {
     public static void flytrapGrowsThroughItsStagesAndHeads(GameTestHelper helper) {
         lawn(helper);
         plant(helper, PLANT, 0);
-        // A young plant under a low roof can't grow tall.
         BlockPos roofed = new BlockPos(1, 1, 1);
         plant(helper, roofed, 1);
         helper.setBlock(roofed.above(2), Blocks.STONE);
@@ -79,7 +75,6 @@ public class FlytrapTests {
         });
     }
 
-    /** How Wildspell Magic uses it: place the block by id at a stage, and wither it by setting it to air. */
     @GameTest(template = ARENA, timeoutTicks = 100, batch = "flytrapMagic")
     public static void placedAtAnyStageAndWitheredToAir(GameTestHelper helper) {
         lawn(helper);
@@ -149,7 +144,6 @@ public class FlytrapTests {
         Vec3 home = helper.absoluteVec(new Vec3(4.5, 2.0, 4.5));
         int[] tick = {0};
         helper.onEachTick(() -> {
-            // Pace back and forth two blocks off until bitten; still, it would be left alone.
             if (pig.getHealth() == pig.getMaxHealth()) {
                 Vec3 at = helper.absoluteVec(new Vec3((tick[0]++ / 4) % 2 == 0 ? 2.5 : 2.9, 1.0, 4.5));
                 pig.moveTo(at.x, at.y, at.z, 0.0F, 0.0F);
@@ -218,7 +212,6 @@ public class FlytrapTests {
             helper.assertFalse(pig.hasEffect(MobEffects.MOVEMENT_SLOWDOWN), "the freed pig is still slowed");
             helper.assertTrue(player.getMainHandItem().getDamageValue() == 1, "cutting didn't wear the shears");
         });
-        // It hangs slack a while and doesn't just bite again.
         helper.runAfterDelay(34, () -> {
             FlytrapHead head = head(helper, PLANT);
             helper.assertTrue(head.getHeld() == null && head.getAction() == FlytrapHead.ACTION_IDLE, "the flytrap took the pig back");
@@ -262,7 +255,6 @@ public class FlytrapTests {
             head.push(1.0, 0.5, 1.0);
             head.knockback(2.0, 1.0, 1.0);
             head.setDeltaMovement(0.8, 0.6, -0.8);
-            // A pig bumbled straight into it.
             helper.spawn(EntityType.PIG, 4.5F, 2.0F, 4.5F);
         });
         helper.runAfterDelay(40, () -> {
@@ -281,12 +273,10 @@ public class FlytrapTests {
         BlockPos young = new BlockPos(1, 1, 7);
         plant(helper, young, 1);
         helper.runAfterDelay(3, () -> {
-            // A player cuts down one of the grown plant's side heads.
             FlytrapHead side = heads(helper, PLANT).stream().filter(h -> h.getSlot() == 1).findFirst().orElseThrow();
             Player player = helper.makeMockPlayer(GameType.SURVIVAL);
             side.hurt(helper.getLevel().damageSources().playerAttack(player), 100.0F);
             helper.assertTrue(side.isDeadOrDying(), "the side head didn't die");
-            // Wildspell Magic's kill() on a head does the same.
             head(helper, young).kill();
             helper.assertBlockNotPresent(WildspellMobs.FLYTRAP.get(), PLANT);
             helper.assertBlockNotPresent(WildspellMobs.FLYTRAP.get(), young);
@@ -316,7 +306,6 @@ public class FlytrapTests {
             helper.assertTrue(helper.getEntities(WildspellMobs.FLYTRAP_HEAD.get()).size() == 5, "expected 5 heads");
             breakBlock(helper, sprout);
             breakBlock(helper, young);
-            // Taking the top of a grown plant's stem takes the whole plant.
             breakBlock(helper, grown.above(2));
             helper.assertBlockNotPresent(WildspellMobs.FLYTRAP.get(), grown);
             helper.assertBlockNotPresent(WildspellMobs.FLYTRAP_STEM.get(), grown.above());
@@ -358,7 +347,7 @@ public class FlytrapTests {
         ConfiguredFeature<?, ?> patch = helper.getLevel().registryAccess().registryOrThrow(Registries.CONFIGURED_FEATURE)
                 .get(WildspellMobs.id("flytrap_patch"));
         helper.assertTrue(patch != null && patch.place(helper.getLevel(), helper.getLevel().getChunkSource().getGenerator(),
-                net.minecraft.util.RandomSource.create(7), helper.absolutePos(PLANT)), "the patch placed nothing");
+                RandomSource.create(7), helper.absolutePos(PLANT)), "the patch placed nothing");
         helper.runAfterDelay(3, () -> {
             int plants = 0;
             for (int x = 0; x < 9; ++x) {
@@ -382,11 +371,6 @@ public class FlytrapTests {
         });
     }
 
-    /**
-     * Clears every plant well around a test (their heads go with them). A patch can spill past the
-     * arena, and a plant left behind is flammable: fire from a later batch's test (the frozen zombies
-     * and fire) spread through leftover flytraps into neighbouring arenas and flaked those tests.
-     */
     private static void clearPlants(GameTestHelper helper) {
         for (BlockPos pos : BlockPos.betweenClosed(helper.absolutePos(new BlockPos(-12, -2, -12)), helper.absolutePos(new BlockPos(20, 8, 20)))) {
             BlockState state = helper.getLevel().getBlockState(pos);
@@ -410,14 +394,12 @@ public class FlytrapTests {
         return FlytrapBlock.headsOf(helper.getLevel(), helper.absolutePos(plant));
     }
 
-    /** The plant's (first) head. */
     private static FlytrapHead head(GameTestHelper helper, BlockPos plant) {
         List<FlytrapHead> heads = heads(helper, plant);
         helper.assertFalse(heads.isEmpty(), "the plant at " + plant + " has no head");
         return heads.getFirst();
     }
 
-    /** The plant has one head per size given, in that slot order, each with its size's reach. */
     private static void assertHeads(GameTestHelper helper, BlockPos plant, int... sizes) {
         List<FlytrapHead> heads = heads(helper, plant);
         helper.assertTrue(heads.size() == sizes.length, "a stage " + helper.getBlockState(plant).getValue(FlytrapBlock.AGE) + " plant has "
@@ -443,7 +425,6 @@ public class FlytrapTests {
         helper.assertBlockProperty(plant, FlytrapBlock.AGE, age);
     }
 
-    /** Breaks a block the way mining it does, drops and all (GameTestHelper.destroyBlock drops nothing). */
     private static void breakBlock(GameTestHelper helper, BlockPos pos) {
         helper.getLevel().destroyBlock(helper.absolutePos(pos), true);
     }
@@ -452,7 +433,6 @@ public class FlytrapTests {
         return helper.getEntities(EntityType.ITEM).stream().map(ItemEntity::getItem).filter(stack -> stack.is(item)).mapToInt(ItemStack::getCount).sum();
     }
 
-    /** Grass under the whole arena, for the flytraps to root in. */
     private static void lawn(GameTestHelper helper) {
         for (int x = 0; x < 9; ++x) {
             for (int z = 0; z < 9; ++z) {
@@ -461,7 +441,6 @@ public class FlytrapTests {
         }
     }
 
-    /** A survival-mode mock player standing in the world (not a ServerPlayer, which needs a connection). */
     private static Player addMockPlayer(GameTestHelper helper, Vec3 at) {
         Player player = helper.makeMockPlayer(GameType.SURVIVAL);
         place(helper, player, at);

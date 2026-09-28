@@ -33,28 +33,10 @@ import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.neoforge.event.tick.ServerTickEvent;
 
-/**
- * Every lich's soul, wherever its phylactery has gone. A phylactery starts on its crypt's altar (a
- * {@link PhylacteryBlockEntity}), but once its wards are broken it can be carried off as an item, into
- * a chest or another dimension; the soul's state lives here, in the world's saved data, so it
- * follows. One {@link Soul} per lich:
- * <ul>
- *   <li>its <b>anchor</b>, where the phylactery is (on the altar, or wherever it was last seen: a
- *       player carrying it, an item on the ground, the spot it was put in a chest);</li>
- *   <li>its form: a body ({@link Soul#lichId}), a soul in flight home ({@link Soul#soulTicks}), or a
- *       re-forming countdown ({@link Soul#reformTicks}). It has at most one at a time;</li>
- *   <li>whether its phylactery has burned (the only way to destroy one), and once its last form has
- *       fallen, whether its crypt has been cleansed ({@link Cleansing}).</li>
- * </ul>
- * Cleansed crypts are remembered as safe zones where the cold's undead no longer rise.
- */
 public class LichSouls extends SavedData {
     private static final String NAME = "wildspellmobs_lich_souls";
-    /** Ticks a lich can go unfound (while its phylactery's area is loaded) before its soul stops waiting for it. */
     private static final int MISSING_LIMIT = 60 * 20;
-    /** Tests: treat every soul's body as lying in an unloaded crypt (the arena is always loaded). */
     public static boolean ASSUME_BODY_AWAY_FOR_TEST = false;
-    /** Radius around a cleansed crypt where Frozen Zombies don't freeze and Rime Skulls don't spawn. */
     public static final double SAFE_RADIUS = 64.0;
 
     private final Map<UUID, Soul> souls = new HashMap<>();
@@ -73,7 +55,6 @@ public class LichSouls extends SavedData {
         return id == null ? null : this.souls.get(id);
     }
 
-    /** A new soul, for a phylactery on its altar at {@code altar}. */
     public Soul create(ServerLevel level, BlockPos altar) {
         Soul soul = new Soul(UUID.randomUUID(), level.dimension(), level.dimension(), altar.immutable());
         if (level.getBlockState(altar).hasProperty(PhylacteryBlock.FACING)) {
@@ -84,7 +65,6 @@ public class LichSouls extends SavedData {
         return soul;
     }
 
-    /** True within {@link #SAFE_RADIUS} of a cleansed crypt. */
     public boolean isCleansed(Level level, BlockPos pos) {
         for (GlobalPos zone : this.cleansed) {
             if (zone.dimension() == level.dimension() && zone.pos().distSqr(pos) < SAFE_RADIUS * SAFE_RADIUS) {
@@ -94,7 +74,6 @@ public class LichSouls extends SavedData {
         return false;
     }
 
-    /** Gametests: forget a safe zone, so it can't reach into the next test's arena. */
     public void forgetCleansed(Level level, BlockPos crypt) {
         this.cleansed.removeIf(zone -> zone.dimension() == level.dimension() && zone.pos().equals(crypt));
         this.setDirty();
@@ -112,7 +91,6 @@ public class LichSouls extends SavedData {
         for (Soul soul : all) {
             soul.tick(server, time);
         }
-        // From here, not the phylacteries, so no crypt need be loaded for a lich to sense a player far off.
         if (time % 20 == 7) {
             for (ServerLevel level : server.getAllLevels()) {
                 PhylacteryBlockEntity.ambushFromAfar(level, all);
@@ -120,14 +98,11 @@ public class LichSouls extends SavedData {
         }
     }
 
-    /** One lich's soul. */
     public final class Soul {
         public final UUID id;
         private ResourceKey<Level> dimension;
         private final ResourceKey<Level> cryptDimension;
-        /** The altar the phylactery was made on: where the crypt is, and where its cleansing happens. */
         private final BlockPos crypt;
-        /** Which way the altar faces, into the crypt. */
         private Direction cryptFacing = Direction.NORTH;
         private BlockPos anchor;
         private boolean inAltar = true;
@@ -169,7 +144,6 @@ public class LichSouls extends SavedData {
             return this.cryptFacing;
         }
 
-        /** Where the phylactery is, or was last seen. */
         public BlockPos anchor() {
             return this.anchor;
         }
@@ -178,7 +152,6 @@ public class LichSouls extends SavedData {
             return this.inAltar;
         }
 
-        /** Its phylactery has burned: the lich is mortal. */
         public boolean burned() {
             return this.burned;
         }
@@ -193,16 +166,10 @@ public class LichSouls extends SavedData {
             return this.carrier;
         }
 
-        /** No body, no soul in flight and no re-forming under way: the lich is waiting to rise. */
         public boolean dormant() {
             return this.lichId == null && this.soulTicks <= 0 && this.reformTicks < 0 && !this.burned;
         }
 
-        /**
-         * Whether this soul can rise behind a player far off: dormant, or its body is on record but
-         * lies idle in its unloaded crypt (nowhere loaded, home not loaded). Raising a new body then
-         * makes the old one a stale copy, which vanishes when its chunk is next loaded.
-         */
         public boolean canStalk(ServerLevel level) {
             if (!this.inAltar || this.burned || this.reformTicks >= 0 || this.soulTicks > 0) {
                 return false;
@@ -218,7 +185,6 @@ public class LichSouls extends SavedData {
             LichSouls.this.setDirty();
         }
 
-        /** The phylactery was set on an altar at {@code pos}. */
         void placeOnAltar(ServerLevel level, BlockPos pos) {
             this.dimension = level.dimension();
             this.anchor = pos.immutable();
@@ -227,7 +193,6 @@ public class LichSouls extends SavedData {
             this.changed();
         }
 
-        /** The phylactery was taken off its altar, or moved while carried or lying about. */
         public void moved(Level level, BlockPos pos, @Nullable Entity carrier) {
             UUID carrierId = carrier == null ? null : carrier.getUUID();
             if (!this.inAltar && this.dimension == level.dimension() && this.anchor.equals(pos) && Objects.equals(this.carrier, carrierId)) {
@@ -251,16 +216,11 @@ public class LichSouls extends SavedData {
             }
         }
 
-        /** The phylactery's lich, if it's loaded and alive. */
         @Nullable
         public IceLich findLich(ServerLevel level) {
             return this.lichId != null && level.getEntity(this.lichId) instanceof IceLich lich && lich.isAlive() ? lich : null;
         }
 
-        /**
-         * A bound lich checking in. It's this soul's lich if it's the one on record, or if the soul has
-         * lost track of its body and this one turns up; any other body is a stale copy.
-         */
         public boolean claim(IceLich lich) {
             if (lich.getUUID().equals(this.lichId)) {
                 return true;
@@ -275,7 +235,6 @@ public class LichSouls extends SavedData {
             return false;
         }
 
-        /** Where the lich re-forms: over its altar, or beside wherever its phylactery has been taken. */
         @Nullable
         public Vec3 reformSpot(ServerLevel level) {
             if (this.inAltar) {
@@ -290,7 +249,6 @@ public class LichSouls extends SavedData {
             return ColdEffects.isOpen(level, this.anchor.above(), 3) ? Vec3.atBottomCenterOf(this.anchor.above()) : null;
         }
 
-        /** Raises this soul's lich at {@code at}, hunting {@code prey} if given. Nothing rises on Peaceful. */
         @Nullable
         public IceLich raise(ServerLevel level, Vec3 at, @Nullable Player prey) {
             IceLich lich = level.getDifficulty() == Difficulty.PEACEFUL || this.burned ? null : IceLich.summon(level, at, this.id);
@@ -312,7 +270,6 @@ public class LichSouls extends SavedData {
             this.changed();
         }
 
-        /** Hurries a re-forming already under way. */
         public void hurryRise(int ticks) {
             if (this.reformTicks >= 0) {
                 this.reformTicks = Math.min(this.reformTicks, ticks);
@@ -320,7 +277,6 @@ public class LichSouls extends SavedData {
             }
         }
 
-        /** The lich's soul has flown home; it re-forms after a while. */
         public void onWispArrived(ServerLevel level, @Nullable UUID hunting) {
             this.soulTicks = 0;
             this.changed();
@@ -332,7 +288,6 @@ public class LichSouls extends SavedData {
                     ? PhylacteryBlockEntity.REFORM_TICKS_AWAKE : PhylacteryBlockEntity.REFORM_TICKS;
         }
 
-        /** The lich was struck down; its soul is on the way home. */
         public void onLichDiscorporated(IceLich lich) {
             if (lich.getUUID().equals(this.lichId)) {
                 this.lichId = null;
@@ -341,7 +296,6 @@ public class LichSouls extends SavedData {
             }
         }
 
-        /** The lich gave up its hunt and sank back into its phylactery. */
         public void onLichRetreated(IceLich lich) {
             if (lich.getUUID().equals(this.lichId)) {
                 this.lichId = null;
@@ -350,10 +304,6 @@ public class LichSouls extends SavedData {
             }
         }
 
-        /**
-         * The phylactery has burned: the lich is mortal. Its body, if it has one here, is torn back to
-         * the flames; either way its last form rises there, mortal and enraged.
-         */
         public void burn(ServerLevel level, Vec3 at) {
             if (this.burned) {
                 return;
@@ -380,7 +330,6 @@ public class LichSouls extends SavedData {
             }
         }
 
-        /** Its last form has fallen: its hold on the caves breaks, and its crypt is cleansed as soon as it's loaded. */
         public void fall(ServerLevel level, Vec3 at) {
             if (this.fallen) {
                 return;
@@ -432,7 +381,6 @@ public class LichSouls extends SavedData {
             }
             Vec3 at = level.isLoaded(this.anchor) ? this.reformSpot(level) : null;
             if (at == null) {
-                // Its phylactery's surroundings aren't loaded (or there's no room): try again shortly.
                 this.reformTicks = 20;
                 return;
             }
