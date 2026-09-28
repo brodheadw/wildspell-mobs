@@ -1,5 +1,3 @@
-"""Writes the empty GameTest arena structures: the 9x7x9 arena, and the 31x24x31 sky arena that a flying
-Pegasus needs. Run from the repo root."""
 import gzip
 import struct
 
