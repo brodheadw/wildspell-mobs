@@ -25,7 +25,6 @@ public class WildspellMobsClient {
         container.registerExtensionPoint(IConfigScreenFactory.class, ConfigurationScreen::new);
     }
 
-    /** The Soulseeker's needle turns toward the crypt it was attuned to, like a lodestone compass's. */
     @SubscribeEvent
     static void clientSetup(FMLClientSetupEvent event) {
         event.enqueueWork(() -> ItemProperties.register(WildspellMobs.SOULSEEKER.get(), ResourceLocation.withDefaultNamespace("angle"),

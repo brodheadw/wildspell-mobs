@@ -1,5 +1,3 @@
-"""Writes the empty GameTest arena structures: the 9x7x9 arena, and the 31x24x31 sky arena that a flying
-Pegasus needs. Run from the repo root."""
 import gzip
 import struct
 
@@ -35,6 +33,6 @@ def write(path, size):
         f.write(b"\x0a" + name("") + root)
 
 
-write("src/main/resources/data/wildspellmobs/structure/arena.nbt", [9, 7, 9])
-write("src/main/resources/data/wildspellmobs/structure/sky_arena.nbt", [31, 24, 31])
+write("src/gametest/resources/data/wildspellmobs/structure/arena.nbt", [9, 7, 9])
+write("src/gametest/resources/data/wildspellmobs/structure/sky_arena.nbt", [31, 24, 31])
 print("arenas written")

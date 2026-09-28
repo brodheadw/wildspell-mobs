@@ -15,14 +15,6 @@ import net.minecraft.world.phys.AABB;
 import net.neoforged.neoforge.common.ModConfigSpec;
 import net.neoforged.neoforge.event.entity.living.MobSpawnEvent;
 
-/**
- * Thins natural hostile spawns in overworld caves. "Underground" means the spawn spot gets no
- * skylight at all, i.e. a cave.
- *
- * <p>The per-spawn chances only change which mobs fill the vanilla monster cap, not how many there
- * are, so the local caps do the real thinning: a cave spot that already has enough hostiles (or
- * creepers) nearby refuses further spawns, pushing the cap's mobs out away from the player.
- */
 public final class SpawnBalance {
     private static final ModConfigSpec.Builder BUILDER = new ModConfigSpec.Builder();
 
@@ -36,8 +28,8 @@ public final class SpawnBalance {
             .defineInRange("undergroundMonsterChance", 0.75, 0.0, 1.0);
 
     static final ModConfigSpec.IntValue UNDERGROUND_LOCAL_CAP = BUILDER
-            .comment("Underground spawns are refused when this many hostile mobs (Rime Skulls included) are already",
-                    "within 'undergroundCapRadius' blocks of the spot. 0 = no cap.")
+            .comment("Underground spawns are refused when this many hostile mobs (Rime Skulls included; persistent ones like",
+                    "flytrap heads and liches not) are already within 'undergroundCapRadius' blocks of the spot. 0 = no cap.")
             .defineInRange("undergroundLocalCap", 8, 0, 256);
 
     static final ModConfigSpec.IntValue UNDERGROUND_CREEPER_CAP = BUILDER
@@ -50,9 +42,9 @@ public final class SpawnBalance {
             .defineInRange("undergroundCapRadius", 32, 8, 128);
 
     public static final ModConfigSpec.DoubleValue LICH_AMBUSH_CHANCE = BUILDER
-            .comment("Chance (0-1), each second, that an Ice Lich rises behind a player in the Frosted Caves within 64",
-                    "blocks of its crypt. The default averages about 4 minutes spent near a crypt; while it waits, the",
-                    "caves give signs (a whisper behind you, a drift of ice motes). 0 = never.")
+            .comment("Chance (0-1), each second, that an Ice Lich rises behind a player in the Frosted Caves within",
+                    "'lichAmbushRange' blocks of its crypt. The default averages about 4 minutes spent near a crypt; while it",
+                    "waits, the caves give signs (a whisper behind you, a drift of ice motes). 0 = never.")
             .defineInRange("lichAmbushChance", 0.004, 0.0, 1.0);
 
     public static final ModConfigSpec.IntValue LICH_AMBUSH_RANGE = BUILDER
@@ -63,7 +55,6 @@ public final class SpawnBalance {
 
     static final ModConfigSpec SPEC = BUILDER.build();
 
-    // Spawning probes thousands of spots per tick; count neighbours once per chunk section per tick.
     private static final Long2ObjectOpenHashMap<int[]> NEARBY = new Long2ObjectOpenHashMap<>();
     private static long nearbyTick = Long.MIN_VALUE;
 
@@ -101,7 +92,6 @@ public final class SpawnBalance {
         }
     }
 
-    /** {hostiles, creepers} within the cap radius of the section containing {@code pos}. */
     private static int[] nearbyHostiles(ServerLevel level, BlockPos pos) {
         long now = level.getGameTime();
         if (now != nearbyTick) {
@@ -111,7 +101,7 @@ public final class SpawnBalance {
         return NEARBY.computeIfAbsent(SectionPos.asLong(pos), key -> {
             int[] counts = new int[2];
             AABB area = new AABB(SectionPos.of(pos).center()).inflate(UNDERGROUND_CAP_RADIUS.get());
-            for (Mob other : level.getEntitiesOfClass(Mob.class, area, m -> m instanceof Enemy && m.isAlive())) {
+            for (Mob other : level.getEntitiesOfClass(Mob.class, area, m -> m instanceof Enemy && m.isAlive() && !m.isPersistenceRequired() && !m.requiresCustomPersistence())) {
                 ++counts[0];
                 if (other instanceof Creeper) {
                     ++counts[1];
@@ -121,7 +111,6 @@ public final class SpawnBalance {
         });
     }
 
-    /** Drops cached neighbour counts; gametests call this after spawning mobs mid-tick. */
     static void clearCache() {
         NEARBY.clear();
     }

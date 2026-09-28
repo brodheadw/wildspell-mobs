@@ -12,10 +12,6 @@ import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
 import net.neoforged.neoforge.registries.RegistryManager;
 import net.neoforged.neoforge.registries.datamaps.DataMapType;
 
-/**
- * The crypt feeds Fundamental Magic's field, by data alone: this mod doesn't depend on the engine, so
- * the test finds its tag and data map by name and skips when the engine isn't loaded.
- */
 @GameTestHolder(WildspellMobs.MODID)
 @PrefixGameTestTemplate(false)
 public class FieldTests {

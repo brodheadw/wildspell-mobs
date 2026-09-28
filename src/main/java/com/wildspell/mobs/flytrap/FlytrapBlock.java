@@ -4,6 +4,7 @@ import com.mojang.serialization.MapCodec;
 import com.wildspell.mobs.WildspellMobs;
 import com.wildspell.mobs.entity.FlytrapHead;
 import java.util.List;
+import java.util.function.Predicate;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.registries.Registries;
@@ -11,12 +12,13 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.tags.TagKey;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.level.BlockGetter;
+import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.LevelAccessor;
 import net.minecraft.world.level.LevelReader;
-import net.minecraft.world.level.block.BonemealableBlock;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.BonemealableBlock;
 import net.minecraft.world.level.block.state.BlockBehaviour;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.StateDefinition;
@@ -28,44 +30,19 @@ import net.minecraft.world.phys.shapes.CollisionContext;
 import net.minecraft.world.phys.shapes.Shapes;
 import net.minecraft.world.phys.shapes.VoxelShape;
 
-/**
- * The rooted part of a flytrap: a rosette of leaves and a stalk, with its jaws as {@link FlytrapHead}
- * entities anchored above it. It grows like a sapling (random ticks in light 9 or more, or bone meal)
- * through three stages ({@link #AGE}):
- * <ul>
- * <li>0, a sprout: one small head at its tip that snaps only at tiny creatures (moths, bees...);
- * <li>1, about a block tall: one head at about a player's height, which snaps at anything moving;
- * <li>2, a stalk three blocks tall (this block and two {@link FlytrapStemBlock}s above it) with a big
- * head on top and two smaller ones on branches either side.
- * </ul>
- * It roots only in {@link #ROOTS_IN} (grass, moss, mud and other dirt) and breaks as one plant: taking
- * any part of it, or killing any of its heads, breaks the whole thing, which drops a sprout and a Trap
- * Jaw per grown stage. Heads keep to their plant: they appear a tick after the plant is placed or
- * changes stage, and vanish when it goes (however it goes, set to air included) or changes stage.
- *
- * <p>Wildspell Magic places it by id ({@code wildspellmobs:flytrap}, any {@code age}); placing the
- * grown stage builds its stem, room permitting (else it settles for stage 1).
- */
 public class FlytrapBlock extends Block implements BonemealableBlock {
     public static final MapCodec<FlytrapBlock> CODEC = simpleCodec(FlytrapBlock::new);
     public static final IntegerProperty AGE = BlockStateProperties.AGE_2;
     public static final int MAX_AGE = 2;
-    /** Ground a flytrap roots in: grass, moss, mud and other dirt. */
     public static final TagKey<Block> ROOTS_IN = TagKey.create(Registries.BLOCK, WildspellMobs.id("flytrap_roots_in"));
     public static final TagKey<Block> HOSTILE_GROWTH = TagKey.create(Registries.BLOCK, WildspellMobs.id("hostile_growth"));
-    /** Chance per random tick, in enough light, of growing a stage: about ten minutes a stage. */
     private static final int GROW_ONE_IN = 10;
-    /** Stems above a grown plant's base. */
     public static final int STEM_HEIGHT = 2;
 
     private static final VoxelShape SPROUT = Block.box(4.0, 0.0, 4.0, 12.0, 6.0, 12.0);
     private static final VoxelShape YOUNG = Block.box(3.0, 0.0, 3.0, 13.0, 16.0, 13.0);
     private static final VoxelShape STALK = Block.box(6.0, 0.0, 6.0, 10.0, 16.0, 10.0);
 
-    /**
-     * Where a stage's heads sit, relative to the block's corner: which slot, how big, and where its
-     * neck meets the plant. The grown plant's side heads sit at the ends of its stem's branches.
-     */
     public record HeadSlot(int slot, int size, Vec3 offset) {
     }
 
@@ -99,8 +76,6 @@ public class FlytrapBlock extends Block implements BonemealableBlock {
         return state.is(WildspellMobs.FLYTRAP.get());
     }
 
-    // --- Shape and survival --------------------------------------------------------------------------
-
     @Override
     protected VoxelShape getShape(BlockState state, BlockGetter level, BlockPos pos, CollisionContext context) {
         return switch (state.getValue(AGE)) {
@@ -110,7 +85,6 @@ public class FlytrapBlock extends Block implements BonemealableBlock {
         };
     }
 
-    /** The young plant is soft enough to walk through; the grown one's stalk is not. */
     @Override
     protected VoxelShape getCollisionShape(BlockState state, BlockGetter level, BlockPos pos, CollisionContext context) {
         return state.getValue(AGE) == MAX_AGE ? STALK : Shapes.empty();
@@ -130,8 +104,6 @@ public class FlytrapBlock extends Block implements BonemealableBlock {
         return super.updateShape(state, direction, neighborState, level, pos, neighborPos);
     }
 
-    // --- Growth --------------------------------------------------------------------------------------
-
     @Override
     protected boolean isRandomlyTicking(BlockState state) {
         return true;
@@ -142,12 +114,10 @@ public class FlytrapBlock extends Block implements BonemealableBlock {
         if (state.getValue(AGE) < MAX_AGE && level.getRawBrightness(pos.above(), 0) >= 9 && random.nextInt(GROW_ONE_IN) == 0) {
             this.grow(level, pos, state);
         } else {
-            // A safety net: a head lost some other way than dying (which breaks the plant) comes back.
             syncHeads(level, pos, state);
         }
     }
 
-    /** Whether it has room for its next stage: the grown plant's stem and top head need three blocks of air. */
     public static boolean canGrow(LevelReader level, BlockPos pos, BlockState state) {
         int age = state.getValue(AGE);
         return age < MAX_AGE && (age + 1 < MAX_AGE || hasRoomForStem(level, pos));
@@ -162,7 +132,6 @@ public class FlytrapBlock extends Block implements BonemealableBlock {
         return true;
     }
 
-    /** Grows it a stage, if it has the room. */
     public void grow(Level level, BlockPos pos, BlockState state) {
         if (canGrow(level, pos, state)) {
             level.setBlock(pos, state.setValue(AGE, state.getValue(AGE) + 1), Block.UPDATE_ALL);
@@ -184,15 +153,12 @@ public class FlytrapBlock extends Block implements BonemealableBlock {
         this.grow(level, pos, state);
     }
 
-    /** Puts up the grown plant's stem: the branched segment, then plain ones. */
     public static void buildStem(LevelAccessor level, BlockPos pos, int flags) {
         for (int dy = 1; dy <= STEM_HEIGHT; ++dy) {
             level.setBlock(pos.above(dy), WildspellMobs.FLYTRAP_STEM.get().defaultBlockState()
                     .setValue(FlytrapStemBlock.BRANCHES, dy == 1), flags);
         }
     }
-
-    // --- Heads ---------------------------------------------------------------------------------------
 
     @Override
     protected void onPlace(BlockState state, Level level, BlockPos pos, BlockState oldState, boolean movedByPiston) {
@@ -211,7 +177,6 @@ public class FlytrapBlock extends Block implements BonemealableBlock {
         if (level instanceof ServerLevel server) {
             clearHeads(server, pos, head -> head.getStage() != state.getValue(AGE));
         }
-        // The heads come a tick later, once the block (and any stem) has settled.
         level.scheduleTick(pos, this, 1);
     }
 
@@ -223,18 +188,16 @@ public class FlytrapBlock extends Block implements BonemealableBlock {
     @Override
     protected void onRemove(BlockState state, Level level, BlockPos pos, BlockState newState, boolean movedByPiston) {
         if (!newState.is(state.getBlock()) && level instanceof ServerLevel server) {
-            // A head that is dying (and so broke the plant) withers where it is.
             clearHeads(server, pos, head -> !head.isDeadOrDying());
         }
         super.onRemove(state, level, pos, newState, movedByPiston);
     }
 
-    /** The heads anchored to the plant at {@code pos}. */
     public static List<FlytrapHead> headsOf(Level level, BlockPos pos) {
         return level.getEntitiesOfClass(FlytrapHead.class, new AABB(pos).inflate(3.0, 5.0, 3.0), head -> pos.equals(head.getAnchor()));
     }
 
-    private static void clearHeads(ServerLevel level, BlockPos pos, java.util.function.Predicate<FlytrapHead> which) {
+    private static void clearHeads(ServerLevel level, BlockPos pos, Predicate<FlytrapHead> which) {
         for (FlytrapHead head : headsOf(level, pos)) {
             if (which.test(head)) {
                 head.discard();
@@ -242,8 +205,10 @@ public class FlytrapBlock extends Block implements BonemealableBlock {
         }
     }
 
-    /** Clears heads from another stage and puts any missing ones of this stage in their places. */
     public static void syncHeads(ServerLevel level, BlockPos pos, BlockState state) {
+        if (!level.areEntitiesLoaded(ChunkPos.asLong(pos))) {
+            return;
+        }
         int age = state.getValue(AGE);
         List<FlytrapHead> heads = headsOf(level, pos);
         for (HeadSlot slot : slots(age)) {
@@ -252,6 +217,9 @@ public class FlytrapBlock extends Block implements BonemealableBlock {
                 if (head.getStage() != age) {
                     head.discard();
                 } else if (head.getSlot() == slot.slot() && head.isAlive()) {
+                    if (present) {
+                        head.discard();
+                    }
                     present = true;
                 }
             }
@@ -264,8 +232,6 @@ public class FlytrapBlock extends Block implements BonemealableBlock {
             }
         }
     }
-
-    // --- Fire ----------------------------------------------------------------------------------------
 
     @Override
     public int getFlammability(BlockState state, BlockGetter level, BlockPos pos, Direction direction) {

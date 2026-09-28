@@ -1,38 +1,18 @@
-"""Builds the Ice Lich's GeckoLib model and animations. Run from the repo root: python3 tools/make_lich_model.py
-
-Bedrock geometry (format 1.12.0, box UV on a 128x128 texture). The model faces north (-Z) and the
-lich's right side is -X, as in Blockbench's Bedrock player model. All sizes are whole pixels so the
-box-UV nets land on whole texels. Each cube carries a material name; tools/paint_lich.py imports this
-module and paints every net from it, so the UV layout lives in one place.
-
-Hierarchy: root > body > {hem > hem strips, torso > {entrails > entrail strands, mantle > collar + pauldrons > shards,
-neck > head > {jaw, crown > spikes}, right_arm > {right_hand, staff > staff_crystal}, left_arm > fingers}}.
-"""
-import json
 import math
-import os
 
 import numpy as np
+
+from geckolib_model import Model, anim, c, kf, rot_matrix, write
 
 GEO_OUT = "src/main/resources/assets/wildspellmobs/geo/entity/ice_lich.geo.json"
 ANIM_OUT = "src/main/resources/assets/wildspellmobs/animations/entity/ice_lich.animation.json"
 TEX = 128
 
-BONES = []    # dicts: name, parent, pivot, rotation, cubes; cubes: origin, size, material, inflate, uv
+MODEL = Model("geometry.ice_lich", TEX, 5, 4.5, [0, 2, 0])
+BONES = MODEL.bones
+bone = MODEL.bone
+geometry = MODEL.geometry
 
-
-def bone(name, parent, pivot, rotation=None, cubes=()):
-    BONES.append({"name": name, "parent": parent, "pivot": list(pivot), "rotation": rotation,
-                  "cubes": [{"origin": list(o), "size": list(s), "material": m, "inflate": i} for (o, s, m, i) in cubes]})
-
-
-def c(origin, size, material, inflate=0):
-    return (origin, size, material, inflate)
-
-
-# --- Body and robe ---------------------------------------------------------------------------------
-# He floats: the body pivot sits at the waist and the idle bob moves it. The skirt tapers from the belt
-# into a narrower lower robe, and fourteen tattered strips hang from under it, ending 4-6px above y=0.
 
 bone("root", None, (0, 0, 0))
 bone("body", "root", (0, 20, 0))
@@ -40,8 +20,6 @@ bone("hem", "body", (0, 20, 0), cubes=[
     c((-6, 14, -4), (12, 6, 8), "skirt"),
     c((-5, 10, -3.5), (10, 4, 7), "skirt_low"),
 ])
-# Strips: (bone suffix, x or z start, width, length, side). Front and back strips span x; side strips
-# span z. Each flares outward from its top (y=13) so the hem reads as loose cloth, not a skirt box.
 STRIPS = [
     ("front_0", -5, 3, 8, "front"), ("front_1", -2, 2, 9, "front"), ("front_2", 0, 3, 7, "front"), ("front_3", 3, 2, 8, "front"),
     ("back_0", -5, 2, 7, "back"), ("back_1", -3, 3, 9, "back"), ("back_2", 0, 2, 8, "back"), ("back_3", 2, 3, 7, "back"),
@@ -58,7 +36,7 @@ for suffix, start, width, length, side in STRIPS:
     else:
         x = -5.5 if side == "right" else 4.5
         origin, size, pivot = (x, top - length, start), (1, length, width), (x + 0.5, top, start + width / 2)
-    wobble = (len(suffix) * 7 + width * 3 + length) % 5 - 2   # a little irregularity per strip
+    wobble = (len(suffix) * 7 + width * 3 + length) % 5 - 2
     rx, ry, rz = FLARE[side]
     rot = [rx + (wobble if side in ("front", "back") else 0), 0, rz + (wobble if side in ("right", "left") else 0)]
     bone("hem_" + suffix, "hem", pivot, rot, [c(origin, size, "strip")])
@@ -69,23 +47,15 @@ bone("torso", "body", (0, 20, 0), cubes=[
     c((-5.5, 18, -3.5), (11, 2, 7), "belt"),
 ])
 
-# --- Frozen entrails -------------------------------------------------------------------------------
-# A frozen tangle of gut spills from the bottom of the ribcage, through the narrow foot of the robe
-# opening and over the belt, sagging a little forward of the skirt. Four strands of different lengths
-# hang from it; each is pivoted at its top so the animations can swing it. Small icicles hang off the
-# coil and the strand tips.
 bone("entrails", "torso", (0, 20, -4), cubes=[
-    c((-1, 20, -4.5), (2, 3, 2), "gut"),          # loop pushing out of the foot of the ribcage
-    c((-2, 16.5, -5.5), (4, 2, 2), "gut"),        # the knot the strands hang from
+    c((-1, 20, -4.5), (2, 3, 2), "gut"),
+    c((-2, 16.5, -5.5), (4, 2, 2), "gut"),
     c((-2, 15.5, -5), (1, 1, 1), "icicle"),
     c((2.5, 15, -5.5), (1, 1, 1), "icicle"),
 ])
-# Two loops draped across the belt at opposite angles, so the mass reads as a tangle, not a block.
 bone("entrails_loop_0", "entrails", (-0.5, 19, -5), [8, 0, -26], [c((-4.5, 18.5, -6), (5, 2, 2), "gut")])
 bone("entrails_loop_1", "entrails", (1, 18, -5.5), [-10, 0, 22], [c((-0.5, 17, -6.5), (4, 2, 2), "gut"),
                                                                   c((3, 16, -6), (1, 1, 1), "icicle")])
-# Strands: (top x, top y, top z, width, length, rest rotation, icicle at the tip). Front is -Z, so a
-# negative X rotation lifts the free end forward, clear of the skirt.
 ENTRAILS = [
     (-2.5, 16.5, -5.0, 2, 6, (-8, 0, -6), True),
     (-0.5, 16.5, -5.5, 1, 4, (-12, 0, 4), False),
@@ -98,27 +68,22 @@ for i, (x, y, z, w, length, rot, tip) in enumerate(ENTRAILS):
         cubes.append(c((x - 0.5, y - length - 1, z - 0.5), (1, 1, 1), "icicle"))
     bone(f"entrail_{i}", "entrails", (x, y, z), list(rot), cubes)
 
-# --- Mantle, collar and pauldrons ------------------------------------------------------------------
 bone("mantle", "torso", (0, 29, 0), cubes=[c((-8, 27, -4), (16, 4, 8), "mantle", 0.25)])
 bone("collar", "mantle", (0, 30, 2.5), [-18, 0, 0], [c((-5, 30, 2), (10, 6, 2), "collar")])
 for side, sx in (("right", -1), ("left", 1)):
     x0 = -11 if side == "right" else 5
     bone(f"{side}_pauldron", "mantle", (7 * sx, 30, 0), [0, 0, 16 * sx], [c((x0, 27, -4.5), (6, 4, 9), "pauldron")])
-    # Ice shards jutting up and out of each pauldron: (pivot x offset, z, rotation, size).
     for i, (dx, z, rot, size) in enumerate([(2.5, -2, (8, 0, 28), (2, 5, 2)), (1, 1.5, (-22, 0, 16), (1, 4, 1)),
                                             (3.5, 2, (-8, 0, 48), (1, 3, 1))]):
         px = 7 * sx + dx * sx
-        rot = [rot[0], 0, rot[2] * sx]           # top leans outward on both sides
+        rot = [rot[0], 0, rot[2] * sx]
         o = (px - size[0] / 2, 30.5, z - size[2] / 2)
         bone(f"{side}_shard_{i}", f"{side}_pauldron", (px, 30.5, z), rot, [c(o, size, "ice")])
 
-# --- Head, jaw and crown ---------------------------------------------------------------------------
-# The renderer turns `head` toward the target, so the animations tilt `neck` instead.
 bone("neck", "torso", (0, 30, 0), cubes=[c((-1, 29, -1), (2, 4, 2), "bone")])
 bone("head", "neck", (0, 32, -0.5), cubes=[c((-3.5, 33, -4), (7, 7, 7), "skull")])
 bone("jaw", "head", (0, 33.5, 0), [10, 0, 0], [c((-3, 31.5, -4), (6, 2, 5), "jaw")])
 bone("crown", "head", (0, 40, -0.5), cubes=[c((-4, 39, -4.5), (8, 2, 8), "crown_band")])
-# Spikes: (name, base centre x, z, rotation, base w, base h, tip h). Tallest at the front.
 SPIKES = [
     ("front", 0, -4, (7, 0, 0), 2, 3, 2),
     ("front_right", -2.6, -3.6, (6, 0, -12), 2, 2, 2),
@@ -134,9 +99,6 @@ for name, x, z, rot, bw, bh, th in SPIKES:
         cubes.append(c((x - 0.5, 40.5 + bh, z - 0.5), (1, th, 1), "spike_tip"))
     bone("spike_" + name, "crown", (x, 41, z), list(rot), cubes)
 
-# --- Arms, hands and the staff ---------------------------------------------------------------------
-# Wide bell sleeves over bare arm bones. The right arm is held a little forward and the staff bone
-# cancels that angle, so at rest the staff stands upright in the hand.
 for side, sx in (("right", -1), ("left", 1)):
     x_sleeve = -9 if side == "right" else 5
     x_cuff = -9.5 if side == "right" else 4.5
@@ -150,10 +112,8 @@ for side, sx in (("right", -1), ("left", 1)):
     x_palm = -8.5 if side == "right" else 5.5
     bone(f"{side}_hand", f"{side}_arm", (7 * sx, 13, 0), cubes=[c((x_palm, 11, -1.5), (3, 2, 3), "hand")])
 
-# Right hand: bony fingers curled around the staff in front of the palm.
 for i, x in enumerate((-8.5, -7.5, -6.5)):
     bone(f"right_finger_{i}", "right_hand", (x + 0.5, 11.5, -1.5), [30, 0, 0], [c((x, 9.5, -2.5), (1, 2, 1), "bone")])
-# Left hand: four long splayed claws.
 for i, (x, rz, length) in enumerate([(5.5, 10, 4), (6.5, 3, 5), (7.5, -4, 5), (8.5, -12, 4)]):
     bone(f"left_finger_{i}", "left_hand", (x + 0.5, 11, 0), [-10, 0, rz], [c((x, 11 - length, -0.5), (1, length, 1), "claw")])
 
@@ -173,77 +133,14 @@ bone("staff_crystal", "staff", (-7, 40.5, 0), [0, 45, 0], [
 ])
 
 
-# --- UV packing ------------------------------------------------------------------------------------
+MODEL.pack()
 
-def net_size(size):
-    w, h, d = size
-    return 2 * (w + d), d + h
-
-
-def pack():
-    """Shelf-pack every cube's box-UV net onto the texture, tallest nets first."""
-    cubes = [cube for b in BONES for cube in b["cubes"]]
-    order = sorted(cubes, key=lambda cube: (-net_size(cube["size"])[1], -net_size(cube["size"])[0]))
-    x = y = shelf = 0
-    for cube in order:
-        nw, nh = net_size(cube["size"])
-        if x + nw > TEX:
-            x, y, shelf = 0, y + shelf, 0
-        if y + nh > TEX:
-            raise SystemExit("texture full")
-        cube["uv"] = [x, y]
-        x += nw
-        shelf = max(shelf, nh)
-
-
-pack()
-
-
-def geometry():
-    bones = []
-    for b in BONES:
-        out = {"name": b["name"]}
-        if b["parent"]:
-            out["parent"] = b["parent"]
-        out["pivot"] = b["pivot"]
-        if b["rotation"]:
-            out["rotation"] = b["rotation"]
-        if b["cubes"]:
-            out["cubes"] = []
-            for cube in b["cubes"]:
-                cj = {"origin": cube["origin"], "size": cube["size"], "uv": cube["uv"]}
-                if cube["inflate"]:
-                    cj["inflate"] = cube["inflate"]
-                out["cubes"].append(cj)
-        bones.append(out)
-    return {"format_version": "1.12.0", "minecraft:geometry": [{
-        "description": {"identifier": "geometry.ice_lich", "texture_width": TEX, "texture_height": TEX,
-                        "visible_bounds_width": 5, "visible_bounds_height": 4.5, "visible_bounds_offset": [0, 2, 0]},
-        "bones": bones}]}
-
-
-# --- Animations ------------------------------------------------------------------------------------
-# Channels are {time: [x, y, z]}; every keyframe is written catmullrom for smooth motion. Rotations are
-# degrees added to the rest pose. Negative X swings a hanging limb forward (and tips an upright part
-# back); positive Z swings a hanging part toward the lich's right (-X).
 
 def ch(**frames):
     return frames
 
 
-def kf(frames):
-    return {f"{t:.4g}" if t % 1 else f"{t:.1f}": {"post": v, "lerp_mode": "catmullrom"} for t, v in sorted(frames.items())}
-
-
-def anim(length, loop, bones):
-    out = {"loop": loop, "animation_length": length, "bones": {}}
-    for name, channels in bones.items():
-        out["bones"][name] = {k: kf(v) for k, v in channels.items()}
-    return out
-
-
 def strip_sway(amp, phase, length, flare=0.0):
-    """Keyframes for every hem strip: outward flare plus a travelling sway with a per-strip phase."""
     bones = {}
     for i, (suffix, _start, _w, _l, side) in enumerate(STRIPS):
         steps = 4
@@ -288,7 +185,6 @@ def idle():
 
 
 def cast():
-    # Wind up, thrust the staff crystal at the target at 0.3s, recover by 0.75s.
     return anim(0.75, False, {
         "torso": {"rotation": {0: [0, 0, 0], 0.15: [-6, 8, 0], 0.3: [10, -6, 0], 0.5: [6, -3, 0], 0.75: [0, 0, 0]}},
         "right_arm": {"rotation": {0: [0, 0, 0], 0.15: [-10, 0, -8], 0.3: [-55, 0, 0], 0.5: [-50, 0, 0], 0.75: [0, 0, 0]}},
@@ -301,7 +197,6 @@ def cast():
 
 
 def summon():
-    # Arms flung up, staff raised overhead, head thrown back, rising, hem flared: an obvious channel.
     L = 1.5
     bones = {
         "body": {"position": {0: [0, 1.5, 0], 0.75: [0, 2.5, 0], 1.5: [0, 1.5, 0]}},
@@ -309,7 +204,6 @@ def summon():
         "neck": {"rotation": {0: [-22, 0, 0], 0.75: [-26, 0, 3], 1.5: [-22, 0, 0]}},
         "jaw": {"rotation": {0: [18, 0, 0], 0.75: [24, 0, 0], 1.5: [18, 0, 0]}},
         "right_arm": {"rotation": {0: [-150, 0, -14], 0.75: [-156, 0, -18], 1.5: [-150, 0, -14]}},
-        # The staff turns in the hand to stand upright overhead and slides down so the crystal stays low.
         "staff": {"rotation": {0: [150, 0, 0], 0.75: [154, 0, 0], 1.5: [150, 0, 0]},
                   "position": {0: [0, 11.6, 3.1], 1.5: [0, 11.6, 3.1]}},
         "left_arm": {"rotation": {0: [-150, 0, 24], 0.75: [-157, 0, 28], 1.5: [-150, 0, 24]}},
@@ -324,14 +218,12 @@ def summon():
 
 
 def beam():
-    # The staff levelled at the target in both hands, body leaning into it, trembling with the strain.
     L = 1.0
     return anim(L, True, {
         "body": {"position": {0: [0, 0, -1], 0.5: [0, 0.4, -1], 1: [0, 0, -1]}},
         "torso": {"rotation": {0: [10, 0, 0], 0.25: [10.5, 0.8, 0], 0.5: [9.5, 0, 0], 0.75: [10.5, -0.8, 0], 1: [10, 0, 0]}},
         "neck": {"rotation": {0: [-10, 0, 0], 1: [-10, 0, 0]}},
         "jaw": {"rotation": {0: [16, 0, 0], 0.5: [20, 0, 0], 1: [16, 0, 0]}},
-        # Right hand forward at the hip, staff levelled through it, left hand on the shaft behind it.
         "right_arm": {"rotation": {0: [-35, -20, 0], 0.5: [-36, -20, 0], 1: [-35, -20, 0]}},
         "staff": {"rotation": {0: [110, 20, 0], 0.25: [109, 21.5, 0], 0.5: [111, 20, 0], 0.75: [109, 18.5, 0], 1: [110, 20, 0]},
                   "position": {0: [1.7, 3.4, 4.6], 1: [1.7, 3.4, 4.6]}},
@@ -342,7 +234,6 @@ def beam():
 
 
 def burst():
-    # The free hand goes up, then slams down at 0.45s as ice erupts under the player, then recovers.
     bones = {
         "body": {"position": {0: [0, 0, 0], 0.3: [0, 1.5, 0], 0.45: [0, -1.5, 0], 0.7: [0, -1, 0], 1: [0, 0, 0]}},
         "torso": {"rotation": {0: [0, 0, 0], 0.3: [-10, -10, 0], 0.45: [20, 8, 0], 0.7: [16, 6, 0], 1: [0, 0, 0]}},
@@ -353,8 +244,6 @@ def burst():
         "right_arm": {"rotation": {0: [0, 0, 0], 0.3: [8, 0, -10], 0.45: [-10, 0, -6], 1: [0, 0, 0]}},
         "hem": {"rotation": {0: [0, 0, 0], 0.3: [-6, 0, 0], 0.45: [10, 0, 0], 0.7: [4, 0, 0], 1: [0, 0, 0]}},
     }
-    # The entrails hang back as he rises, then fling forward and up off the slam and swing to rest; each
-    # strand a beat behind the one before it. The torso's own lean is cancelled so they keep hanging.
     swing = {0.3: [8, 0, 3], 0.45: [-16, 0, -4], 0.55: [-44, 0, 8], 0.7: [-8, 0, -6], 0.82: [-22, 0, 3],
              0.92: [-12, 0, -1]}
     for i in range(len(ENTRAILS)):
@@ -365,27 +254,9 @@ def burst():
     return anim(1.0, False, bones)
 
 
-# --- Posing helpers for the staff tricks -------------------------------------------------------------
-# The staff can't be reparented, so the tricks pose it in world (model) space: where the hand holds it,
-# which way it points, where its middle flies. These helpers turn that into keyframes on `staff`
-# relative to `right_arm`, using the same transform GeckoLib applies (see tools/preview_lich.py).
-# Everything is sampled densely, every bone at the same times, so catmullrom in game and the linear
-# preview agree at every keyframe and the staff can't drift out of the hand between them.
-
-def rot_matrix(rx, ry, rz):
-    """Bedrock rotation (degrees) as a matrix on Bedrock-space points, as GeckoLib applies it."""
-    a, b, g = (math.radians(v) for v in (-rx, -ry, rz))
-    Rx = np.array([[1, 0, 0], [0, math.cos(a), -math.sin(a)], [0, math.sin(a), math.cos(a)]])
-    Ry = np.array([[math.cos(b), 0, math.sin(b)], [0, 1, 0], [-math.sin(b), 0, math.cos(b)]])
-    Rz = np.array([[math.cos(g), -math.sin(g), 0], [math.sin(g), math.cos(g), 0], [0, 0, 1]])
-    F = np.diag([-1, 1, 1])
-    return F @ Rz @ Ry @ Rx @ F
-
-
 def euler_candidates(M):
-    """The two Bedrock Euler triples that give rotation matrix M."""
     F = np.diag([-1, 1, 1])
-    N = F @ M @ F                                  # = Rz(g) Ry(b) Rx(a), with a = -rx, b = -ry, g = rz
+    N = F @ M @ F
     b = math.asin(max(-1.0, min(1.0, -N[2, 0])))
     a = math.atan2(N[2, 1], N[2, 2])
     g = math.atan2(N[1, 0], N[0, 0])
@@ -395,7 +266,6 @@ def euler_candidates(M):
 
 
 def euler_near(M, prev):
-    """Euler angles for M, unwrapped to lie closest to `prev` so interpolation never takes the long way."""
     best = None
     for e in euler_candidates(M):
         e = e + 360 * np.round((prev - e) / 360)
@@ -408,7 +278,6 @@ BONE_BY_NAME = {b["name"]: b for b in BONES}
 
 
 def world_of(name, pose):
-    """(R, t) with world point = R @ local point + t, for bone `name` under `pose` {bone: {rotation, position}}."""
     b = BONE_BY_NAME[name]
     rot = np.array(b["rotation"] or [0, 0, 0], float) + np.array(pose.get(name, {}).get("rotation", [0, 0, 0]), float)
     pos = np.array(pose.get(name, {}).get("position", [0, 0, 0]), float)
@@ -422,8 +291,6 @@ def world_of(name, pose):
 
 
 def hand_hold(side, pose):
-    """World grip point and the staff's world rotation when `side`'s hand holds it as the right hand does
-    at rest: through the palm, upright when the arm hangs at rest."""
     R, t = world_of(f"{side}_arm", pose)
     grip = np.array([-7.0, 12, 0] if side == "right" else [7.0, 12, 0])
     rest = np.array(BONE_BY_NAME[f"{side}_arm"]["rotation"], float)
@@ -432,12 +299,11 @@ def hand_hold(side, pose):
 
 STAFF_PIVOT = np.array(BONE_BY_NAME["staff"]["pivot"], float)
 STAFF_REST = np.array(BONE_BY_NAME["staff"]["rotation"], float)
-STAFF_MID = 11.0            # the staff's middle, above the grip along its shaft (it runs y=1..45.5 with the grip at 12)
-STAFF_TIP = 33.5            # the crystal's point above the grip
+STAFF_MID = 11.0
+STAFF_TIP = 33.5
 
 
 def solve_staff(pose, grip_world, W, prev):
-    """Keyframe values for `staff` so that its grip point lands on `grip_world` with world rotation W."""
     R, t = world_of("right_arm", pose)
     pos = R.T @ (grip_world - t) - STAFF_PIVOT
     e = euler_near(R.T @ W, prev + STAFF_REST) - STAFF_REST
@@ -476,7 +342,6 @@ def smooth(k):
 
 
 def track(keys, t):
-    """Catmull-Rom through sparse {time: [x, y, z]} keys, sampled at t (for posing the arms smoothly)."""
     ts = sorted(keys)
     if t <= ts[0]:
         return np.array(keys[ts[0]], float)
@@ -490,7 +355,6 @@ def track(keys, t):
 
 
 def sample_times(length, fine=()):
-    """Every 0.05s, and every 0.025s inside the (start, end) windows in `fine` where the staff spins."""
     ts = {round(k * 0.05, 3) for k in range(int(round(length / 0.05)) + 1)}
     for a, b in fine:
         ts |= {round(a + k * 0.025, 3) for k in range(int(round((b - a) / 0.025)) + 1)}
@@ -498,9 +362,6 @@ def sample_times(length, fine=()):
 
 
 def dense(length, sparse, staff_at, fine=()):
-    """Build a bone dict: every bone in `sparse` ({bone: {channel: keys}}) sampled along its spline, plus
-    the staff solved from staff_at(t, pose) -> (grip_world, W), all at the same times. The first and last
-    keyframes are the rest pose exactly."""
     out = {name: {ch_: {} for ch_ in chans} for name, chans in sparse.items()}
     out["staff"] = {"position": {}, "rotation": {}}
     prev = np.zeros(3)
@@ -520,7 +381,6 @@ def dense(length, sparse, staff_at, fine=()):
 
 
 def entrail_sway(length, amp_x, amp_z, cycles=1, lift=0.0, steps=8):
-    """A looping sway of the entrail strands, the longer ones swinging wider and lagging further behind."""
     bones = {}
     for i, (_x, _y, _z, _w, strand, _rot, _tip) in enumerate(ENTRAILS):
         lag = 0.35 + 0.12 * strand + 0.9 * i
@@ -536,17 +396,14 @@ def entrail_sway(length, amp_x, amp_z, cycles=1, lift=0.0, steps=8):
 
 
 def ballistic(c0, c1, s, apex, bulge):
-    """The staff's middle in flight: straight across, lifted into an arc and bowed out in front of him."""
     arc = 4 * s * (1 - s)
     return c0 + (c1 - c0) * s + np.array([0, apex * arc, -bulge * arc])
 
 
 def toss():
-    # Right hand tosses the staff across in a cartwheeling arc in front of him; the left hand catches it,
-    # twirls it a little and tosses it back; the right hand catches and he settles back to rest.
     L = 1.5
-    R_OUT, R_CATCH = 0.24, 0.56               # right -> left flight
-    L_OUT, L_CATCH = 0.9, 1.2                 # left -> right flight
+    R_OUT, R_CATCH = 0.24, 0.56
+    L_OUT, L_CATCH = 0.9, 1.2
     sparse = {
         "torso": {"rotation": {0: [0, 0, 0], 0.2: [0, 8, 0], 0.4: [-3, 0, 0], 0.6: [0, -10, 0], 0.8: [0, -8, 0],
                                0.95: [0, -4, 0], 1.25: [0, 8, 0], 1.5: [0, 0, 0]}},
@@ -564,12 +421,10 @@ def toss():
                               1.5: [0, 0, 0]}},
     }
     mid = np.array([0, STAFF_MID, 0])
-    twirl_l = {0.56: 0, 0.75: -18, 0.84: -6, L_OUT: 20}          # the left hand rolls it in its grip
-    tilt_r = {0: 0, 0.14: -14, R_OUT: 24}                        # the flick that sends it off
+    twirl_l = {0.56: 0, 0.75: -18, 0.84: -6, L_OUT: 20}
+    tilt_r = {0: 0, 0.14: -14, R_OUT: 24}
 
     def held(side, pose, tilt):
-        # Held upright relative to the torso (whatever the arm's angle), leaning `tilt` degrees toward
-        # his left; at rest that is exactly the rest pose.
         grip, _ = hand_hold(side, pose)
         R, _t = world_of("torso", pose)
         return grip, R @ rot_matrix(0, 0, tilt)
@@ -600,8 +455,6 @@ def toss():
 
 
 def spin():
-    # Raise the staff overhead, spin it flat above his head (2.75 turns), bring it down and thrust the
-    # crystal at the target. The thrust peaks at exactly 1.25s: the Java fires the projectile on tick 25.
     L = 1.5
     UP, SPIN_END, THRUST = 0.3, 1.05, 1.25
     sparse = {
@@ -620,8 +473,6 @@ def spin():
         "hem": {"rotation": {0: [0, 0, 0], UP: [-3, 0, 0], SPIN_END: [-3, 0, 0], THRUST: [8, 0, 0], 1.38: [3, 0, 0],
                              L: [0, 0, 0]}},
     }
-    # Lying flat along his right (-X), then yawed about the vertical axis. Yaw FORWARD_YAW points the
-    # crystal straight ahead (-Z); the spin runs down to it from 2.75 turns back.
     flat = rot_matrix(0, 0, -90)
     FORWARD_YAW = 90.0
     for yaw in (90.0, -90.0):
@@ -632,20 +483,20 @@ def spin():
 
     def staff_at(t, pose):
         hand, W_rest = hand_hold("right", pose)
-        if t <= UP:                                  # tip it flat and slide the grip to its middle
+        if t <= UP:
             k = smooth(t / UP)
             W = slerp(W_rest, rot_matrix(0, start_yaw, 0) @ flat, k)
             return hand - W @ np.array([0, STAFF_MID * k, 0]), W
-        if t <= SPIN_END:                            # spin flat, held at its middle, hand overhead
+        if t <= SPIN_END:
             k = (t - UP) / (SPIN_END - UP)
             yaw = start_yaw + (FORWARD_YAW - start_yaw) * (k * (2 - k) * 0.35 + k * 0.65)
             W = rot_matrix(0, yaw, 0) @ flat
             return hand - W @ np.array([0, STAFF_MID, 0]), W
-        if t <= THRUST:                              # level it at the target and slide the grip back
+        if t <= THRUST:
             k = smooth((t - SPIN_END) / (THRUST - SPIN_END))
             W = thrust_W
             return hand - W @ np.array([0, STAFF_MID * (1 - k), 0]), W
-        k = smooth((t - THRUST) / (L - THRUST))       # swing it back upright into the rest grip
+        k = smooth((t - THRUST) / (L - THRUST))
         return hand, slerp(thrust_W, W_rest, k)
 
     bones = dense(L, sparse, staff_at, fine=((UP, SPIN_END),))
@@ -667,13 +518,6 @@ def animations():
         "animation.ice_lich.toss": toss(),
         "animation.ice_lich.spin": spin(),
     }}
-
-
-def write(path, data):
-    os.makedirs(os.path.dirname(path), exist_ok=True)
-    with open(path, "w") as f:
-        json.dump(data, f, indent=1)
-        f.write("\n")
 
 
 if __name__ == "__main__":

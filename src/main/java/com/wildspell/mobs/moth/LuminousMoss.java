@@ -14,18 +14,12 @@ import net.minecraft.world.level.block.CarpetBlock;
 import net.minecraft.world.level.block.state.BlockBehaviour;
 import net.minecraft.world.level.block.state.BlockState;
 
-/**
- * Moss a Luminous Moth has brightened. It glows while moths stay near it, and once none have been
- * around for a while it fades back to plain moss on a random tick. Mined, it drops plain moss.
- */
 public final class LuminousMoss {
-    /** Per random tick with no moth nearby: about five minutes on average. */
     private static final int FADE_CHANCE = 4;
 
     private LuminousMoss() {
     }
 
-    /** Brightens the moss at {@code pos}, if it's moss. */
     public static void brighten(Level level, BlockPos pos) {
         BlockState state = level.getBlockState(pos);
         if (state.is(Blocks.MOSS_BLOCK)) {

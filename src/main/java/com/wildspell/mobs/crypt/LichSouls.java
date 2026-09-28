@@ -7,9 +7,11 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.UUID;
 import javax.annotation.Nullable;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
 import net.minecraft.core.GlobalPos;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.core.registries.Registries;
@@ -17,6 +19,7 @@ import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.NbtUtils;
 import net.minecraft.nbt.Tag;
+import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.MinecraftServer;
@@ -30,28 +33,10 @@ import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.neoforge.event.tick.ServerTickEvent;
 
-/**
- * Every lich's soul, wherever its phylactery has gone. A phylactery starts on its crypt's altar (a
- * {@link PhylacteryBlockEntity}), but once its wards are broken it can be carried off as an item, into
- * a chest or another dimension; the soul's state lives here, in the world's saved data, so it
- * follows. One {@link Soul} per lich:
- * <ul>
- *   <li>its <b>anchor</b>, where the phylactery is (on the altar, or wherever it was last seen: a
- *       player carrying it, an item on the ground, the spot it was put in a chest);</li>
- *   <li>its form: a body ({@link Soul#lichId}), a soul in flight home ({@link Soul#soulTicks}), or a
- *       re-forming countdown ({@link Soul#reformTicks}). It has at most one at a time;</li>
- *   <li>whether its phylactery has burned (the only way to destroy one), and once its last form has
- *       fallen, whether its crypt has been cleansed ({@link Cleansing}).</li>
- * </ul>
- * Cleansed crypts are remembered as safe zones where the cold's undead no longer rise.
- */
 public class LichSouls extends SavedData {
     private static final String NAME = "wildspellmobs_lich_souls";
-    /** Ticks a lich can go unfound (while its phylactery's area is loaded) before its soul stops waiting for it. */
     private static final int MISSING_LIMIT = 60 * 20;
-    /** Tests: treat every soul's body as lying in an unloaded crypt (the arena is always loaded). */
-    public static boolean ASSUME_BODY_AWAY_FOR_TEST = false;
-    /** Radius around a cleansed crypt where Frozen Zombies don't freeze and Rime Skulls don't spawn. */
+    static boolean assumeBodyAway;
     public static final double SAFE_RADIUS = 64.0;
 
     private final Map<UUID, Soul> souls = new HashMap<>();
@@ -70,9 +55,8 @@ public class LichSouls extends SavedData {
         return id == null ? null : this.souls.get(id);
     }
 
-    /** A new soul, for a phylactery on its altar at {@code altar}. */
     public Soul create(ServerLevel level, BlockPos altar) {
-        Soul soul = new Soul(UUID.randomUUID(), level.dimension(), altar.immutable());
+        Soul soul = new Soul(UUID.randomUUID(), level.dimension(), level.dimension(), altar.immutable());
         if (level.getBlockState(altar).hasProperty(PhylacteryBlock.FACING)) {
             soul.cryptFacing = level.getBlockState(altar).getValue(PhylacteryBlock.FACING);
         }
@@ -81,7 +65,6 @@ public class LichSouls extends SavedData {
         return soul;
     }
 
-    /** True within {@link #SAFE_RADIUS} of a cleansed crypt. */
     public boolean isCleansed(Level level, BlockPos pos) {
         for (GlobalPos zone : this.cleansed) {
             if (zone.dimension() == level.dimension() && zone.pos().distSqr(pos) < SAFE_RADIUS * SAFE_RADIUS) {
@@ -91,9 +74,17 @@ public class LichSouls extends SavedData {
         return false;
     }
 
-    /** Gametests: forget a safe zone, so it can't reach into the next test's arena. */
-    public void forgetCleansed(Level level, BlockPos crypt) {
-        this.cleansed.removeIf(zone -> zone.dimension() == level.dimension() && zone.pos().equals(crypt));
+    void forgetWithin(ServerLevel level, AABB area) {
+        this.souls.values().removeIf(soul -> {
+            if (soul.cryptDimension != level.dimension() || !area.contains(Vec3.atCenterOf(soul.crypt))) {
+                return false;
+            }
+            if (soul.lichId != null && level.getEntity(soul.lichId) instanceof IceLich lich) {
+                lich.discard();
+            }
+            return true;
+        });
+        this.cleansed.removeIf(zone -> zone.dimension() == level.dimension() && area.contains(Vec3.atCenterOf(zone.pos())));
         this.setDirty();
     }
 
@@ -107,12 +98,8 @@ public class LichSouls extends SavedData {
         long time = server.overworld().getGameTime();
         List<Soul> all = List.copyOf(souls.souls.values());
         for (Soul soul : all) {
-            ServerLevel level = server.getLevel(soul.dimension);
-            if (level != null) {
-                soul.tick(level, time);
-            }
+            soul.tick(server, time);
         }
-        // From here, not the phylacteries, so no crypt need be loaded for a lich to sense a player far off.
         if (time % 20 == 7) {
             for (ServerLevel level : server.getAllLevels()) {
                 PhylacteryBlockEntity.ambushFromAfar(level, all);
@@ -120,14 +107,12 @@ public class LichSouls extends SavedData {
         }
     }
 
-    /** One lich's soul. */
     public final class Soul {
         public final UUID id;
         private ResourceKey<Level> dimension;
-        /** The altar the phylactery was made on: where the crypt is, and where its cleansing happens. */
+        private final ResourceKey<Level> cryptDimension;
         private final BlockPos crypt;
-        /** Which way the altar faces, into the crypt. */
-        private net.minecraft.core.Direction cryptFacing = net.minecraft.core.Direction.NORTH;
+        private Direction cryptFacing = Direction.NORTH;
         private BlockPos anchor;
         private boolean inAltar = true;
         @Nullable
@@ -144,9 +129,10 @@ public class LichSouls extends SavedData {
         private boolean fallen;
         private boolean cleansedCrypt;
 
-        Soul(UUID id, ResourceKey<Level> dimension, BlockPos crypt) {
+        Soul(UUID id, ResourceKey<Level> dimension, ResourceKey<Level> cryptDimension, BlockPos crypt) {
             this.id = id;
             this.dimension = dimension;
+            this.cryptDimension = cryptDimension;
             this.crypt = crypt;
             this.anchor = crypt;
         }
@@ -155,15 +141,18 @@ public class LichSouls extends SavedData {
             return this.dimension;
         }
 
+        public ResourceKey<Level> cryptDimension() {
+            return this.cryptDimension;
+        }
+
         public BlockPos crypt() {
             return this.crypt;
         }
 
-        public net.minecraft.core.Direction cryptFacing() {
+        public Direction cryptFacing() {
             return this.cryptFacing;
         }
 
-        /** Where the phylactery is, or was last seen. */
         public BlockPos anchor() {
             return this.anchor;
         }
@@ -172,7 +161,6 @@ public class LichSouls extends SavedData {
             return this.inAltar;
         }
 
-        /** Its phylactery has burned: the lich is mortal. */
         public boolean burned() {
             return this.burned;
         }
@@ -187,16 +175,10 @@ public class LichSouls extends SavedData {
             return this.carrier;
         }
 
-        /** No body, no soul in flight and no re-forming under way: the lich is waiting to rise. */
         public boolean dormant() {
             return this.lichId == null && this.soulTicks <= 0 && this.reformTicks < 0 && !this.burned;
         }
 
-        /**
-         * Whether this soul can rise behind a player far off: dormant, or its body is on record but
-         * lies idle in its unloaded crypt (nowhere loaded, home not loaded). Raising a new body then
-         * makes the old one a stale copy, which vanishes when its chunk is next loaded.
-         */
         public boolean canStalk(ServerLevel level) {
             if (!this.inAltar || this.burned || this.reformTicks >= 0 || this.soulTicks > 0) {
                 return false;
@@ -204,7 +186,7 @@ public class LichSouls extends SavedData {
             if (this.lichId == null) {
                 return true;
             }
-            boolean bodyAway = ASSUME_BODY_AWAY_FOR_TEST || (this.findLich(level) == null && !level.isLoaded(this.anchor));
+            boolean bodyAway = assumeBodyAway || (this.findLich(level) == null && !level.isLoaded(this.anchor));
             return bodyAway;
         }
 
@@ -212,7 +194,6 @@ public class LichSouls extends SavedData {
             LichSouls.this.setDirty();
         }
 
-        /** The phylactery was set on an altar at {@code pos}. */
         void placeOnAltar(ServerLevel level, BlockPos pos) {
             this.dimension = level.dimension();
             this.anchor = pos.immutable();
@@ -221,10 +202,9 @@ public class LichSouls extends SavedData {
             this.changed();
         }
 
-        /** The phylactery was taken off its altar, or moved while carried or lying about. */
         public void moved(Level level, BlockPos pos, @Nullable Entity carrier) {
             UUID carrierId = carrier == null ? null : carrier.getUUID();
-            if (!this.inAltar && this.dimension == level.dimension() && this.anchor.equals(pos) && java.util.Objects.equals(this.carrier, carrierId)) {
+            if (!this.inAltar && this.dimension == level.dimension() && this.anchor.equals(pos) && Objects.equals(this.carrier, carrierId)) {
                 return;
             }
             this.dimension = level.dimension();
@@ -245,16 +225,11 @@ public class LichSouls extends SavedData {
             }
         }
 
-        /** The phylactery's lich, if it's loaded and alive. */
         @Nullable
         public IceLich findLich(ServerLevel level) {
             return this.lichId != null && level.getEntity(this.lichId) instanceof IceLich lich && lich.isAlive() ? lich : null;
         }
 
-        /**
-         * A bound lich checking in. It's this soul's lich if it's the one on record, or if the soul has
-         * lost track of its body and this one turns up; any other body is a stale copy.
-         */
         public boolean claim(IceLich lich) {
             if (lich.getUUID().equals(this.lichId)) {
                 return true;
@@ -269,22 +244,20 @@ public class LichSouls extends SavedData {
             return false;
         }
 
-        /** Where the lich re-forms: over its altar, or beside wherever its phylactery has been taken. */
         @Nullable
         public Vec3 reformSpot(ServerLevel level) {
             if (this.inAltar) {
                 return Vec3.atBottomCenterOf(this.anchor.above());
             }
-            for (int attempt = 0; attempt < 24; ++attempt) {
-                BlockPos pos = this.anchor.offset(level.random.nextInt(13) - 6, level.random.nextInt(5) - 1, level.random.nextInt(13) - 6);
-                if (pos.distSqr(this.anchor) >= 9 && ColdEffects.isOpen(level, pos, 3)) {
-                    return Vec3.atBottomCenterOf(pos);
-                }
+            Vec3 spot = ColdEffects.findSpot(24,
+                    () -> Vec3.atBottomCenterOf(this.anchor.offset(level.random.nextInt(13) - 6, level.random.nextInt(5) - 1, level.random.nextInt(13) - 6)),
+                    at -> BlockPos.containing(at).distSqr(this.anchor) >= 9 && ColdEffects.isOpen(level, BlockPos.containing(at), 3));
+            if (spot != null) {
+                return spot;
             }
             return ColdEffects.isOpen(level, this.anchor.above(), 3) ? Vec3.atBottomCenterOf(this.anchor.above()) : null;
         }
 
-        /** Raises this soul's lich at {@code at}, hunting {@code prey} if given. Nothing rises on Peaceful. */
         @Nullable
         public IceLich raise(ServerLevel level, Vec3 at, @Nullable Player prey) {
             IceLich lich = level.getDifficulty() == Difficulty.PEACEFUL || this.burned ? null : IceLich.summon(level, at, this.id);
@@ -306,7 +279,6 @@ public class LichSouls extends SavedData {
             this.changed();
         }
 
-        /** Hurries a re-forming already under way. */
         public void hurryRise(int ticks) {
             if (this.reformTicks >= 0) {
                 this.reformTicks = Math.min(this.reformTicks, ticks);
@@ -314,7 +286,6 @@ public class LichSouls extends SavedData {
             }
         }
 
-        /** The lich's soul has flown home; it re-forms after a while. */
         public void onWispArrived(ServerLevel level, @Nullable UUID hunting) {
             this.soulTicks = 0;
             this.changed();
@@ -326,7 +297,6 @@ public class LichSouls extends SavedData {
                     ? PhylacteryBlockEntity.REFORM_TICKS_AWAKE : PhylacteryBlockEntity.REFORM_TICKS;
         }
 
-        /** The lich was struck down; its soul is on the way home. */
         public void onLichDiscorporated(IceLich lich) {
             if (lich.getUUID().equals(this.lichId)) {
                 this.lichId = null;
@@ -335,7 +305,6 @@ public class LichSouls extends SavedData {
             }
         }
 
-        /** The lich gave up its hunt and sank back into its phylactery. */
         public void onLichRetreated(IceLich lich) {
             if (lich.getUUID().equals(this.lichId)) {
                 this.lichId = null;
@@ -344,10 +313,6 @@ public class LichSouls extends SavedData {
             }
         }
 
-        /**
-         * The phylactery has burned: the lich is mortal. Its body, if it has one here, is torn back to
-         * the flames; either way its last form rises there, mortal and enraged.
-         */
         public void burn(ServerLevel level, Vec3 at) {
             if (this.burned) {
                 return;
@@ -358,21 +323,22 @@ public class LichSouls extends SavedData {
             this.changed();
             IceLich old = this.findLich(level);
             if (old != null) {
-                old.vanishInto(at);
+                old.vanish();
             }
             this.lichId = null;
             ColdEffects.tellNearby(level, new AABB(BlockPos.containing(at)).inflate(64.0),
-                    net.minecraft.network.chat.Component.translatable("message.wildspellmobs.phylactery_burned"));
-            if (level.getDifficulty() != Difficulty.PEACEFUL) {
-                Player prey = level.getNearestPlayer(at.x, at.y, at.z, 48.0, p -> p instanceof Player player && PhylacteryBlockEntity.isPrey(player));
-                IceLich last = IceLich.summonLastForm(level, at.add(0.0, 1.0, 0.0), this.id);
-                if (last != null && prey != null) {
-                    last.hunt(prey);
-                }
+                    Component.translatable("message.wildspellmobs.phylactery_burned"));
+            IceLich last = IceLich.summonLastForm(level, at.add(0.0, 1.0, 0.0), this.id);
+            if (last == null) {
+                this.fall(level, at);
+                return;
+            }
+            Player prey = level.getNearestPlayer(at.x, at.y, at.z, 48.0, p -> p instanceof Player player && PhylacteryBlockEntity.isPrey(player));
+            if (prey != null) {
+                last.hunt(prey);
             }
         }
 
-        /** Its last form has fallen: its hold on the caves breaks, and its crypt is cleansed as soon as it's loaded. */
         public void fall(ServerLevel level, Vec3 at) {
             if (this.fallen) {
                 return;
@@ -381,10 +347,23 @@ public class LichSouls extends SavedData {
             this.changed();
             Cleansing.purge(level, at);
             ColdEffects.tellNearby(level, new AABB(BlockPos.containing(at)).inflate(64.0),
-                    net.minecraft.network.chat.Component.translatable("message.wildspellmobs.lich_fallen"));
+                    Component.translatable("message.wildspellmobs.lich_fallen"));
         }
 
-        private void tick(ServerLevel level, long time) {
+        private void tick(MinecraftServer server, long time) {
+            ServerLevel cryptLevel = server.getLevel(this.cryptDimension);
+            if (this.fallen && !this.cleansedCrypt && cryptLevel != null && time % 40 == 0
+                    && cryptLevel.isAreaLoaded(this.crypt, Cleansing.LOADED_RADIUS)) {
+                this.cleansedCrypt = true;
+                LichSouls.this.cleansed.add(GlobalPos.of(this.cryptDimension, this.crypt));
+                LichSouls.this.souls.remove(this.id);
+                this.changed();
+                Cleansing.cleanse(cryptLevel, this.crypt, this.cryptFacing);
+            }
+            ServerLevel level = server.getLevel(this.dimension);
+            if (level == null || this.cleansedCrypt) {
+                return;
+            }
             if (this.soulTicks > 0 && --this.soulTicks == 0) {
                 this.changed();
             }
@@ -401,12 +380,6 @@ public class LichSouls extends SavedData {
                     this.changed();
                 }
             }
-            if (this.fallen && !this.cleansedCrypt && time % 40 == 0 && level.isAreaLoaded(this.crypt, Cleansing.LOADED_RADIUS)) {
-                this.cleansedCrypt = true;
-                LichSouls.this.cleansed.add(GlobalPos.of(level.dimension(), this.crypt));
-                this.changed();
-                Cleansing.cleanse(level, this.crypt, this.cryptFacing);
-            }
         }
 
         private void reform(ServerLevel level) {
@@ -417,7 +390,6 @@ public class LichSouls extends SavedData {
             }
             Vec3 at = level.isLoaded(this.anchor) ? this.reformSpot(level) : null;
             if (at == null) {
-                // Its phylactery's surroundings aren't loaded (or there's no room): try again shortly.
                 this.reformTicks = 20;
                 return;
             }
@@ -439,6 +411,7 @@ public class LichSouls extends SavedData {
             CompoundTag tag = new CompoundTag();
             tag.putUUID("Id", this.id);
             tag.putString("Dimension", this.dimension.location().toString());
+            tag.putString("CryptDimension", this.cryptDimension.location().toString());
             tag.put("Crypt", NbtUtils.writeBlockPos(this.crypt));
             tag.put("Anchor", NbtUtils.writeBlockPos(this.anchor));
             tag.putInt("CryptFacing", this.cryptFacing.get3DDataValue());
@@ -469,13 +442,15 @@ public class LichSouls extends SavedData {
             if (!s.hasUUID("Id")) {
                 continue;
             }
-            ResourceKey<Level> dimension = ResourceKey.create(Registries.DIMENSION, ResourceLocation.parse(s.getString("Dimension")));
+            ResourceKey<Level> dimension = dimension(s.getString("Dimension"));
+            ResourceKey<Level> cryptDimension = s.contains("CryptDimension", Tag.TAG_STRING) ? dimension(s.getString("CryptDimension"))
+                    : s.getBoolean("InAltar") ? dimension : Level.OVERWORLD;
             BlockPos crypt = NbtUtils.readBlockPos(s, "Crypt").orElse(BlockPos.ZERO);
-            Soul soul = data.new Soul(s.getUUID("Id"), dimension, crypt);
+            Soul soul = data.new Soul(s.getUUID("Id"), dimension, cryptDimension, crypt);
             soul.anchor = NbtUtils.readBlockPos(s, "Anchor").orElse(crypt);
-            soul.cryptFacing = net.minecraft.core.Direction.from3DDataValue(s.getInt("CryptFacing"));
+            soul.cryptFacing = Direction.from3DDataValue(s.getInt("CryptFacing"));
             if (soul.cryptFacing.getAxis().isVertical()) {
-                soul.cryptFacing = net.minecraft.core.Direction.NORTH;
+                soul.cryptFacing = Direction.NORTH;
             }
             soul.inAltar = s.getBoolean("InAltar");
             soul.carrier = s.hasUUID("Carrier") ? s.getUUID("Carrier") : null;
@@ -487,14 +462,20 @@ public class LichSouls extends SavedData {
             soul.burned = s.getBoolean("Burned");
             soul.fallen = s.getBoolean("Fallen");
             soul.cleansedCrypt = s.getBoolean("Cleansed");
-            data.souls.put(soul.id, soul);
+            if (!soul.cleansedCrypt) {
+                data.souls.put(soul.id, soul);
+            }
         }
         for (Tag entry : tag.getList("Cleansed", Tag.TAG_COMPOUND)) {
             CompoundTag z = (CompoundTag) entry;
-            ResourceKey<Level> dimension = ResourceKey.create(Registries.DIMENSION, ResourceLocation.parse(z.getString("Dimension")));
+            ResourceKey<Level> dimension = dimension(z.getString("Dimension"));
             NbtUtils.readBlockPos(z, "Pos").ifPresent(pos -> data.cleansed.add(GlobalPos.of(dimension, pos)));
         }
         return data;
+    }
+
+    private static ResourceKey<Level> dimension(String id) {
+        return ResourceKey.create(Registries.DIMENSION, ResourceLocation.parse(id));
     }
 
     @Override

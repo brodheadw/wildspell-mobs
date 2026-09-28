@@ -35,13 +35,11 @@ public class RimeSkullRenderer extends MobRenderer<RimeSkull, RimeSkullModel> {
         return TEXTURES[skull.getVariant()];
     }
 
-    /** Frost glows faintly, so the skull stays visible in unlit caves. */
     @Override
     protected int getBlockLightLevel(RimeSkull skull, BlockPos pos) {
         return Math.max(7, super.getBlockLightLevel(skull, pos));
     }
 
-    /** Glowing eyes; like vanilla's EyesLayer, but the texture follows the skull's variant. */
     private static class EyesLayer extends RenderLayer<RimeSkull, RimeSkullModel> {
         EyesLayer(RenderLayerParent<RimeSkull, RimeSkullModel> parent) {
             super(parent);

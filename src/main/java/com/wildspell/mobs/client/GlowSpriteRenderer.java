@@ -12,10 +12,6 @@ import net.minecraft.util.Mth;
 import net.minecraft.world.entity.Entity;
 import org.joml.Matrix4f;
 
-/**
- * A camera-facing, fullbright sprite that pulses gently: the lich's fleeing soul, its frost orb. Drawn
- * with an entity render type, so a glowing entity's outline shows through walls.
- */
 public class GlowSpriteRenderer<T extends Entity> extends EntityRenderer<T> {
     private final ResourceLocation texture;
     private final RenderType renderType;
