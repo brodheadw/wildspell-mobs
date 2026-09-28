@@ -26,6 +26,10 @@ sourceSets.main.resources {
     exclude("src/generated/**/.cache") // datagen cache files
 }
 
+sourceSets {
+    gametest
+}
+
 repositories {
     // Add here additional repositories if required by some of the dependencies below.
     maven {
@@ -47,6 +51,7 @@ java.toolchain.languageVersion = JavaLanguageVersion.of(21)
 neoForge {
     // Specify the version of NeoForge to use.
     version = project.neo_version
+    addModdingDependenciesTo(sourceSets.gametest)
 
     parchment {
         mappingsVersion = project.parchment_mappings_version
@@ -61,6 +66,7 @@ neoForge {
     runs {
         client {
             client()
+            sourceSet = sourceSets.gametest
             // Comma-separated list of namespaces to load gametests from. Empty = all namespaces.
             systemProperty 'neoforge.enabledGameTestNamespaces', project.mod_id
         }
@@ -73,6 +79,7 @@ neoForge {
 
         server {
             server()
+            sourceSet = sourceSets.gametest
             programArgument '--nogui'
             systemProperty 'neoforge.enabledGameTestNamespaces', project.mod_id
         }
@@ -82,6 +89,7 @@ neoForge {
         // The gametest system is also enabled by default for other run configs under the /test command.
         gameTestServer {
             type = "gameTestServer"
+            sourceSet = sourceSets.gametest
             systemProperty 'neoforge.enabledGameTestNamespaces', project.mod_id
         }
 
@@ -116,6 +124,7 @@ neoForge {
         // multi mod projects should define one per mod
         "${mod_id}" {
             sourceSet(sourceSets.main)
+            sourceSet(sourceSets.gametest)
         }
     }
 }
@@ -126,9 +135,12 @@ neoForge {
 // "optional", meaning it will not be pulled by dependents of this mod.
 configurations {
     runtimeClasspath.extendsFrom localRuntime
+    gametestCompileOnly.extendsFrom compileOnly
+    gametestRuntimeClasspath.extendsFrom localRuntime
 }
 
 dependencies {
+    gametestImplementation sourceSets.main.output
     // YUNG's Cave Biomes (+ its API) at dev runtime only, so gametests can check the Frosted Caves spawn list.
     // Drop the jars into ./libs; they are not shipped or declared as dependencies.
     localRuntime fileTree(dir: 'libs', include: '*.jar')
@@ -216,4 +228,8 @@ tasks.named('jar', Jar).configure {
     from('LICENSE') {
         rename { bundledLicenseName }
     }
+}
+
+tasks.named('check') {
+    dependsOn tasks.named('gametestClasses')
 }
