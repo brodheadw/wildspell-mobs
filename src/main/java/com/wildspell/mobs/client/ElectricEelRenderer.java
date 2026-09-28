@@ -30,7 +30,6 @@ public class ElectricEelRenderer extends MobRenderer<ElectricEel, ElectricEelMod
         return TEXTURE;
     }
 
-    /** Stranded, it lies on its side, as fish do. */
     @Override
     protected void setupRotations(ElectricEel eel, PoseStack poseStack, float bob, float yBodyRot, float partialTick, float scale) {
         super.setupRotations(eel, poseStack, bob, yBodyRot, partialTick, scale);
@@ -40,13 +39,11 @@ public class ElectricEelRenderer extends MobRenderer<ElectricEel, ElectricEelMod
         }
     }
 
-    /** Lit by its own discharge. */
     @Override
     protected int getBlockLightLevel(ElectricEel eel, BlockPos pos) {
         return Math.max(Mth.floor(eel.getGlow(0.0F) * 15.0F), super.getBlockLightLevel(eel, pos));
     }
 
-    /** The electric organ's glow along its flanks, as bright as the eel's charge. */
     private static class OrganLayer extends RenderLayer<ElectricEel, ElectricEelModel> {
         OrganLayer(RenderLayerParent<ElectricEel, ElectricEelModel> parent) {
             super(parent);

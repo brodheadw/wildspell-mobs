@@ -1,7 +1,7 @@
 {
   "values": {
-    "wildspellmobs:frozen_phylactery": {"strength": 0.5, "resonance": "still"},
-    "wildspellmobs:rime_ward": {"strength": 0.3, "resonance": "still"},
-    "wildspellmobs:frozen_soul": {"strength": 0.2, "resonance": "still"}
+    "wildspellmobs:frozen_phylactery": {"strength": 0.5, "resonance": "fundamentalmagic:still"},
+    "wildspellmobs:rime_ward": {"strength": 0.3, "resonance": "fundamentalmagic:still"},
+    "wildspellmobs:frozen_soul": {"strength": 0.2, "resonance": "fundamentalmagic:still"}
   }
 }

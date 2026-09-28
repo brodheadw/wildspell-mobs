@@ -14,15 +14,6 @@ import net.minecraft.world.level.biome.Biome;
 import net.neoforged.neoforge.event.EventHooks;
 import net.neoforged.neoforge.event.tick.EntityTickEvent;
 
-/**
- * Zombies that linger in a freezing biome (the Frosted Caves) turn into Frozen Zombies, the way
- * skeletons in powder snow turn into strays: after a few seconds they start to shiver and frost
- * over, then crack into their frozen form. Leaving the biome lets the progress fade as fast as it built;
- * fire thaws it away at once.
- *
- * <p>Zombies are checked every {@link #CHECK_INTERVAL} ticks (staggered by entity id) rather than
- * every tick, so a crowd of zombies costs a tenth of the biome lookups and save-data writes.
- */
 public final class ZombieFreezing {
     public static final TagKey<Biome> FREEZES_ZOMBIES = TagKey.create(Registries.BIOME, WildspellMobs.id("freezes_zombies"));
     static final int SHIVER_AT = 60;
@@ -44,16 +35,12 @@ public final class ZombieFreezing {
         }
         CompoundTag data = zombie.getPersistentData();
         int chill = data.getInt(CHILL);
-        // Nothing freezes while it burns: fire thaws the chill away at once.
         if (zombie.isOnFire()) {
             if (chill > 0) {
                 data.remove(CHILL);
             }
             return;
         }
-        // Out of the cold (the cave biome is three-dimensional, so a zombie chasing along its edge or roof
-        // dips out constantly), or around a cleansed crypt where the cold has lost its hold, the chill
-        // fades as fast as it built rather than vanishing, so a zombie that mostly lingers still freezes.
         if (!level.getBiome(zombie.blockPosition()).is(FREEZES_ZOMBIES) || LichSouls.isCleansedZone(level, zombie.blockPosition())) {
             if (chill > 0) {
                 chill -= CHECK_INTERVAL;
@@ -70,8 +57,6 @@ public final class ZombieFreezing {
         if (chill < SHIVER_AT) {
             return;
         }
-        // Held fully frozen, the vanilla renderer shivers it and frost creeps over it. Frost thaws
-        // by 2 a tick, so top it up with enough slack to last until the next check.
         zombie.setTicksFrozen(zombie.getTicksRequiredToFreeze() + 2 * CHECK_INTERVAL);
         if (chill < SHIVER_AT + CHECK_INTERVAL) {
             zombie.playSound(WildspellMobs.FROZEN_ZOMBIE_CRUNCH.get(), 0.8F, 0.8F);
@@ -80,7 +65,6 @@ public final class ZombieFreezing {
         if (chill >= CONVERT_AT && EventHooks.canLivingConvert(zombie, WildspellMobs.FROZEN_ZOMBIE.get(), ticks -> data.putInt(CHILL, CONVERT_AT - ticks))) {
             FrozenZombie frozen = zombie.convertTo(WildspellMobs.FROZEN_ZOMBIE.get(), true);
             if (frozen != null) {
-                // Sometimes an arm shatters off as it freezes; on ice, its legs freeze into the ice.
                 frozen.pickVariant();
                 frozen.getPersistentData().remove(CHILL);
                 frozen.playSound(WildspellMobs.FROZEN_ZOMBIE_SHATTER.get(), 0.8F, 1.2F);

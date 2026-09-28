@@ -18,9 +18,7 @@ public class PegasusRenderer extends AbstractHorseRenderer<Pegasus, PegasusModel
             TEXTURES.put(variant, WildspellMobs.id("textures/entity/pegasus_" + variant.name + ".png"));
         }
     }
-    /** A little bigger than a horse (1.1). */
     private static final float SCALE = 1.25F;
-    /** The most it tilts nose-up or nose-down in flight, in degrees. */
     private static final float MAX_PITCH = 30.0F;
 
     public PegasusRenderer(EntityRendererProvider.Context context) {
@@ -32,7 +30,6 @@ public class PegasusRenderer extends AbstractHorseRenderer<Pegasus, PegasusModel
         return TEXTURES.get(pegasus.getVariant());
     }
 
-    /** In the air it pitches with its climb or dive. */
     @Override
     protected void setupRotations(Pegasus pegasus, PoseStack poseStack, float bob, float yBodyRot, float partialTick, float scale) {
         super.setupRotations(pegasus, poseStack, bob, yBodyRot, partialTick, scale);

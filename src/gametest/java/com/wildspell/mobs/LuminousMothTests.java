@@ -3,6 +3,7 @@ package com.wildspell.mobs;
 import com.wildspell.mobs.entity.LuminousMoth;
 import com.wildspell.mobs.moth.MothBottleItem;
 import java.util.List;
+import java.util.function.BiPredicate;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.registries.Registries;
@@ -11,6 +12,7 @@ import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.InteractionHand;
+import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.MobCategory;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
@@ -25,7 +27,6 @@ import net.minecraft.world.phys.Vec3;
 import net.neoforged.neoforge.gametest.GameTestHolder;
 import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
 
-/** In-world checks for the Luminous Moth, run with the rest by ./gradlew runGameTestServer. */
 @GameTestHolder(WildspellMobs.MODID)
 @PrefixGameTestTemplate(false)
 public class LuminousMothTests {
@@ -111,7 +112,6 @@ public class LuminousMothTests {
         });
     }
 
-    // Own batch: a lure next door would draw the fleeing moth to it.
     @GameTest(template = ARENA, timeoutTicks = 200, batch = "mothLureStay")
     public static void aMothStaysNearAPlayerWithASporeBlossom(GameTestHelper helper) {
         LuminousMoth moth = helper.spawn(WildspellMobs.LUMINOUS_MOTH.get(), 4.5F, 3.0F, 4.5F);
@@ -133,7 +133,6 @@ public class LuminousMothTests {
 
     @GameTest(template = ARENA, timeoutTicks = 1600, batch = "mothWall")
     public static void mothSettlesOnAWall(GameTestHelper helper) {
-        // A closed stone room over water: its walls are the only place left to settle.
         for (int x = 1; x <= 7; ++x) {
             for (int y = 0; y <= 6; ++y) {
                 for (int z = 1; z <= 7; ++z) {
@@ -152,7 +151,6 @@ public class LuminousMothTests {
 
     @GameTest(template = ARENA, timeoutTicks = 100, batch = "mothMossFade")
     public static void luminousMossFadesOnlyWithNoMothNear(GameTestHelper helper) {
-        // Keeping moss lit looks in a box six blocks out, so the lonely moss sits outside the moth's.
         BlockPos lonely = new BlockPos(0, 1, 0);
         BlockPos kept = new BlockPos(7, 1, 7);
         helper.setBlock(lonely, WildspellMobs.LUMINOUS_MOSS.get());
@@ -196,7 +194,6 @@ public class LuminousMothTests {
             helper.assertTrue(player.getMainHandItem().is(WildspellMobs.LUMINOUS_MOTH_BOTTLE.get()), "not bottled: holding " + player.getMainHandItem());
             helper.assertTrue(wild.isRemoved(), "bottled moth still in the world");
         });
-        // Its trail light gone, the cave is dark again: release it there.
         helper.runAfterDelay(60, () -> {
             helper.assertTrue(blockLight(helper, home) == 0, "cave not dark before release: " + blockLight(helper, home));
             BlockPos abs = helper.absolutePos(floor);
@@ -230,12 +227,7 @@ public class LuminousMothTests {
         });
     }
 
-    /**
-     * Lays a mossy floor, waits for a moth to settle on it, then has a player pace back and forth
-     * a couple of blocks off it (sneaking or not), calling {@code check} each tick of that until it
-     * says the test is done.
-     */
-    private static void watchAPerchedMoth(GameTestHelper helper, boolean sneaking, java.util.function.BiPredicate<LuminousMoth, Integer> check) {
+    private static void watchAPerchedMoth(GameTestHelper helper, boolean sneaking, BiPredicate<LuminousMoth, Integer> check) {
         for (int x = 0; x < 9; ++x) {
             for (int z = 0; z < 9; ++z) {
                 helper.setBlock(x, 0, z, Blocks.MOSS_BLOCK);
@@ -244,11 +236,10 @@ public class LuminousMothTests {
         }
         LuminousMoth moth = helper.spawn(WildspellMobs.LUMINOUS_MOTH.get(), 4.5F, 2.5F, 4.5F);
         Player player = addMockPlayer(helper, new Vec3(0.5, 1.1, 0.5));
-        // Sneaking until it settles: a moth in flight flees anyone walking this close.
         player.setShiftKeyDown(true);
         int[] walked = {-1};
         helper.runAtTickTime(1590, () -> helper.fail("moth never settled; at " + helper.relativeVec(moth.position()) + " alive=" + moth.isAlive()
-                + " nearby=" + helper.getLevel().getEntitiesOfClass(net.minecraft.world.entity.LivingEntity.class, moth.getBoundingBox().inflate(4)).stream()
+                + " nearby=" + helper.getLevel().getEntitiesOfClass(LivingEntity.class, moth.getBoundingBox().inflate(4)).stream()
                 .map(e -> e.getType().toShortString() + "@" + helper.relativeVec(e.position())).toList()));
         helper.onEachTick(() -> {
             if (walked[0] < 0) {
@@ -258,7 +249,6 @@ public class LuminousMothTests {
                 walked[0] = 0;
                 player.setShiftKeyDown(sneaking);
             }
-            // Pace along a line about two and a half blocks from where the moth sat down.
             Vec3 perch = moth.position();
             double along = Math.sin(walked[0] * 0.1) * 1.5;
             player.moveTo(perch.x + 2.5, perch.y, perch.z + along, 0.0F, 0.0F);
@@ -287,7 +277,6 @@ public class LuminousMothTests {
         helper.getLevel().getBlockState(pos).randomTick(helper.getLevel(), pos, helper.getLevel().random);
     }
 
-    /** Encloses (4, 1, 4) in a stone shell so no light reaches it; light needs a few ticks to settle. */
     private static void sealCave(GameTestHelper helper) {
         for (int x = 2; x <= 6; ++x) {
             for (int y = 0; y <= 4; ++y) {
@@ -299,16 +288,11 @@ public class LuminousMothTests {
         }
     }
 
-    /**
-     * Passes the test and takes its mock player out of the world. Left behind, a mock player
-     * outlasts its test and draws the attention of other tests' mobs (the lich hunts players).
-     */
     private static void succeedAndLeave(GameTestHelper helper, Player player) {
         player.discard();
         helper.succeed();
     }
 
-    /** A survival-mode mock player standing in the world (not a ServerPlayer, which needs a connection). */
     private static Player addMockPlayer(GameTestHelper helper, Vec3 at) {
         Player player = helper.makeMockPlayer(GameType.SURVIVAL);
         Vec3 pos = helper.absoluteVec(at);

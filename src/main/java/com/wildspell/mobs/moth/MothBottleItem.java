@@ -18,10 +18,6 @@ import net.minecraft.world.item.context.UseOnContext;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.gameevent.GameEvent;
 
-/**
- * A Luminous Moth caught in a glass bottle. Used on a block, it lets the moth out there; if that spot
- * is dark, the moth takes it as its home and lights it up.
- */
 public class MothBottleItem extends Item {
     public MothBottleItem(Item.Properties properties) {
         super(properties);
@@ -53,9 +49,7 @@ public class MothBottleItem extends Item {
         return InteractionResult.sidedSuccess(level.isClientSide);
     }
 
-    /** Lets a moth out at {@code pos}, homed there if it's dark. */
     public static LuminousMoth release(ServerLevel level, BlockPos pos, ItemStack bottle, Player player) {
-        // Measure before the moth is out, so its own light doesn't count.
         boolean dark = level.getMaxLocalRawBrightness(pos) < LuminousMoth.DARK_BELOW;
         LuminousMoth moth = WildspellMobs.LUMINOUS_MOTH.get().create(level);
         Bucketable.loadDefaultDataFromBucketTag(moth, bottle.getOrDefault(DataComponents.BUCKET_ENTITY_DATA, CustomData.EMPTY).copyTag());

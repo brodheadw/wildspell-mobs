@@ -4,6 +4,8 @@ import com.wildspell.mobs.entity.Pegasus;
 import net.minecraft.core.BlockPos;
 import net.minecraft.gametest.framework.GameTest;
 import net.minecraft.gametest.framework.GameTestHelper;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.util.RandomSource;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.MobSpawnType;
 import net.minecraft.world.entity.player.Player;
@@ -15,15 +17,12 @@ import net.minecraft.world.phys.Vec3;
 import net.neoforged.neoforge.gametest.GameTestHolder;
 import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
 
-/** In-world checks for the Pegasus, run with the rest by ./gradlew runGameTestServer. */
 @GameTestHolder(WildspellMobs.MODID)
 @PrefixGameTestTemplate(false)
 public class PegasusTests {
     private static final String ARENA = "arena";
-    /** 31x24x31 of open air: room to climb and circle (the arena's barrier roof is 7 up). */
     private static final String SKY = "sky_arena";
 
-    /** Tamed, so it won't take wing on its own mid-test. */
     private static Pegasus tamedPegasus(GameTestHelper helper, float x, float y, float z) {
         Pegasus pegasus = helper.spawn(WildspellMobs.PEGASUS.get(), x, y, z);
         pegasus.setTamed(true);
@@ -64,10 +63,10 @@ public class PegasusTests {
         helper.onEachTick(() -> {
             tick[0]++;
             if (tick[0] == 40) {
-                rider.jumping = false; // let go: it should glide, not drop
+                rider.jumping = false;
             }
             double before = pegasus.getY();
-            pegasus.flyRidden(rider, Vec3.ZERO); // straight up: the sky arena is 31 wide, not 30 blocks of flight
+            pegasus.flyRidden(rider, Vec3.ZERO);
             topY[0] = Math.max(topY[0], pegasus.getY());
             if (tick[0] > 60) {
                 sinkPerTick[0] = Math.max(sinkPerTick[0], before - pegasus.getY());
@@ -84,7 +83,6 @@ public class PegasusTests {
         });
     }
 
-    // Own batch: the soar circles half the sky arena.
     @GameTest(template = SKY, timeoutTicks = 500, batch = "pegasusSoar")
     public static void wildPegasusSoarsAndComesBack(GameTestHelper helper) {
         Pegasus pegasus = helper.spawn(WildspellMobs.PEGASUS.get(), 15.5F, 0.0F, 15.5F);
@@ -142,7 +140,7 @@ public class PegasusTests {
     public static void pegasusKeepsItsCoat(GameTestHelper helper) {
         Pegasus pink = helper.spawn(WildspellMobs.PEGASUS.get(), 4.5F, 0.0F, 4.5F);
         pink.setVariant(Pegasus.Variant.PINK);
-        net.minecraft.nbt.CompoundTag saved = new net.minecraft.nbt.CompoundTag();
+        CompoundTag saved = new CompoundTag();
         pink.saveWithoutId(saved);
         Pegasus loaded = helper.spawn(WildspellMobs.PEGASUS.get(), 2.5F, 0.0F, 2.5F);
         loaded.load(saved);
@@ -152,7 +150,7 @@ public class PegasusTests {
 
     @GameTest(template = ARENA)
     public static void foalsTakeAParentsCoat(GameTestHelper helper) {
-        net.minecraft.util.RandomSource random = net.minecraft.util.RandomSource.create(1);
+        RandomSource random = RandomSource.create(1);
         int pinkFromWhite = 0;
         int pinkFromPink = 0;
         for (int i = 0; i < 4000; i++) {

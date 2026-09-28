@@ -2,10 +2,6 @@ package com.wildspell.mobs.entity;
 
 import com.wildspell.mobs.WildspellMobs;
 import com.wildspell.mobs.flytrap.FlytrapBlock;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Map;
-import java.util.Set;
 import javax.annotation.Nullable;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.registries.Registries;
@@ -45,22 +41,6 @@ import software.bernie.geckolib.animation.AnimationController;
 import software.bernie.geckolib.animation.RawAnimation;
 import software.bernie.geckolib.util.GeckoLibUtil;
 
-/**
- * A flytrap's jaws, on a short neck, anchored to its plant ({@link FlytrapBlock}). It never leaves its
- * place on the plant; it turns to track whatever moves near it. Anything that moves within its reach
- * gets a lunge and a bite, and a bitten victim is held for a moment: heavy Slowness and a pull toward
- * the jaws. It senses movement, not sight of you, so it ignores anything standing still, and a
- * sneaking player slips past. Striking it counts as moving.
- *
- * <p>Three sizes: a sprout's small head snaps only at tiny creatures ({@link #TINY_PREY} or anything
- * no bigger than 0.7 blocks); the young plant's head, and the grown plant's side heads, snap at players
- * and mobs; the grown plant's big top head reaches furthest and bites hardest.
- *
- * <p>Counterplay: fire (double damage, and any fire sets it alight) and blades. Shears used on a head
- * that holds someone cut them free. Killing a head breaks its whole plant, which drops its loot as if
- * it had been broken. It doesn't drown, can't be pushed or knocked back, and vanishes (without dying)
- * when its plant goes or changes stage.
- */
 public class FlytrapHead extends Monster implements GeoEntity {
     private static final EntityDataAccessor<Byte> DATA_ACTION = SynchedEntityData.defineId(FlytrapHead.class, EntityDataSerializers.BYTE);
     private static final EntityDataAccessor<Byte> DATA_SIZE = SynchedEntityData.defineId(FlytrapHead.class, EntityDataSerializers.BYTE);
@@ -71,30 +51,22 @@ public class FlytrapHead extends Monster implements GeoEntity {
     public static final int SIZE_SMALL = 0;
     public static final int SIZE_MEDIUM = 1;
     public static final int SIZE_BIG = 2;
-    /** Per size: model and hitbox scale, reach (from its eyes to the victim's body), health and bite. */
     private static final float[] SCALE = {0.45F, 1.0F, 1.5F};
     private static final double[] REACH = {1.5, 3.0, 4.0};
     private static final double[] HEALTH = {4.0, 20.0, 30.0};
     private static final double[] BITE = {2.0, 4.0, 6.0};
 
     public static final TagKey<EntityType<?>> HOSTILE_GROWTH = TagKey.create(Registries.ENTITY_TYPE, WildspellMobs.id("hostile_growth"));
-    /** What a sprout's small head bites besides anything tiny: moths, butterflies, bees... */
     public static final TagKey<EntityType<?>> TINY_PREY = TagKey.create(Registries.ENTITY_TYPE, WildspellMobs.id("flytrap_sprout_prey"));
     private static final float TINY = 0.7F;
 
-    /** How far it tracks movement (turns to follow it), beyond its reach. */
     public static final double SENSE_RADIUS = 8.0;
-    /** Ticks between movement checks, and the movement over one that counts as moving: about a slow walk. */
     private static final int SENSE_INTERVAL = 4;
-    private static final double MOVED = 0.15;
-    /** Wind-up before the jaws close; the animation's snap lands on its last tick. */
     public static final int LUNGE_TICKS = 8;
     public static final int HOLD_TICKS = 24;
-    /** Slowness V while held: next to no walking. */
     private static final int HOLD_SLOWNESS = 4;
     private static final int MISS_COOLDOWN = 20;
     private static final int HOLD_COOLDOWN = 30;
-    /** After shears cut a victim free, the jaws hang slack for a while. */
     private static final int CUT_COOLDOWN = 60;
 
     private static final RawAnimation IDLE = RawAnimation.begin().thenLoop("animation.flytrap_head.idle");
@@ -104,17 +76,13 @@ public class FlytrapHead extends Monster implements GeoEntity {
 
     private final AnimatableInstanceCache geoCache = GeckoLibUtil.createInstanceCache(this);
 
-    /** Where each living thing nearby was at the last movement check, by entity id. */
-    private final Map<Integer, Vec3> lastSeen = new HashMap<>();
-    /** Ids of the things that moved between the last two checks (and of anyone who just struck it). */
-    private final Set<Integer> moving = new HashSet<>();
+    private final MotionSense motion = new MotionSense();
     private int lungeTicks;
     private int holdTicks;
     private int cooldown;
     @Nullable
     private LivingEntity held;
 
-    /** The plant it grows from, the plant's stage it belongs to, and its place on the plant. */
     @Nullable
     private BlockPos anchor;
     private int stage;
@@ -169,7 +137,6 @@ public class FlytrapHead extends Monster implements GeoEntity {
         return SCALE[this.getSize()];
     }
 
-    /** How near (from its eyes to the victim's body) something moving must be for a lunge. */
     public double getReach() {
         return REACH[this.getSize()];
     }
@@ -187,9 +154,6 @@ public class FlytrapHead extends Monster implements GeoEntity {
         return super.getDefaultDimensions(pose).scale(this.getScale());
     }
 
-    // --- The plant -----------------------------------------------------------------------------------
-
-    /** Sets it in its place on the plant at {@code anchor}, for that plant's {@code stage}. */
     public void anchorTo(BlockPos anchor, int stage, FlytrapBlock.HeadSlot slot) {
         this.anchor = anchor.immutable();
         this.stage = stage;
@@ -197,7 +161,6 @@ public class FlytrapHead extends Monster implements GeoEntity {
         this.offset = slot.offset();
         this.setSize(slot.size());
         Vec3 at = this.home();
-        // Side heads face away from the stalk; the others start facing a random way.
         float yaw = slot.slot() == 1 ? 90.0F : slot.slot() == 2 ? -90.0F : this.random.nextFloat() * 360.0F;
         this.moveTo(at.x, at.y, at.z, yaw, 0.0F);
         this.setYHeadRot(yaw);
@@ -221,7 +184,6 @@ public class FlytrapHead extends Monster implements GeoEntity {
         return Vec3.atLowerCornerOf(this.anchor).add(this.offset);
     }
 
-    /** Whether its plant still stands at the stage it grew for. */
     private boolean plantStands() {
         if (this.anchor == null) {
             return false;
@@ -233,7 +195,6 @@ public class FlytrapHead extends Monster implements GeoEntity {
     @Override
     public void tick() {
         if (!this.level().isClientSide && !this.isDeadOrDying()) {
-            // Gone with its plant, or with the stage it grew for (the plant's next stage brings its own).
             if (this.anchor == null || this.level().isLoaded(this.anchor) && !this.plantStands()) {
                 this.discard();
                 return;
@@ -247,7 +208,6 @@ public class FlytrapHead extends Monster implements GeoEntity {
         this.setDeltaMovement(Vec3.ZERO);
     }
 
-    /** Killing a head kills the plant: it breaks as if it had been broken, loot and all. */
     @Override
     public void die(DamageSource source) {
         super.die(source);
@@ -256,15 +216,11 @@ public class FlytrapHead extends Monster implements GeoEntity {
         }
     }
 
-    // --- Hunting -------------------------------------------------------------------------------------
-
     @Override
     protected void registerGoals() {
-        // Everything else (tracking, the lunge, the hold) runs in customServerAiStep, every tick.
         this.goalSelector.addGoal(8, new RandomLookAroundGoal(this));
     }
 
-    /** The whole head turns with its look: its neck is a stalk, not a neck. */
     @Override
     protected BodyRotationControl createBodyControl() {
         return new BodyRotationControl(this) {
@@ -308,32 +264,15 @@ public class FlytrapHead extends Monster implements GeoEntity {
         }
     }
 
-    /** Notes where everything alive nearby is, and which of it moved since the last check. */
     private void sense() {
-        Map<Integer, Vec3> seen = new HashMap<>();
-        this.moving.clear();
-        for (LivingEntity other : this.level().getEntitiesOfClass(LivingEntity.class, this.getBoundingBox().inflate(SENSE_RADIUS),
-                e -> e != this && e.isAlive())) {
-            seen.put(other.getId(), other.position());
-            Vec3 before = this.lastSeen.get(other.getId());
-            if (before != null && before.distanceToSqr(other.position()) > MOVED * MOVED) {
-                this.moving.add(other.getId());
-            }
-        }
-        this.lastSeen.clear();
-        this.lastSeen.putAll(seen);
+        this.motion.sense(this.level().getEntitiesOfClass(LivingEntity.class, this.getBoundingBox().inflate(SENSE_RADIUS),
+                e -> e != this && e.isAlive()));
     }
 
-    /** Whether {@code other} moved at the last movement check. */
     public boolean isMoving(LivingEntity other) {
-        return this.moving.contains(other.getId());
+        return this.motion.isMoving(other);
     }
 
-    /**
-     * Whether it would lunge at {@code other}: something it hunts (anything for a big head, only tiny
-     * things for a sprout's), within reach and moving, that isn't sneaking, isn't a hostile growth
-     * itself, and isn't a creative or spectating player.
-     */
     public boolean isPrey(LivingEntity other) {
         return this.isSensed(other) && this.reachSqr(other) <= this.getReach() * this.getReach();
     }
@@ -348,7 +287,6 @@ public class FlytrapHead extends Monster implements GeoEntity {
                 && this.hunts(other) && this.isMoving(other) && this.getSensing().hasLineOfSight(other);
     }
 
-    /** What its size lets it take on: a sprout's head, only tiny creatures. */
     public boolean hunts(LivingEntity other) {
         return this.getSize() != SIZE_SMALL || other.getType().is(TINY_PREY) || other.getBbWidth() <= TINY && other.getBbHeight() <= TINY;
     }
@@ -375,7 +313,6 @@ public class FlytrapHead extends Monster implements GeoEntity {
         if (--this.lungeTicks > 0) {
             return;
         }
-        // The jaws close on whoever is still in reach, moving or not: it has committed.
         this.playSound(SoundEvents.EVOKER_FANGS_ATTACK, this.getScale(), 1.3F / this.getScale());
         double reach = this.getReach() + 0.5;
         if (target != null && target.isAlive() && this.reachSqr(target) <= reach * reach && this.hasLineOfSight(target)
@@ -388,7 +325,6 @@ public class FlytrapHead extends Monster implements GeoEntity {
         }
     }
 
-    /** Clamps its jaws on {@code victim} and holds it for {@link #HOLD_TICKS}. */
     public void seize(LivingEntity victim) {
         this.lungeTicks = 0;
         this.held = victim;
@@ -405,9 +341,7 @@ public class FlytrapHead extends Monster implements GeoEntity {
             return;
         }
         this.getLookControl().setLookAt(victim, 60.0F, 60.0F);
-        // Refreshed every tick and short, so it lifts almost as soon as the jaws open.
         victim.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, 5, HOLD_SLOWNESS, false, false), this);
-        // Dragged in along the ground toward the jaws (never lifted off it).
         Vec3 jaws = this.position().add(Vec3.directionFromRotation(0.0F, this.getYHeadRot()).scale(0.6 * this.getScale()));
         Vec3 toJaws = new Vec3(jaws.x - victim.getX(), 0.0, jaws.z - victim.getZ());
         double distance = toJaws.length();
@@ -417,7 +351,6 @@ public class FlytrapHead extends Monster implements GeoEntity {
         }
     }
 
-    /** Opens the jaws; cut free, the victim's slowness lifts at once and the jaws hang slack a while. */
     public void release(boolean cut) {
         LivingEntity victim = this.held;
         this.held = null;
@@ -438,7 +371,6 @@ public class FlytrapHead extends Monster implements GeoEntity {
         return this.held;
     }
 
-    /** Shears on a head holding someone cut them free. */
     @Override
     protected InteractionResult mobInteract(Player player, InteractionHand hand) {
         ItemStack stack = player.getItemInHand(hand);
@@ -462,19 +394,15 @@ public class FlytrapHead extends Monster implements GeoEntity {
         }
         boolean hurt = super.hurt(source, amount);
         if (hurt && !this.level().isClientSide) {
-            // Dry leaves: any fire sets it alight.
             if (fire && !wasBurning && !this.fireImmune()) {
                 this.igniteForSeconds(8.0F);
             }
-            // A blow is movement: whoever strikes it from within reach gets bitten, sneaking or not.
             if (source.getEntity() instanceof LivingEntity attacker && source.getDirectEntity() == attacker) {
-                this.moving.add(attacker.getId());
+                this.motion.markMoving(attacker);
             }
         }
         return hurt;
     }
-
-    // --- Rooted --------------------------------------------------------------------------------------
 
     @Override
     public void move(MoverType type, Vec3 movement) {
@@ -512,7 +440,6 @@ public class FlytrapHead extends Monster implements GeoEntity {
     protected void playStepSound(BlockPos pos, BlockState state) {
     }
 
-    /** It lives and goes with its plant, peaceful or not (and a plant does no harm to a peaceful player). */
     @Override
     public boolean removeWhenFarAway(double distanceToClosestPlayer) {
         return false;
@@ -550,8 +477,6 @@ public class FlytrapHead extends Monster implements GeoEntity {
             this.setHealth(health);
         }
     }
-
-    // --- Sounds and animation ------------------------------------------------------------------------
 
     @Override
     protected SoundEvent getAmbientSound() {

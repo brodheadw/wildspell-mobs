@@ -1,11 +1,3 @@
-"""Software preview of the Ice Lich GeckoLib model. Run from the repo root:
-    python3 tools/preview_lich.py OUT_DIR [animation_name@seconds ...]
-
-Loads the geo JSON, texture and glowmask, applies bone pivots/rotations (and optionally one animation
-pose, interpolated linearly between keyframes) the way GeckoLib does, and z-buffer rasterises every
-textured, alpha-tested cube face from several angles. Writes one PNG per pose: front, 3/4, side, back,
-a dark "night" view where only the glowmask is lit, and a small in-game-sized thumbnail.
-"""
 import json
 import math
 import sys
@@ -13,28 +5,15 @@ import sys
 import numpy as np
 from PIL import Image
 
+from geckolib_model import rot_matrix
+
 GEO = "src/main/resources/assets/wildspellmobs/geo/entity/ice_lich.geo.json"
 ANIM = "src/main/resources/assets/wildspellmobs/animations/entity/ice_lich.animation.json"
 TEX = "src/main/resources/assets/wildspellmobs/textures/entity/ice_lich.png"
 GLOW = "src/main/resources/assets/wildspellmobs/textures/entity/ice_lich_glowmask.png"
 
 
-def rot_matrix(rx, ry, rz):
-    """Bedrock rotation (degrees) as a matrix acting on Bedrock-space points. GeckoLib negates X of
-    positions and the X/Y rotation angles, then applies Rz * Ry * Rx in Java space; conjugating by the
-    X flip gives this matrix in Bedrock space."""
-    a, b, g = (math.radians(v) for v in (-rx, -ry, rz))
-    Rx = np.array([[1, 0, 0], [0, math.cos(a), -math.sin(a)], [0, math.sin(a), math.cos(a)]])
-    Ry = np.array([[math.cos(b), 0, math.sin(b)], [0, 1, 0], [-math.sin(b), 0, math.cos(b)]])
-    Rz = np.array([[math.cos(g), -math.sin(g), 0], [math.sin(g), math.cos(g), 0], [0, 0, 1]])
-    F = np.diag([-1, 1, 1])
-    return F @ Rz @ Ry @ Rx @ F
-
-
 def cube_faces(cube):
-    """Six textured faces of a box-UV cube in Bedrock space: (P0, Pu, Pv, u0, v0, fw, fh, normal).
-    P0 is the corner at the texture's top-left, Pu the top-right, Pv the bottom-left. The net is
-    [right side (-X)][front (-Z)][left side (+X)][back (+Z)], each seen from outside, unmirrored."""
     (x0, y0, z0), (w, h, d) = cube["origin"], cube["size"]
     i = cube.get("inflate", 0)
     X0, Y0, Z0, X1, Y1, Z1 = x0 - i, y0 - i, z0 - i, x0 + w + i, y0 + h + i, z0 + d + i
@@ -42,12 +21,12 @@ def cube_faces(cube):
     w, h, d = int(w), int(h), int(d)
     P = lambda x, y, z: np.array([x, y, z], float)
     return [
-        (P(X0, Y1, Z1), P(X0, Y1, Z0), P(X0, Y0, Z1), u, v + d, d, h, (-1, 0, 0)),                  # right side
-        (P(X0, Y1, Z0), P(X1, Y1, Z0), P(X0, Y0, Z0), u + d, v + d, w, h, (0, 0, -1)),              # front
-        (P(X1, Y1, Z0), P(X1, Y1, Z1), P(X1, Y0, Z0), u + d + w, v + d, d, h, (1, 0, 0)),           # left side
-        (P(X1, Y1, Z1), P(X0, Y1, Z1), P(X1, Y0, Z1), u + 2 * d + w, v + d, w, h, (0, 0, 1)),       # back
-        (P(X0, Y1, Z1), P(X1, Y1, Z1), P(X0, Y1, Z0), u + d, v, w, d, (0, 1, 0)),                   # top
-        (P(X0, Y0, Z0), P(X1, Y0, Z0), P(X0, Y0, Z1), u + d + w, v, w, d, (0, -1, 0)),              # bottom
+        (P(X0, Y1, Z1), P(X0, Y1, Z0), P(X0, Y0, Z1), u, v + d, d, h, (-1, 0, 0)),
+        (P(X0, Y1, Z0), P(X1, Y1, Z0), P(X0, Y0, Z0), u + d, v + d, w, h, (0, 0, -1)),
+        (P(X1, Y1, Z0), P(X1, Y1, Z1), P(X1, Y0, Z0), u + d + w, v + d, d, h, (1, 0, 0)),
+        (P(X1, Y1, Z1), P(X0, Y1, Z1), P(X1, Y0, Z1), u + 2 * d + w, v + d, w, h, (0, 0, 1)),
+        (P(X0, Y1, Z1), P(X1, Y1, Z1), P(X0, Y1, Z0), u + d, v, w, d, (0, 1, 0)),
+        (P(X0, Y0, Z0), P(X1, Y0, Z0), P(X0, Y0, Z1), u + d + w, v, w, d, (0, -1, 0)),
     ]
 
 
@@ -97,8 +76,6 @@ def world_faces(geo, pose=None):
 
 
 def render(faces, tex, glow, yaw, scale, night=False, size=(620, 660), ground=None, cy=23):
-    """Orthographic view from in front of the lich, turned by `yaw` degrees (positive shows his left
-    side). Screen right is his left (+X) in the front view."""
     W, H = size
     img = np.zeros((H, W, 3), float)
     top = np.array([28, 34, 48]) if not night else np.array([6, 8, 14])
@@ -152,7 +129,6 @@ def render(faces, tex, glow, yaw, scale, night=False, size=(620, 660), ground=No
         if not ok.any():
             continue
         shade = 0.55 + 0.45 * max(0.0, float(np.dot(n, light))) if not night else 0.22
-        # no-cull: back faces use the same shading as the flipped normal
         if np.dot(n, light) < 0:
             shade = 0.55 + 0.45 * max(0.0, float(np.dot(-n, light))) * 0.4 if not night else 0.22
         col = texel[..., :3] * shade
@@ -194,13 +170,11 @@ def main():
         glow = np.zeros_like(tex)
     faces = world_faces(geo)
     sheet(faces, tex, glow, "rest").save(f"{out_dir}/lich_rest.png")
-    # Close-up of the head and chest, front and 3/4.
     close = Image.new("RGB", (1200, 700))
     for i, yaw in enumerate((0, 30)):
         full = render(faces, tex, glow, yaw, 30, size=(600, 1300))
         close.paste(full.crop((0, 0, 600, 700)), (i * 600, 0))
     close.save(f"{out_dir}/lich_close.png")
-    # Distance check: roughly how big he is on screen a few blocks away.
     small = render(faces, tex, glow, 25, 3, size=(160, 170), ground=True)
     small.resize((480, 510), Image.NEAREST).save(f"{out_dir}/lich_small.png")
     for spec in sys.argv[2:]:
