@@ -5,6 +5,7 @@ import com.wildspell.mobs.WildspellMobs;
 import com.wildspell.mobs.entity.FlytrapHead;
 import java.util.List;
 import net.minecraft.core.BlockPos;
+import net.minecraft.world.level.ChunkPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.server.level.ServerLevel;
@@ -244,6 +245,9 @@ public class FlytrapBlock extends Block implements BonemealableBlock {
 
     /** Clears heads from another stage and puts any missing ones of this stage in their places. */
     public static void syncHeads(ServerLevel level, BlockPos pos, BlockState state) {
+        if (!level.areEntitiesLoaded(ChunkPos.asLong(pos))) {
+            return;
+        }
         int age = state.getValue(AGE);
         List<FlytrapHead> heads = headsOf(level, pos);
         for (HeadSlot slot : slots(age)) {
@@ -252,6 +256,9 @@ public class FlytrapBlock extends Block implements BonemealableBlock {
                 if (head.getStage() != age) {
                     head.discard();
                 } else if (head.getSlot() == slot.slot() && head.isAlive()) {
+                    if (present) {
+                        head.discard();
+                    }
                     present = true;
                 }
             }

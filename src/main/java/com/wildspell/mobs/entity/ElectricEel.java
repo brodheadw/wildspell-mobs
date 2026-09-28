@@ -99,7 +99,7 @@ public class ElectricEel extends WaterAnimal {
     private int strandedTicks;
     private int lurkCooldown = 100;
     // Ticks until it's hungry again; eels start part-way through a meal so they don't all hunt at once.
-    private int fedTicks = (int) (Math.random() * FED_TICKS);
+    private int fedTicks = this.random.nextInt(FED_TICKS);
     private boolean lurking;
     // Client: ticks left of the discharge's flash.
     private int flashTicks;
@@ -464,6 +464,9 @@ public class ElectricEel extends WaterAnimal {
         @Override
         public void tick() {
             ElectricEel eel = ElectricEel.this;
+            if (eel.getCharge() == 0) {
+                return;
+            }
             LivingEntity target = eel.getTarget();
             if (target != null) {
                 eel.getLookControl().setLookAt(target, 30.0F, 30.0F);
@@ -540,7 +543,7 @@ public class ElectricEel extends WaterAnimal {
             ++this.ticks;
             ElectricEel eel = ElectricEel.this;
             LivingEntity target = eel.getTarget();
-            if (target == null || !eel.getBoundingBox().inflate(0.4).intersects(target.getBoundingBox())) {
+            if (this.struck || target == null || !eel.getBoundingBox().inflate(0.4).intersects(target.getBoundingBox())) {
                 return;
             }
             this.struck = true;

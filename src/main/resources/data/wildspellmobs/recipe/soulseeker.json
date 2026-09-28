@@ -5,7 +5,7 @@
       "modid": "yungscavebiomes"
     }
   ],
-  "type": "minecraft:crafting_shaped",
+  "type": "wildspellmobs:soulseeker",
   "category": "equipment",
   "pattern": [
     "RCR",

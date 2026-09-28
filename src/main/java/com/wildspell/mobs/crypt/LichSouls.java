@@ -7,9 +7,11 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.UUID;
 import javax.annotation.Nullable;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
 import net.minecraft.core.GlobalPos;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.core.registries.Registries;
@@ -17,6 +19,7 @@ import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.NbtUtils;
 import net.minecraft.nbt.Tag;
+import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.MinecraftServer;
@@ -72,7 +75,7 @@ public class LichSouls extends SavedData {
 
     /** A new soul, for a phylactery on its altar at {@code altar}. */
     public Soul create(ServerLevel level, BlockPos altar) {
-        Soul soul = new Soul(UUID.randomUUID(), level.dimension(), altar.immutable());
+        Soul soul = new Soul(UUID.randomUUID(), level.dimension(), level.dimension(), altar.immutable());
         if (level.getBlockState(altar).hasProperty(PhylacteryBlock.FACING)) {
             soul.cryptFacing = level.getBlockState(altar).getValue(PhylacteryBlock.FACING);
         }
@@ -107,10 +110,7 @@ public class LichSouls extends SavedData {
         long time = server.overworld().getGameTime();
         List<Soul> all = List.copyOf(souls.souls.values());
         for (Soul soul : all) {
-            ServerLevel level = server.getLevel(soul.dimension);
-            if (level != null) {
-                soul.tick(level, time);
-            }
+            soul.tick(server, time);
         }
         // From here, not the phylacteries, so no crypt need be loaded for a lich to sense a player far off.
         if (time % 20 == 7) {
@@ -124,10 +124,11 @@ public class LichSouls extends SavedData {
     public final class Soul {
         public final UUID id;
         private ResourceKey<Level> dimension;
+        private final ResourceKey<Level> cryptDimension;
         /** The altar the phylactery was made on: where the crypt is, and where its cleansing happens. */
         private final BlockPos crypt;
         /** Which way the altar faces, into the crypt. */
-        private net.minecraft.core.Direction cryptFacing = net.minecraft.core.Direction.NORTH;
+        private Direction cryptFacing = Direction.NORTH;
         private BlockPos anchor;
         private boolean inAltar = true;
         @Nullable
@@ -144,9 +145,10 @@ public class LichSouls extends SavedData {
         private boolean fallen;
         private boolean cleansedCrypt;
 
-        Soul(UUID id, ResourceKey<Level> dimension, BlockPos crypt) {
+        Soul(UUID id, ResourceKey<Level> dimension, ResourceKey<Level> cryptDimension, BlockPos crypt) {
             this.id = id;
             this.dimension = dimension;
+            this.cryptDimension = cryptDimension;
             this.crypt = crypt;
             this.anchor = crypt;
         }
@@ -155,11 +157,15 @@ public class LichSouls extends SavedData {
             return this.dimension;
         }
 
+        public ResourceKey<Level> cryptDimension() {
+            return this.cryptDimension;
+        }
+
         public BlockPos crypt() {
             return this.crypt;
         }
 
-        public net.minecraft.core.Direction cryptFacing() {
+        public Direction cryptFacing() {
             return this.cryptFacing;
         }
 
@@ -224,7 +230,7 @@ public class LichSouls extends SavedData {
         /** The phylactery was taken off its altar, or moved while carried or lying about. */
         public void moved(Level level, BlockPos pos, @Nullable Entity carrier) {
             UUID carrierId = carrier == null ? null : carrier.getUUID();
-            if (!this.inAltar && this.dimension == level.dimension() && this.anchor.equals(pos) && java.util.Objects.equals(this.carrier, carrierId)) {
+            if (!this.inAltar && this.dimension == level.dimension() && this.anchor.equals(pos) && Objects.equals(this.carrier, carrierId)) {
                 return;
             }
             this.dimension = level.dimension();
@@ -275,11 +281,11 @@ public class LichSouls extends SavedData {
             if (this.inAltar) {
                 return Vec3.atBottomCenterOf(this.anchor.above());
             }
-            for (int attempt = 0; attempt < 24; ++attempt) {
-                BlockPos pos = this.anchor.offset(level.random.nextInt(13) - 6, level.random.nextInt(5) - 1, level.random.nextInt(13) - 6);
-                if (pos.distSqr(this.anchor) >= 9 && ColdEffects.isOpen(level, pos, 3)) {
-                    return Vec3.atBottomCenterOf(pos);
-                }
+            Vec3 spot = ColdEffects.findSpot(24,
+                    () -> Vec3.atBottomCenterOf(this.anchor.offset(level.random.nextInt(13) - 6, level.random.nextInt(5) - 1, level.random.nextInt(13) - 6)),
+                    at -> BlockPos.containing(at).distSqr(this.anchor) >= 9 && ColdEffects.isOpen(level, BlockPos.containing(at), 3));
+            if (spot != null) {
+                return spot;
             }
             return ColdEffects.isOpen(level, this.anchor.above(), 3) ? Vec3.atBottomCenterOf(this.anchor.above()) : null;
         }
@@ -358,17 +364,19 @@ public class LichSouls extends SavedData {
             this.changed();
             IceLich old = this.findLich(level);
             if (old != null) {
-                old.vanishInto(at);
+                old.vanish();
             }
             this.lichId = null;
             ColdEffects.tellNearby(level, new AABB(BlockPos.containing(at)).inflate(64.0),
-                    net.minecraft.network.chat.Component.translatable("message.wildspellmobs.phylactery_burned"));
-            if (level.getDifficulty() != Difficulty.PEACEFUL) {
-                Player prey = level.getNearestPlayer(at.x, at.y, at.z, 48.0, p -> p instanceof Player player && PhylacteryBlockEntity.isPrey(player));
-                IceLich last = IceLich.summonLastForm(level, at.add(0.0, 1.0, 0.0), this.id);
-                if (last != null && prey != null) {
-                    last.hunt(prey);
-                }
+                    Component.translatable("message.wildspellmobs.phylactery_burned"));
+            IceLich last = IceLich.summonLastForm(level, at.add(0.0, 1.0, 0.0), this.id);
+            if (last == null) {
+                this.fall(level, at);
+                return;
+            }
+            Player prey = level.getNearestPlayer(at.x, at.y, at.z, 48.0, p -> p instanceof Player player && PhylacteryBlockEntity.isPrey(player));
+            if (prey != null) {
+                last.hunt(prey);
             }
         }
 
@@ -381,10 +389,23 @@ public class LichSouls extends SavedData {
             this.changed();
             Cleansing.purge(level, at);
             ColdEffects.tellNearby(level, new AABB(BlockPos.containing(at)).inflate(64.0),
-                    net.minecraft.network.chat.Component.translatable("message.wildspellmobs.lich_fallen"));
+                    Component.translatable("message.wildspellmobs.lich_fallen"));
         }
 
-        private void tick(ServerLevel level, long time) {
+        private void tick(MinecraftServer server, long time) {
+            ServerLevel cryptLevel = server.getLevel(this.cryptDimension);
+            if (this.fallen && !this.cleansedCrypt && cryptLevel != null && time % 40 == 0
+                    && cryptLevel.isAreaLoaded(this.crypt, Cleansing.LOADED_RADIUS)) {
+                this.cleansedCrypt = true;
+                LichSouls.this.cleansed.add(GlobalPos.of(this.cryptDimension, this.crypt));
+                LichSouls.this.souls.remove(this.id);
+                this.changed();
+                Cleansing.cleanse(cryptLevel, this.crypt, this.cryptFacing);
+            }
+            ServerLevel level = server.getLevel(this.dimension);
+            if (level == null || this.cleansedCrypt) {
+                return;
+            }
             if (this.soulTicks > 0 && --this.soulTicks == 0) {
                 this.changed();
             }
@@ -400,12 +421,6 @@ public class LichSouls extends SavedData {
                     this.missingTicks = 0;
                     this.changed();
                 }
-            }
-            if (this.fallen && !this.cleansedCrypt && time % 40 == 0 && level.isAreaLoaded(this.crypt, Cleansing.LOADED_RADIUS)) {
-                this.cleansedCrypt = true;
-                LichSouls.this.cleansed.add(GlobalPos.of(level.dimension(), this.crypt));
-                this.changed();
-                Cleansing.cleanse(level, this.crypt, this.cryptFacing);
             }
         }
 
@@ -439,6 +454,7 @@ public class LichSouls extends SavedData {
             CompoundTag tag = new CompoundTag();
             tag.putUUID("Id", this.id);
             tag.putString("Dimension", this.dimension.location().toString());
+            tag.putString("CryptDimension", this.cryptDimension.location().toString());
             tag.put("Crypt", NbtUtils.writeBlockPos(this.crypt));
             tag.put("Anchor", NbtUtils.writeBlockPos(this.anchor));
             tag.putInt("CryptFacing", this.cryptFacing.get3DDataValue());
@@ -469,13 +485,15 @@ public class LichSouls extends SavedData {
             if (!s.hasUUID("Id")) {
                 continue;
             }
-            ResourceKey<Level> dimension = ResourceKey.create(Registries.DIMENSION, ResourceLocation.parse(s.getString("Dimension")));
+            ResourceKey<Level> dimension = dimension(s.getString("Dimension"));
+            ResourceKey<Level> cryptDimension = s.contains("CryptDimension", Tag.TAG_STRING) ? dimension(s.getString("CryptDimension"))
+                    : s.getBoolean("InAltar") ? dimension : Level.OVERWORLD;
             BlockPos crypt = NbtUtils.readBlockPos(s, "Crypt").orElse(BlockPos.ZERO);
-            Soul soul = data.new Soul(s.getUUID("Id"), dimension, crypt);
+            Soul soul = data.new Soul(s.getUUID("Id"), dimension, cryptDimension, crypt);
             soul.anchor = NbtUtils.readBlockPos(s, "Anchor").orElse(crypt);
-            soul.cryptFacing = net.minecraft.core.Direction.from3DDataValue(s.getInt("CryptFacing"));
+            soul.cryptFacing = Direction.from3DDataValue(s.getInt("CryptFacing"));
             if (soul.cryptFacing.getAxis().isVertical()) {
-                soul.cryptFacing = net.minecraft.core.Direction.NORTH;
+                soul.cryptFacing = Direction.NORTH;
             }
             soul.inAltar = s.getBoolean("InAltar");
             soul.carrier = s.hasUUID("Carrier") ? s.getUUID("Carrier") : null;
@@ -487,14 +505,20 @@ public class LichSouls extends SavedData {
             soul.burned = s.getBoolean("Burned");
             soul.fallen = s.getBoolean("Fallen");
             soul.cleansedCrypt = s.getBoolean("Cleansed");
-            data.souls.put(soul.id, soul);
+            if (!soul.cleansedCrypt) {
+                data.souls.put(soul.id, soul);
+            }
         }
         for (Tag entry : tag.getList("Cleansed", Tag.TAG_COMPOUND)) {
             CompoundTag z = (CompoundTag) entry;
-            ResourceKey<Level> dimension = ResourceKey.create(Registries.DIMENSION, ResourceLocation.parse(z.getString("Dimension")));
+            ResourceKey<Level> dimension = dimension(z.getString("Dimension"));
             NbtUtils.readBlockPos(z, "Pos").ifPresent(pos -> data.cleansed.add(GlobalPos.of(dimension, pos)));
         }
         return data;
+    }
+
+    private static ResourceKey<Level> dimension(String id) {
+        return ResourceKey.create(Registries.DIMENSION, ResourceLocation.parse(id));
     }
 
     @Override

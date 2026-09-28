@@ -69,10 +69,15 @@ public class FrostShard extends ThrowableItemProjectile {
         if (!(result.getEntity() instanceof LivingEntity target)) {
             return;
         }
-        target.hurt(this.damageSources().thrown(this, this.getOwner()), 3.0F);
-        // Frost builds a shard at a time: it takes a few hits in quick succession to freeze solid.
-        Frost.add(target, SHARD_FROST, 20);
-        target.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, 60, 0), this);
+        if (target.hurt(this.damageSources().thrown(this, this.getOwner()), 3.0F)) {
+            Frost.add(target, SHARD_FROST, 20);
+            target.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, 60, 0), this);
+        }
+    }
+
+    public double lobTo(LivingEntity target, double dx, double dz, float speed) {
+        double flightTicks = Math.sqrt(dx * dx + dz * dz) / speed;
+        return target.getY(0.5) - this.getY() + 0.5 * GRAVITY * flightTicks * flightTicks;
     }
 
     @Override

@@ -1,12 +1,17 @@
 package com.wildspell.mobs.entity;
 
 import com.wildspell.mobs.WildspellMobs;
+import java.util.function.Predicate;
+import java.util.function.Supplier;
+import javax.annotation.Nullable;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.particles.BlockParticleOption;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.util.RandomSource;
 import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.ClipContext;
 import net.minecraft.world.level.Level;
@@ -40,6 +45,29 @@ public final class ColdEffects {
     /** True if nothing solid lies on the straight line between two points (flyers steer in straight lines). */
     public static boolean clearPath(Entity mover, Vec3 from, Vec3 to) {
         return mover.level().clip(new ClipContext(from, to, ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, mover)).getType() == HitResult.Type.MISS;
+    }
+
+    public static Vec3 ringPoint(RandomSource random, Vec3 center, double minRadius, double spread, double rise) {
+        double angle = random.nextDouble() * Math.PI * 2.0;
+        double radius = minRadius + random.nextDouble() * spread;
+        return new Vec3(center.x + Math.cos(angle) * radius, center.y + rise, center.z + Math.sin(angle) * radius);
+    }
+
+    @Nullable
+    public static Vec3 findSpot(int attempts, Supplier<Vec3> candidate, Predicate<Vec3> accept) {
+        for (int attempt = 0; attempt < attempts; ++attempt) {
+            Vec3 spot = candidate.get();
+            if (accept.test(spot)) {
+                return spot;
+            }
+        }
+        return null;
+    }
+
+    public static void shatter(ServerLevel level, Mob mob, float pitch) {
+        level.sendParticles(ICE_CHIPS, mob.getX(), mob.getY(0.5), mob.getZ(), 25, 0.3, 0.6, 0.3, 0.15);
+        mob.playSound(WildspellMobs.FROZEN_ZOMBIE_SHATTER.get(), 1.0F, pitch);
+        mob.discard();
     }
 
     /** Souls and frost billowing up: the lich rising, fleeing or sinking away. */

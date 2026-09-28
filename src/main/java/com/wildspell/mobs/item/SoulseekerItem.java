@@ -4,7 +4,6 @@ import com.wildspell.mobs.WildspellMobs;
 import com.wildspell.mobs.crypt.LichSouls;
 import java.util.List;
 import java.util.Optional;
-import java.util.UUID;
 import javax.annotation.Nullable;
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.GlobalPos;
@@ -22,7 +21,6 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.TooltipFlag;
 import net.minecraft.world.item.component.LodestoneTracker;
 import net.minecraft.world.level.Level;
-import net.neoforged.neoforge.event.entity.player.PlayerEvent;
 
 /**
  * A scrying focus of rime and enchanted ice bound around a Crown Fragment, a shard of one lich's crown
@@ -94,22 +92,6 @@ public class SoulseekerItem extends Item {
     public void appendHoverText(ItemStack stack, TooltipContext context, List<Component> tooltip, TooltipFlag flag) {
         if (!stack.has(WildspellMobs.SOUL.get())) {
             tooltip.add(Component.translatable("item.wildspellmobs.soulseeker.unbound").withStyle(ChatFormatting.GRAY));
-        }
-    }
-
-    /** The Soulseeker takes on the soul of the Crown Fragment it was made from. */
-    public static void onCrafted(PlayerEvent.ItemCraftedEvent event) {
-        ItemStack result = event.getCrafting();
-        if (!result.is(WildspellMobs.SOULSEEKER.get())) {
-            return;
-        }
-        for (int i = 0; i < event.getInventory().getContainerSize(); ++i) {
-            ItemStack ingredient = event.getInventory().getItem(i);
-            UUID soul = ingredient.is(WildspellMobs.CROWN_FRAGMENT.get()) ? ingredient.get(WildspellMobs.SOUL.get()) : null;
-            if (soul != null) {
-                result.set(WildspellMobs.SOUL.get(), soul);
-                return;
-            }
         }
     }
 }
