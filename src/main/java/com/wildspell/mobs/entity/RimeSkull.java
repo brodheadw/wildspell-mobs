@@ -26,7 +26,6 @@ import net.minecraft.world.entity.MobSpawnType;
 import net.minecraft.world.entity.SpawnGroupData;
 import net.minecraft.world.entity.ai.attributes.AttributeSupplier;
 import net.minecraft.world.entity.ai.attributes.Attributes;
-import net.minecraft.world.entity.ai.control.MoveControl;
 import net.minecraft.world.entity.ai.goal.FloatGoal;
 import net.minecraft.world.entity.ai.goal.Goal;
 import net.minecraft.world.entity.ai.goal.LookAtPlayerGoal;
@@ -63,7 +62,7 @@ public class RimeSkull extends Monster {
 
     public RimeSkull(EntityType<? extends RimeSkull> type, Level level) {
         super(type, level);
-        this.moveControl = new SkullMoveControl();
+        this.moveControl = new SkullMoveControl(this);
         this.setNoGravity(true);
         this.xpReward = 6;
     }
@@ -274,30 +273,26 @@ public class RimeSkull extends Monster {
         return super.getVoicePitch() * 1.35F;
     }
 
-    /** Vex-style steering: accelerate straight at the wanted point, brake on arrival. */
-    private class SkullMoveControl extends MoveControl {
-        SkullMoveControl() {
-            super(RimeSkull.this);
+    private static class SkullMoveControl extends ThrustMoveControl {
+        SkullMoveControl(RimeSkull skull) {
+            super(skull, 0.05, 0.5);
         }
 
         @Override
-        public void tick() {
-            if (this.operation != MoveControl.Operation.MOVE_TO) {
+        protected double arrival() {
+            return this.mob.getBoundingBox().getSize();
+        }
+
+        @Override
+        protected void face(@Nullable Vec3 heading) {
+            if (heading == null) {
                 return;
             }
-            Vec3 toWanted = new Vec3(this.wantedX - RimeSkull.this.getX(), this.wantedY - RimeSkull.this.getY(), this.wantedZ - RimeSkull.this.getZ());
-            double distance = toWanted.length();
-            if (distance < RimeSkull.this.getBoundingBox().getSize()) {
-                this.operation = MoveControl.Operation.WAIT;
-                RimeSkull.this.setDeltaMovement(RimeSkull.this.getDeltaMovement().scale(0.5));
-                return;
-            }
-            RimeSkull.this.setDeltaMovement(RimeSkull.this.getDeltaMovement().add(toWanted.scale(this.speedModifier * 0.05 / distance)));
-            LivingEntity target = RimeSkull.this.getTarget();
-            double faceX = target == null ? RimeSkull.this.getDeltaMovement().x : target.getX() - RimeSkull.this.getX();
-            double faceZ = target == null ? RimeSkull.this.getDeltaMovement().z : target.getZ() - RimeSkull.this.getZ();
-            RimeSkull.this.setYRot(-((float) Mth.atan2(faceX, faceZ)) * Mth.RAD_TO_DEG);
-            RimeSkull.this.yBodyRot = RimeSkull.this.getYRot();
+            LivingEntity target = this.mob.getTarget();
+            double faceX = target == null ? this.mob.getDeltaMovement().x : target.getX() - this.mob.getX();
+            double faceZ = target == null ? this.mob.getDeltaMovement().z : target.getZ() - this.mob.getZ();
+            this.mob.setYRot(-((float) Mth.atan2(faceX, faceZ)) * Mth.RAD_TO_DEG);
+            this.mob.yBodyRot = this.mob.getYRot();
         }
     }
 
@@ -436,20 +431,15 @@ public class RimeSkull extends Monster {
                 return;
             }
             this.repickTicks = 15 + RimeSkull.this.random.nextInt(25);
+            RimeSkull skull = RimeSkull.this;
             Vec3 targetEye = target.getEyePosition();
-            for (int attempt = 0; attempt < 12; ++attempt) {
-                double angle = RimeSkull.this.random.nextDouble() * Math.PI * 2.0;
-                double radius = 3.5 + RimeSkull.this.random.nextDouble() * 3.0;
-                Vec3 spot = new Vec3(target.getX() + Math.cos(angle) * radius,
-                        target.getY() + 1.2 + RimeSkull.this.random.nextDouble() * 2.0,
-                        target.getZ() + Math.sin(angle) * radius);
-                // Steering is a straight line, so only take spots it can actually fly to and see from.
-                if (ColdEffects.isOpen(RimeSkull.this.level(), BlockPos.containing(spot), 1)
-                        && ColdEffects.clearPath(RimeSkull.this, RimeSkull.this.getEyePosition(), spot)
-                        && ColdEffects.clearPath(RimeSkull.this, spot, targetEye)) {
-                    RimeSkull.this.getMoveControl().setWantedPosition(spot.x, spot.y, spot.z, 0.55);
-                    return;
-                }
+            Vec3 spot = ColdEffects.findSpot(12, () -> ColdEffects.ringPoint(skull.random, target.position(), 3.5, 3.0, 1.2 + skull.random.nextDouble() * 2.0),
+                    at -> ColdEffects.isOpen(skull.level(), BlockPos.containing(at), 1)
+                            && ColdEffects.clearPath(skull, skull.getEyePosition(), at)
+                            && ColdEffects.clearPath(skull, at, targetEye));
+            if (spot != null) {
+                skull.getMoveControl().setWantedPosition(spot.x, spot.y, spot.z, 0.55);
+                return;
             }
             // Boxed in (usually tucked under a ledge): rise to get a new view, else close in.
             BlockPos above = RimeSkull.this.blockPosition().above(2);

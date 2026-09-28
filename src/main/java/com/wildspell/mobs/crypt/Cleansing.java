@@ -64,9 +64,7 @@ public final class Cleansing {
     public static void purge(ServerLevel level, Vec3 at) {
         for (Mob mob : level.getEntitiesOfClass(Mob.class, new AABB(at, at).inflate(PURGE_RADIUS),
                 m -> (m instanceof FrozenZombie || m instanceof RimeSkull) && m.isAlive())) {
-            level.sendParticles(ColdEffects.ICE_CHIPS, mob.getX(), mob.getY(0.5), mob.getZ(), 25, 0.3, 0.6, 0.3, 0.15);
-            mob.playSound(WildspellMobs.FROZEN_ZOMBIE_SHATTER.get(), 1.0F, 1.1F);
-            mob.discard();
+            ColdEffects.shatter(level, mob, 1.1F);
         }
         for (int i = 0; i < 48; ++i) {
             double angle = i / 48.0 * Math.PI * 2.0;
@@ -107,8 +105,7 @@ public final class Cleansing {
 
     /** Soul-fire gives way to ordinary fire, and every candle is lit. */
     private static void warmCrypt(ServerLevel level, BlockPos altar, Direction facing) {
-        AABB crypt = PhylacteryBlockEntity.cryptBounds(altar, facing);
-        for (BlockPos p : BlockPos.betweenClosed(BlockPos.containing(crypt.minX, crypt.minY, crypt.minZ), BlockPos.containing(crypt.maxX - 1, crypt.maxY - 1, crypt.maxZ - 1))) {
+        for (BlockPos p : PhylacteryBlockEntity.cryptBlocks(altar, facing)) {
             BlockState state = level.getBlockState(p);
             if (state.is(Blocks.SOUL_CAMPFIRE)) {
                 level.setBlock(p, Blocks.CAMPFIRE.defaultBlockState().setValue(CampfireBlock.FACING, state.getValue(CampfireBlock.FACING))
@@ -168,7 +165,7 @@ public final class Cleansing {
         if (!ColdEffects.isOpen(level, pos, 1)) {
             return false;
         }
-        for (net.minecraft.core.Direction side : net.minecraft.core.Direction.Plane.HORIZONTAL) {
+        for (Direction side : Direction.Plane.HORIZONTAL) {
             if (!ColdEffects.isOpen(level, pos.relative(side), 1)) {
                 return false;
             }

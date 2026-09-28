@@ -187,6 +187,40 @@ public class ElectricEelTests {
         }
     }
 
+    @GameTest(template = ARENA, timeoutTicks = 300, batch = "eelParity")
+    public static void aDischargeEndsTheWindUpWhateverTheTickParity(GameTestHelper helper) {
+        pool(helper);
+        ElectricEel[] eels = {helper.spawn(WildspellMobs.ELECTRIC_EEL.get(), 3.5F, 1.2F, 4.5F), helper.spawn(WildspellMobs.ELECTRIC_EEL.get(), 5.5F, 1.2F, 4.5F)};
+        Pig target = helper.spawn(EntityType.PIG, 4.5F, 2.0F, 4.5F);
+        target.setNoAi(true);
+        target.setInvulnerable(true);
+        int[] last = new int[2];
+        boolean[] discharged = new boolean[2];
+        for (ElectricEel eel : eels) {
+            eel.setTarget(target);
+        }
+        helper.onEachTick(() -> {
+            for (int i = 0; i < 2; ++i) {
+                int charge = eels[i].getCharge();
+                if (discharged[i]) {
+                    helper.assertTrue(charge == 0, "eel " + i + " wound up again with nothing to shock");
+                } else if (last[i] >= ElectricEel.CHARGE_TICKS - 2 && charge <= 1) {
+                    discharged[i] = true;
+                    eels[i].setTarget(null);
+                    helper.assertTrue(charge == 0, "eel " + i + " rewound straight after its discharge");
+                }
+                last[i] = charge;
+            }
+            if (discharged[0] && discharged[1] && !target.isRemoved()) {
+                target.discard();
+            }
+        });
+        helper.runAtTickTime(290, () -> {
+            helper.assertTrue(discharged[0] && discharged[1], "not every eel discharged");
+            helper.succeed();
+        });
+    }
+
     /** A survival-mode mock player standing in the world (not a ServerPlayer, which needs a connection). */
     private static Player addMockPlayer(GameTestHelper helper, Vec3 at) {
         Player player = helper.makeMockPlayer(GameType.SURVIVAL);

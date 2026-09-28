@@ -86,7 +86,6 @@ public class FlytrapHead extends Monster implements GeoEntity {
     public static final double SENSE_RADIUS = 8.0;
     /** Ticks between movement checks, and the movement over one that counts as moving: about a slow walk. */
     private static final int SENSE_INTERVAL = 4;
-    private static final double MOVED = 0.15;
     /** Wind-up before the jaws close; the animation's snap lands on its last tick. */
     public static final int LUNGE_TICKS = 8;
     public static final int HOLD_TICKS = 24;
@@ -104,10 +103,7 @@ public class FlytrapHead extends Monster implements GeoEntity {
 
     private final AnimatableInstanceCache geoCache = GeckoLibUtil.createInstanceCache(this);
 
-    /** Where each living thing nearby was at the last movement check, by entity id. */
-    private final Map<Integer, Vec3> lastSeen = new HashMap<>();
-    /** Ids of the things that moved between the last two checks (and of anyone who just struck it). */
-    private final Set<Integer> moving = new HashSet<>();
+    private final MotionSense motion = new MotionSense();
     private int lungeTicks;
     private int holdTicks;
     private int cooldown;
@@ -310,23 +306,12 @@ public class FlytrapHead extends Monster implements GeoEntity {
 
     /** Notes where everything alive nearby is, and which of it moved since the last check. */
     private void sense() {
-        Map<Integer, Vec3> seen = new HashMap<>();
-        this.moving.clear();
-        for (LivingEntity other : this.level().getEntitiesOfClass(LivingEntity.class, this.getBoundingBox().inflate(SENSE_RADIUS),
-                e -> e != this && e.isAlive())) {
-            seen.put(other.getId(), other.position());
-            Vec3 before = this.lastSeen.get(other.getId());
-            if (before != null && before.distanceToSqr(other.position()) > MOVED * MOVED) {
-                this.moving.add(other.getId());
-            }
-        }
-        this.lastSeen.clear();
-        this.lastSeen.putAll(seen);
+        this.motion.sense(this.level().getEntitiesOfClass(LivingEntity.class, this.getBoundingBox().inflate(SENSE_RADIUS),
+                e -> e != this && e.isAlive()));
     }
 
-    /** Whether {@code other} moved at the last movement check. */
     public boolean isMoving(LivingEntity other) {
-        return this.moving.contains(other.getId());
+        return this.motion.isMoving(other);
     }
 
     /**
@@ -468,7 +453,7 @@ public class FlytrapHead extends Monster implements GeoEntity {
             }
             // A blow is movement: whoever strikes it from within reach gets bitten, sneaking or not.
             if (source.getEntity() instanceof LivingEntity attacker && source.getDirectEntity() == attacker) {
-                this.moving.add(attacker.getId());
+                this.motion.markMoving(attacker);
             }
         }
         return hurt;

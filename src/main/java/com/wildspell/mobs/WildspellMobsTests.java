@@ -7,11 +7,15 @@ import com.wildspell.mobs.entity.FrostShard;
 import com.wildspell.mobs.entity.FrozenZombie;
 import com.wildspell.mobs.entity.IceLich;
 import com.wildspell.mobs.entity.RimeSkull;
+import com.wildspell.mobs.crypt.LichSouls;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
+import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.gametest.framework.GameTest;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.resources.ResourceKey;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.Mob;
@@ -20,7 +24,11 @@ import net.minecraft.world.entity.MobSpawnType;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.animal.Pig;
 import net.minecraft.world.entity.monster.Zombie;
+import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.crafting.CraftingInput;
+import net.minecraft.world.item.crafting.CraftingRecipe;
+import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.biome.Biome;
 import net.minecraft.world.level.block.Blocks;
@@ -28,6 +36,7 @@ import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.event.entity.living.MobSpawnEvent;
 import net.neoforged.neoforge.gametest.GameTestHolder;
 import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
+import java.util.List;
 
 /** In-world checks, run with ./gradlew runGameTestServer. Only loaded when gametests are enabled. */
 @GameTestHolder(WildspellMobs.MODID)
@@ -68,7 +77,6 @@ public class WildspellMobsTests {
         shade(helper);
         Pig pig = helper.spawn(EntityType.PIG, 8.5F, 1.0F, 8.5F);
         pig.setNoAi(true);
-        pig.setInvulnerable(true);
         RimeSkull skull = helper.spawn(WildspellMobs.RIME_SKULL.get(), 0.5F, 4.0F, 0.5F);
         skull.setTarget(pig);
         int[] shards = {0};
@@ -200,7 +208,6 @@ public class WildspellMobsTests {
         shade(helper);
         Pig pig = helper.spawn(EntityType.PIG, 8.5F, 1.0F, 8.5F);
         pig.setNoAi(true);
-        pig.setInvulnerable(true);
         helper.setBlock(1, 0, 1, Blocks.ICE);
         FrozenZombie zombie = helper.spawn(WildspellMobs.FROZEN_ZOMBIE.get(), 1.5F, 1.0F, 1.5F);
         zombie.pickVariant();
@@ -394,11 +401,14 @@ public class WildspellMobsTests {
         ItemStack fragment = helper.getEntities(EntityType.ITEM).stream().map(net.minecraft.world.entity.item.ItemEntity::getItem)
                 .filter(stack -> stack.is(WildspellMobs.CROWN_FRAGMENT.get())).findFirst().orElseThrow();
         helper.assertTrue(phylactery.soulId().equals(fragment.get(WildspellMobs.SOUL.get())), "the fragment isn't bound to the lich's soul");
-        // Made into a Soulseeker, the fragment's soul goes with it.
-        ItemStack seeker = new ItemStack(WildspellMobs.SOULSEEKER.get());
-        net.minecraft.world.SimpleContainer grid = new net.minecraft.world.SimpleContainer(9);
-        grid.setItem(4, fragment);
-        com.wildspell.mobs.item.SoulseekerItem.onCrafted(new net.neoforged.neoforge.event.entity.player.PlayerEvent.ItemCraftedEvent(player, seeker, grid));
+        CraftingRecipe recipe = (CraftingRecipe) helper.getLevel().getRecipeManager().byKey(WildspellMobs.id("soulseeker")).orElseThrow().value();
+        ItemStack rime = new ItemStack(WildspellMobs.RIME_SHARD.get());
+        ItemStack lily = new ItemStack(BuiltInRegistries.ITEM.get(ResourceLocation.fromNamespaceAndPath("yungscavebiomes", "frost_lily")));
+        ItemStack crystal = new ItemStack(WildspellMobs.ENCHANTED_ICE_CRYSTAL.get());
+        CraftingInput grid = CraftingInput.of(3, 3, List.of(rime, fragment, rime, lily, crystal, lily, rime, lily, rime));
+        helper.assertTrue(recipe.matches(grid, helper.getLevel()), "the Soulseeker recipe doesn't match its own pattern");
+        ItemStack seeker = recipe.assemble(grid, helper.getLevel().registryAccess());
+        helper.assertTrue(seeker.is(WildspellMobs.SOULSEEKER.get()), "the recipe didn't make a Soulseeker");
         helper.assertTrue(phylactery.soulId().equals(seeker.get(WildspellMobs.SOUL.get())), "the Soulseeker didn't take the fragment's soul");
         helper.succeed();
     }
@@ -447,13 +457,13 @@ public class WildspellMobsTests {
         helper.setBlock(new BlockPos(1, 1, 1), Blocks.SNOW);
         FrozenZombie zombie = helper.spawn(WildspellMobs.FROZEN_ZOMBIE.get(), 7.5F, 1.0F, 7.5F);
         zombie.setNoAi(true);
-        // A crypt is cleansed once the area around it is loaded, as it is with a player nearby.
-        net.minecraft.world.level.ChunkPos center = new net.minecraft.world.level.ChunkPos(helper.absolutePos(altar));
-        for (int dx = -3; dx <= 3; ++dx) {
-            for (int dz = -3; dz <= 3; ++dz) {
-                helper.getLevel().setChunkForced(center.x + dx, center.z + dz, true);
-            }
-        }
+        ChunkPos center = new ChunkPos(helper.absolutePos(altar));
+        forceChunks(helper, center, true);
+        Runnable cleanup = () -> {
+            LichSouls.get(helper.getLevel()).forgetCleansed(helper.getLevel(), helper.absolutePos(altar));
+            forceChunks(helper, center, false);
+        };
+        helper.runAtTickTime(199, cleanup);
         helper.destroyBlock(altar);
         helper.getEntities(EntityType.ITEM).getFirst().hurt(helper.getLevel().damageSources().lava(), 10.0F);
         IceLich last = helper.getEntities(WildspellMobs.ICE_LICH.get()).getFirst();
@@ -471,13 +481,35 @@ public class WildspellMobsTests {
             helper.assertTrue(helper.getBlockState(brazier).is(Blocks.CAMPFIRE) && helper.getBlockState(brazier).getValue(net.minecraft.world.level.block.CampfireBlock.LIT),
                     "the soul-fire brazier didn't turn to ordinary fire");
             helper.assertBlockNotPresent(Blocks.SNOW, new BlockPos(1, 1, 1));
-            helper.assertTrue(com.wildspell.mobs.crypt.LichSouls.isCleansedZone(helper.getLevel(), helper.absolutePos(altar)), "the crypt isn't a safe zone");
-            com.wildspell.mobs.crypt.LichSouls.get(helper.getLevel()).forgetCleansed(helper.getLevel(), helper.absolutePos(altar));
-            for (int dx = -3; dx <= 3; ++dx) {
-                for (int dz = -3; dz <= 3; ++dz) {
-                    helper.getLevel().setChunkForced(center.x + dx, center.z + dz, false);
-                }
+            helper.assertTrue(LichSouls.isCleansedZone(helper.getLevel(), helper.absolutePos(altar)), "the crypt isn't a safe zone");
+            helper.assertTrue(LichSouls.get(helper.getLevel()).soul(soul.id) == null, "a cleansed soul is still on record");
+            cleanup.run();
+        });
+    }
+
+    private static void forceChunks(GameTestHelper helper, ChunkPos center, boolean forced) {
+        for (int dx = -3; dx <= 3; ++dx) {
+            for (int dz = -3; dz <= 3; ++dz) {
+                helper.getLevel().setChunkForced(center.x + dx, center.z + dz, forced);
             }
+        }
+    }
+
+    @GameTest(template = ARENA, timeoutTicks = 100, batch = "lichVoid")
+    public static void aPhylacteryLostToTheVoidFindsRoomAboveItsAltar(GameTestHelper helper) {
+        shade(helper);
+        BlockPos altar = new BlockPos(4, 1, 4);
+        PhylacteryBlockEntity phylactery = placePhylactery(helper, altar, Direction.SOUTH);
+        LichSouls.Soul soul = phylactery.soul(helper.getLevel());
+        helper.destroyBlock(altar);
+        helper.setBlock(altar, Blocks.STONE);
+        ItemEntity item = helper.getEntities(EntityType.ITEM).getFirst();
+        item.setNoGravity(true);
+        item.setPos(item.getX(), helper.getLevel().getMinBuildHeight() - 2, item.getZ());
+        helper.succeedWhen(() -> {
+            helper.assertTrue(item.isRemoved(), "the phylactery is still in the void");
+            helper.assertBlockPresent(WildspellMobs.FROZEN_PHYLACTERY_BLOCK.get(), altar.above());
+            helper.assertTrue(soul.inAltar(), "its soul doesn't know it's home");
         });
     }
 
@@ -1106,7 +1138,7 @@ public class WildspellMobsTests {
         BlockPos spot = new BlockPos(4, 1, 4);
         sealCave(helper);
         for (int i = 0; i < SpawnBalance.UNDERGROUND_LOCAL_CAP.get(); ++i) {
-            helper.spawn(EntityType.ZOMBIE, new BlockPos(3 + i % 3, 1, 3 + i / 3 % 3)).setNoAi(true);
+            spawnWild(helper, EntityType.ZOMBIE, new BlockPos(3 + i % 3, 1, 3 + i / 3 % 3)).setNoAi(true);
         }
         whenSealed(helper, spot, () -> {
             double zombiePass = passRate(helper, EntityType.ZOMBIE, spot);
@@ -1117,12 +1149,35 @@ public class WildspellMobsTests {
         });
     }
 
+    @GameTest(template = ARENA, timeoutTicks = 100, batch = "persistentCap")
+    public static void persistentMobsLeaveTheLocalCapAlone(GameTestHelper helper) {
+        shade(helper);
+        BlockPos spot = new BlockPos(4, 1, 4);
+        sealCave(helper);
+        for (int i = 0; i < SpawnBalance.UNDERGROUND_LOCAL_CAP.get(); ++i) {
+            helper.spawn(EntityType.ZOMBIE, new BlockPos(3 + i % 3, 1, 3 + i / 3 % 3)).setNoAi(true);
+        }
+        whenSealed(helper, spot, () -> {
+            double zombiePass = passRate(helper, EntityType.ZOMBIE, spot);
+            helper.assertTrue(Math.abs(zombiePass - SpawnBalance.UNDERGROUND_MONSTER_CHANCE.get()) < 0.05, "zombie pass rate " + zombiePass);
+            helper.succeed();
+        });
+    }
+
+    private static <T extends Mob> T spawnWild(GameTestHelper helper, EntityType<T> type, BlockPos relative) {
+        T mob = type.create(helper.getLevel());
+        net.minecraft.world.phys.Vec3 at = helper.absoluteVec(net.minecraft.world.phys.Vec3.atBottomCenterOf(relative));
+        mob.moveTo(at.x, at.y, at.z, 0.0F, 0.0F);
+        helper.getLevel().addFreshEntity(mob);
+        return mob;
+    }
+
     @GameTest(template = ARENA, timeoutTicks = 100, batch = "creeperCap")
     public static void creeperCapRefusesOnlyCreepers(GameTestHelper helper) {
         BlockPos spot = new BlockPos(4, 1, 4);
         sealCave(helper);
         for (int i = 0; i < SpawnBalance.UNDERGROUND_CREEPER_CAP.get(); ++i) {
-            helper.spawn(EntityType.CREEPER, new BlockPos(3 + i, 1, 3)).setNoAi(true);
+            spawnWild(helper, EntityType.CREEPER, new BlockPos(3 + i, 1, 3)).setNoAi(true);
         }
         whenSealed(helper, spot, () -> {
             double creeperPass = passRate(helper, EntityType.CREEPER, spot);

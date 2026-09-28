@@ -228,7 +228,7 @@ public class Pegasus extends AbstractHorse {
         if (!this.level().isClientSide) {
             // Flying without gravity keeps a rider from being kicked for "floating a vehicle" on servers that
             // don't allow flight (ServerGamePacketListenerImpl skips no-gravity vehicles); flight supplies its own sink.
-            boolean flying = this.isVehicle() && this.isAloft();
+            boolean flying = this.isAloft() && this.isSaddled() && this.getControllingPassenger() instanceof Player;
             if (flying != this.flightNoGravity) {
                 this.flightNoGravity = flying;
                 this.setNoGravity(flying);

@@ -23,6 +23,7 @@ import com.wildspell.mobs.entity.Pegasus;
 import com.wildspell.mobs.entity.RimeSkull;
 import com.wildspell.mobs.item.FrostboundStaffItem;
 import com.wildspell.mobs.item.SoulseekerItem;
+import com.wildspell.mobs.item.SoulseekerRecipe;
 import com.wildspell.mobs.moth.LuminousMoss;
 import com.wildspell.mobs.moth.MothBottleItem;
 import com.wildspell.mobs.moth.MothGlowBlock;
@@ -42,6 +43,7 @@ import net.minecraft.world.item.CreativeModeTabs;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemNameBlockItem;
 import net.minecraft.world.item.Rarity;
+import net.minecraft.world.item.crafting.RecipeSerializer;
 import net.minecraft.world.level.block.AmethystClusterBlock;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.SoundType;
@@ -77,6 +79,7 @@ public class WildspellMobs {
     public static final DeferredRegister<BlockEntityType<?>> BLOCK_ENTITY_TYPES = DeferredRegister.create(Registries.BLOCK_ENTITY_TYPE, MODID);
     public static final DeferredRegister<StructureType<?>> STRUCTURE_TYPES = DeferredRegister.create(Registries.STRUCTURE_TYPE, MODID);
     public static final DeferredRegister<StructurePieceType> STRUCTURE_PIECES = DeferredRegister.create(Registries.STRUCTURE_PIECE, MODID);
+    public static final DeferredRegister<RecipeSerializer<?>> RECIPE_SERIALIZERS = DeferredRegister.create(Registries.RECIPE_SERIALIZER, MODID);
     public static final DeferredRegister.DataComponents DATA_COMPONENTS = DeferredRegister.createDataComponents(Registries.DATA_COMPONENT_TYPE, MODID);
 
     /** The lich's soul an item is bound to: a carried phylactery, a Crown Fragment, a Soulseeker (see LichSouls). */
@@ -291,6 +294,9 @@ public class WildspellMobs {
     public static final DeferredItem<SoulseekerItem> SOULSEEKER = ITEMS.register("soulseeker",
             () -> new SoulseekerItem(new Item.Properties().rarity(Rarity.UNCOMMON).stacksTo(1)));
 
+    public static final DeferredHolder<RecipeSerializer<?>, SoulseekerRecipe.Serializer> SOULSEEKER_RECIPE =
+            RECIPE_SERIALIZERS.register("soulseeker", SoulseekerRecipe.Serializer::new);
+
     public static final DeferredItem<FrostboundStaffItem> FROSTBOUND_STAFF = ITEMS.register("frostbound_staff",
             () -> new FrostboundStaffItem(new Item.Properties().rarity(Rarity.EPIC).durability(250)));
 
@@ -327,6 +333,7 @@ public class WildspellMobs {
         STRUCTURE_TYPES.register(modBus);
         STRUCTURE_PIECES.register(modBus);
         DATA_COMPONENTS.register(modBus);
+        RECIPE_SERIALIZERS.register(modBus);
         SOUND_EVENTS.register(modBus);
         PARTICLE_TYPES.register(modBus);
         BIOME_MODIFIER_SERIALIZERS.register(modBus);
@@ -339,7 +346,6 @@ public class WildspellMobs {
         NeoForge.EVENT_BUS.addListener(ZombieFreezing::onEntityTick);
         NeoForge.EVENT_BUS.addListener(IceMelting::onPlayerTick);
         NeoForge.EVENT_BUS.addListener(LichSouls::onServerTick);
-        NeoForge.EVENT_BUS.addListener(SoulseekerItem::onCrafted);
     }
 
     public static ResourceLocation id(String path) {

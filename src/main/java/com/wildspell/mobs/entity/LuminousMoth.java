@@ -30,7 +30,6 @@ import net.minecraft.world.entity.MoverType;
 import net.minecraft.world.entity.PathfinderMob;
 import net.minecraft.world.entity.ai.attributes.AttributeSupplier;
 import net.minecraft.world.entity.ai.attributes.Attributes;
-import net.minecraft.world.entity.ai.control.MoveControl;
 import net.minecraft.world.entity.ai.goal.Goal;
 import net.minecraft.world.entity.ai.navigation.FlyingPathNavigation;
 import net.minecraft.world.entity.ai.navigation.PathNavigation;
@@ -90,8 +89,6 @@ public class LuminousMoth extends PathfinderMob {
     /** How near a still (or sneaking) player can come before the moth flies anyway. */
     public static final double STARTLE_RADIUS = 1.5;
     public static final double SNEAK_STARTLE_RADIUS = 1.0;
-    /** Movement over a disturbance check (four ticks) that counts as moving: about a slow walk. */
-    private static final double MOVED = 0.15;
     /** How near a player (without a lure) can come to a moth in flight before it flees. */
     public static final double FLEE_RADIUS = 6.0;
     public static final double SNEAK_FLEE_RADIUS = 3.0;
@@ -100,13 +97,12 @@ public class LuminousMoth extends PathfinderMob {
 
     @Nullable
     private BlockPos home;
-    private int perchCooldown = 20 + (int) (Math.random() * 40);
+    private int perchCooldown = 20 + this.random.nextInt(40);
     // Flushed: ticks left of the escape flight, and what it's escaping.
     private int flushTicks;
     @Nullable
     private Vec3 flushFrom;
-    // Where the things around a perched moth were at the last disturbance check, by entity id.
-    private final java.util.Map<Integer, Vec3> lastSeen = new java.util.HashMap<>();
+    private final MotionSense motion = new MotionSense();
 
     public LuminousMoth(EntityType<? extends LuminousMoth> type, Level level) {
         super(type, level);
@@ -260,25 +256,19 @@ public class LuminousMoth extends PathfinderMob {
      */
     @Nullable
     private Entity findDisturbance() {
-        java.util.Map<Integer, Vec3> seen = new java.util.HashMap<>();
-        Entity disturber = null;
-        for (LivingEntity other : this.level().getEntitiesOfClass(LivingEntity.class, this.getBoundingBox().inflate(DISTURB_RADIUS),
-                e -> e != this && e.isAlive() && !(e instanceof LuminousMoth) && !e.isSpectator())) {
-            seen.put(other.getId(), other.position());
-            if (disturber != null || other instanceof Player player && holdsLure(player)) {
+        List<LivingEntity> nearby = this.level().getEntitiesOfClass(LivingEntity.class, this.getBoundingBox().inflate(DISTURB_RADIUS),
+                e -> e != this && e.isAlive() && !(e instanceof LuminousMoth) && !e.isSpectator());
+        this.motion.sense(nearby);
+        for (LivingEntity other : nearby) {
+            if (other instanceof Player player && holdsLure(player)) {
                 continue;
             }
             boolean sneaking = other instanceof Player && other.isShiftKeyDown();
-            double distance = this.distanceTo(other);
-            Vec3 before = this.lastSeen.get(other.getId());
-            boolean moving = before != null && before.distanceToSqr(other.position()) > MOVED * MOVED;
-            if (distance < (sneaking ? SNEAK_STARTLE_RADIUS : STARTLE_RADIUS) || moving && !sneaking) {
-                disturber = other;
+            if (this.distanceTo(other) < (sneaking ? SNEAK_STARTLE_RADIUS : STARTLE_RADIUS) || this.motion.isMoving(other) && !sneaking) {
+                return other;
             }
         }
-        this.lastSeen.clear();
-        this.lastSeen.putAll(seen);
-        return disturber;
+        return null;
     }
 
     /** The nearest player a moth in flight should flee: anyone close without a lure, sneakers only closer. */
@@ -648,7 +638,7 @@ public class LuminousMoth extends PathfinderMob {
                 moth.getNavigation().stop();
                 moth.entityData.set(DATA_PERCH_FACE, this.face);
                 moth.setPerched(true);
-                moth.lastSeen.clear();
+                moth.motion.forget();
                 moth.brightenMoss();
                 this.stayTicks = this.ticks + 600 + moth.random.nextInt(1800);
             } else if (moth.getNavigation().isDone()) {
@@ -791,19 +781,13 @@ public class LuminousMoth extends PathfinderMob {
             LuminousMoth moth = LuminousMoth.this;
             Vec3 away = moth.position().subtract(moth.flushFrom).multiply(1.0, 0.0, 1.0);
             away = away.lengthSqr() < 1.0E-4 ? new Vec3(moth.random.nextDouble() - 0.5, 0.0, moth.random.nextDouble() - 0.5) : away;
-            away = away.normalize();
-            for (int attempt = 0; attempt < 6; ++attempt) {
-                // Away, swerving up to ~70 degrees either side, and upward early in the escape.
-                double swerve = (moth.random.nextDouble() - 0.5) * 2.4;
-                Vec3 heading = away.yRot((float) swerve);
+            Vec3 escape = away.normalize();
+            return ColdEffects.findSpot(6, () -> {
+                Vec3 heading = escape.yRot((float) ((moth.random.nextDouble() - 0.5) * 2.4));
                 double distance = 3.0 + moth.random.nextDouble() * 2.0;
                 double lift = moth.flushTicks > 30 ? 0.6 + moth.random.nextDouble() : (moth.random.nextDouble() - 0.5) * 1.2;
-                Vec3 spot = moth.position().add(heading.scale(distance)).add(0.0, lift, 0.0);
-                if (isOpen(moth.level(), BlockPos.containing(spot)) && ColdEffects.clearPath(moth, moth.position(), spot)) {
-                    return spot;
-                }
-            }
-            return null;
+                return moth.position().add(heading.scale(distance)).add(0.0, lift, 0.0);
+            }, spot -> isOpen(moth.level(), BlockPos.containing(spot)) && ColdEffects.clearPath(moth, moth.position(), spot));
         }
     }
 
@@ -829,30 +813,40 @@ public class LuminousMoth extends PathfinderMob {
         @Override
         public void start() {
             LuminousMoth moth = LuminousMoth.this;
-            for (int attempt = 0; attempt < 8; ++attempt) {
-                // A couple of blocks any way, but a little more often down than up: a moth keeps
-                // near things it could land on instead of climbing away.
-                BlockPos pos = moth.blockPosition().offset(moth.random.nextInt(7) - 3, moth.random.nextInt(4) - 2, moth.random.nextInt(7) - 3);
-                Vec3 spot = Vec3.atCenterOf(pos);
-                if (moth.isWithinRestriction(pos) && isOpen(moth.level(), pos) && ColdEffects.clearPath(moth, moth.position(), spot)) {
-                    moth.getNavigation().moveTo(spot.x, spot.y, spot.z, 0.8);
-                    return;
-                }
+            Vec3 spot = ColdEffects.findSpot(8,
+                    () -> Vec3.atCenterOf(moth.blockPosition().offset(moth.random.nextInt(7) - 3, moth.random.nextInt(4) - 2, moth.random.nextInt(7) - 3)),
+                    at -> moth.isWithinRestriction(BlockPos.containing(at)) && isOpen(moth.level(), BlockPos.containing(at))
+                            && ColdEffects.clearPath(moth, moth.position(), at));
+            if (spot != null) {
+                moth.getNavigation().moveTo(spot.x, spot.y, spot.z, 0.8);
             }
         }
     }
 
-    /**
-     * Thrust straight at the wanted position, harder the higher the speed modifier, easing off in
-     * the last block so it doesn't overshoot. Like vanilla's, it only pushes on ticks it was asked
-     * to, so a goal steering by hand sets the target every tick.
-     */
-    private static class MothMoveControl extends MoveControl {
-        /** Thrust per tick per unit of flying speed; against 0.91 drag, flutter (0.8) cruises ~3 blocks/s. */
+    private static class MothMoveControl extends ThrustMoveControl {
         private static final double THRUST = 0.21;
 
         MothMoveControl(Mob mob) {
-            super(mob);
+            super(mob, THRUST, 1.0);
+        }
+
+        @Override
+        protected double arrival() {
+            return 0.05;
+        }
+
+        @Override
+        protected double thrust(double distance) {
+            return Math.min(this.speedModifier * this.mob.getAttributeValue(Attributes.FLYING_SPEED) * THRUST, distance * 0.02);
+        }
+
+        @Override
+        protected void face(@Nullable Vec3 heading) {
+            if (heading != null && heading.horizontalDistanceSqr() > 1.0E-4) {
+                float yaw = (float) (Mth.atan2(heading.z, heading.x) * Mth.RAD_TO_DEG) - 90.0F;
+                this.mob.setYRot(this.rotlerp(this.mob.getYRot(), yaw, 40.0F));
+                this.mob.yBodyRot = this.mob.getYRot();
+            }
         }
 
         @Override
@@ -860,22 +854,8 @@ public class LuminousMoth extends PathfinderMob {
             this.mob.setSpeed(0.0F);
             this.mob.setYya(0.0F);
             this.mob.setZza(0.0F);
-            if (this.operation != Operation.MOVE_TO) {
-                return;
-            }
+            super.tick();
             this.operation = Operation.WAIT;
-            Vec3 to = new Vec3(this.wantedX - this.mob.getX(), this.wantedY - this.mob.getY(), this.wantedZ - this.mob.getZ());
-            double distance = to.length();
-            if (distance < 0.05) {
-                return;
-            }
-            double thrust = Math.min(this.speedModifier * this.mob.getAttributeValue(Attributes.FLYING_SPEED) * THRUST, distance * 0.02);
-            this.mob.setDeltaMovement(this.mob.getDeltaMovement().add(to.scale(thrust / distance)));
-            if (to.horizontalDistanceSqr() > 1.0E-4) {
-                float yaw = (float) (Mth.atan2(to.z, to.x) * (180.0 / Math.PI)) - 90.0F;
-                this.mob.setYRot(this.rotlerp(this.mob.getYRot(), yaw, 40.0F));
-                this.mob.yBodyRot = this.mob.getYRot();
-            }
         }
     }
 }

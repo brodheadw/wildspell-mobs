@@ -209,13 +209,8 @@ public class FrozenZombie extends Zombie implements RangedAttackMob {
         FrostShard snowball = new FrostShard(this.level(), this);
         snowball.setItem(new ItemStack(Items.SNOWBALL));
         double dx = target.getX() - this.getX();
-        // Aim at the middle of the target, whatever its height, lofted by how far the snowball will drop
-        // on the way: gravity * flightTime^2 / 2, with flightTime = distance / speed.
-        double dy = target.getY(0.5) - snowball.getY();
         double dz = target.getZ() - this.getZ();
-        double flightTicks = Math.sqrt(dx * dx + dz * dz) / SNOWBALL_SPEED;
-        double drop = 0.5 * FrostShard.GRAVITY * flightTicks * flightTicks;
-        snowball.shoot(dx, dy + drop, dz, SNOWBALL_SPEED, 5.0F);
+        snowball.shoot(dx, snowball.lobTo(target, dx, dz, SNOWBALL_SPEED), dz, SNOWBALL_SPEED, 5.0F);
         this.swing(InteractionHand.MAIN_HAND);
         this.playSound(SoundEvents.SNOW_GOLEM_SHOOT, 1.0F, 0.6F + this.random.nextFloat() * 0.2F);
         this.level().addFreshEntity(snowball);

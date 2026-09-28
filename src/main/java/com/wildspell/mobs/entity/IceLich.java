@@ -8,6 +8,7 @@ import java.util.List;
 import java.util.UUID;
 import javax.annotation.Nullable;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
@@ -24,6 +25,7 @@ import net.minecraft.sounds.SoundSource;
 import net.minecraft.tags.DamageTypeTags;
 import net.minecraft.util.Mth;
 import net.minecraft.world.BossEvent;
+import net.minecraft.world.InteractionHand;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.effect.MobEffects;
@@ -34,7 +36,6 @@ import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.MobSpawnType;
 import net.minecraft.world.entity.ai.attributes.AttributeSupplier;
 import net.minecraft.world.entity.ai.attributes.Attributes;
-import net.minecraft.world.entity.ai.control.MoveControl;
 import net.minecraft.world.entity.ai.goal.Goal;
 import net.minecraft.world.entity.ai.goal.LookAtPlayerGoal;
 import net.minecraft.world.entity.ai.goal.target.HurtByTargetGoal;
@@ -149,7 +150,7 @@ public class IceLich extends Monster implements RangedAttackMob, GeoEntity {
 
     public IceLich(EntityType<? extends IceLich> type, Level level) {
         super(type, level);
-        this.moveControl = new HoverMoveControl();
+        this.moveControl = new HoverMoveControl(this);
         this.setNoGravity(true);
         this.xpReward = 150;
         this.setPersistenceRequired();
@@ -193,7 +194,7 @@ public class IceLich extends Monster implements RangedAttackMob, GeoEntity {
         IceLich lich = summon(level, at, soul);
         if (lich != null) {
             lich.lastForm = true;
-            level.sendParticles(net.minecraft.core.particles.ParticleTypes.FLAME, at.x, at.y + 1.0, at.z, 60, 0.6, 1.0, 0.6, 0.05);
+            level.sendParticles(ParticleTypes.FLAME, at.x, at.y + 1.0, at.z, 60, 0.6, 1.0, 0.6, 0.05);
             level.playSound(null, at.x, at.y, at.z, SoundEvents.BLAZE_SHOOT, SoundSource.HOSTILE, 2.0F, 0.5F);
         }
         return lich;
@@ -386,14 +387,12 @@ public class IceLich extends Monster implements RangedAttackMob, GeoEntity {
     /** A volley of three frost shards, fanned slightly. */
     @Override
     public void performRangedAttack(LivingEntity target, float distanceFactor) {
-        this.swing(net.minecraft.world.InteractionHand.MAIN_HAND);
+        this.swing(InteractionHand.MAIN_HAND);
         for (int i = -1; i <= 1; ++i) {
             FrostShard shard = new FrostShard(this.level(), this);
             double dx = target.getX() - this.getX();
             double dz = target.getZ() - this.getZ();
-            double horizontal = Math.sqrt(dx * dx + dz * dz);
-            double flightTicks = horizontal / 1.6;
-            double dy = target.getY(0.5) - shard.getY() + 0.5 * FrostShard.GRAVITY * flightTicks * flightTicks;
+            double dy = shard.lobTo(target, dx, dz, 1.6F);
             double angle = Math.toRadians(8.0 * i);
             double sx = dx * Math.cos(angle) - dz * Math.sin(angle);
             double sz = dx * Math.sin(angle) + dz * Math.cos(angle);
@@ -446,7 +445,7 @@ public class IceLich extends Monster implements RangedAttackMob, GeoEntity {
             BlockPos column = BlockPos.containing(this.getX() + Math.cos(angle) * radius, this.getY(), this.getZ() + Math.sin(angle) * radius);
             for (int dy = 2; dy >= -8; --dy) {
                 BlockPos pos = column.above(dy);
-                if (level.getBlockState(pos.below()).isFaceSturdy(level, pos.below(), net.minecraft.core.Direction.UP)
+                if (level.getBlockState(pos.below()).isFaceSturdy(level, pos.below(), Direction.UP)
                         && level.isEmptyBlock(pos) && level.isEmptyBlock(pos.above())) {
                     return pos;
                 }
@@ -590,16 +589,11 @@ public class IceLich extends Monster implements RangedAttackMob, GeoEntity {
     /** Vanish in a swirl of frost and reappear 7-12 blocks from the target, where it can see them. */
     private void blinkNear(LivingEntity target) {
         this.blinkCooldown = 100;
-        ServerLevel level = (ServerLevel) this.level();
-        for (int attempt = 0; attempt < 16; ++attempt) {
-            double angle = this.random.nextDouble() * Math.PI * 2.0;
-            double radius = 7.0 + this.random.nextDouble() * 5.0;
-            Vec3 spot = new Vec3(target.getX() + Math.cos(angle) * radius, target.getY() + 1.0 + this.random.nextInt(3), target.getZ() + Math.sin(angle) * radius);
-            if (ColdEffects.isOpen(level, BlockPos.containing(spot), 3)
-                    && ColdEffects.clearPath(this, spot.add(0.0, this.getEyeHeight(), 0.0), target.getEyePosition())) {
-                this.teleportWithFrost(spot);
-                return;
-            }
+        Vec3 spot = ColdEffects.findSpot(16, () -> ColdEffects.ringPoint(this.random, target.position(), 7.0, 5.0, 1.0 + this.random.nextInt(3)),
+                at -> ColdEffects.isOpen(this.level(), BlockPos.containing(at), 3)
+                        && ColdEffects.clearPath(this, at.add(0.0, this.getEyeHeight(), 0.0), target.getEyePosition()));
+        if (spot != null) {
+            this.teleportWithFrost(spot);
         }
     }
 
@@ -641,7 +635,7 @@ public class IceLich extends Monster implements RangedAttackMob, GeoEntity {
         } else if (soul.burned() || !soul.claim(this)) {
             // Its phylactery burned while this body was away (its last form rose at the fire), or it
             // was forgotten and replaced: either way this body is a stale copy.
-            this.vanish(level);
+            this.vanish();
         }
     }
 
@@ -653,11 +647,6 @@ public class IceLich extends Monster implements RangedAttackMob, GeoEntity {
         this.soulId = null;
         this.playSound(SoundEvents.WITHER_HURT, 2.0F, 0.5F);
         ColdEffects.soulBurst((ServerLevel) this.level(), this.position().add(0.0, this.getBbHeight() * 0.6, 0.0), 0.4, 0.8);
-    }
-
-    /** Torn away to where its phylactery is burning: this body goes, and its last form rises there. */
-    public void vanishInto(Vec3 flames) {
-        this.vanish((ServerLevel) this.level());
     }
 
     /**
@@ -704,11 +693,12 @@ public class IceLich extends Monster implements RangedAttackMob, GeoEntity {
         if (soul != null) {
             soul.onLichRetreated(this);
         }
-        this.vanish((ServerLevel) this.level());
+        this.vanish();
     }
 
     /** Fade away in a swirl of souls, taking its minions with it. */
-    private void vanish(ServerLevel level) {
+    public void vanish() {
+        ServerLevel level = (ServerLevel) this.level();
         ColdEffects.soulBurst(level, this.position().add(0.0, this.getBbHeight() * 0.5, 0.0), 0.4, 1.0);
         level.playSound(null, this.getX(), this.getY(), this.getZ(), SoundEvents.SOUL_ESCAPE.value(), SoundSource.HOSTILE, 2.0F, 0.5F);
         this.shatterMinions(level);
@@ -748,15 +738,13 @@ public class IceLich extends Monster implements RangedAttackMob, GeoEntity {
         ColdEffects.tellNearby(level, this.getBoundingBox().inflate(32.0), Component.translatable("message.wildspellmobs.lich_soul_flees"));
         level.addFreshEntity(new LichWisp(level, this.position().add(0.0, this.getBbHeight() * 0.6, 0.0), soul.id, next));
         soul.onLichDiscorporated(this);
-        this.vanish(level);
+        this.vanish();
     }
 
     private void shatterMinions(ServerLevel level) {
         String owner = this.ownerTag();
         for (Mob minion : level.getEntitiesOfClass(Mob.class, this.getBoundingBox().inflate(48.0), m -> m.getTags().contains(owner))) {
-            level.sendParticles(ColdEffects.ICE_CHIPS, minion.getX(), minion.getY(0.5), minion.getZ(), 25, 0.3, 0.6, 0.3, 0.15);
-            minion.playSound(WildspellMobs.FROZEN_ZOMBIE_SHATTER.get(), 1.0F, 1.2F);
-            minion.discard();
+            ColdEffects.shatter(level, minion, 1.2F);
         }
     }
 
@@ -774,6 +762,20 @@ public class IceLich extends Monster implements RangedAttackMob, GeoEntity {
             ((ServerLevel) this.level()).sendParticles(ColdEffects.ICE_CHIPS, this.getX(), this.getY(0.6), this.getZ(), 30, 0.4, 0.6, 0.4, 0.15);
         }
         return hurt;
+    }
+
+    @Override
+    public void checkDespawn() {
+        if (this.lastForm && this.level().getDifficulty() == Difficulty.PEACEFUL && this.level() instanceof ServerLevel level) {
+            LichSouls.Soul soul = this.soul();
+            this.shatterMinions(level);
+            if (soul != null) {
+                soul.fall(level, this.position());
+            }
+            this.discard();
+            return;
+        }
+        super.checkDespawn();
     }
 
     @Override
@@ -884,30 +886,22 @@ public class IceLich extends Monster implements RangedAttackMob, GeoEntity {
         return this.geoCache;
     }
 
-    /** Hover-steering: accelerate toward the wanted point, drifting gently up and down. */
-    private class HoverMoveControl extends MoveControl {
-        HoverMoveControl() {
-            super(IceLich.this);
+    private static class HoverMoveControl extends ThrustMoveControl {
+        HoverMoveControl(IceLich lich) {
+            super(lich, 0.02, 1.0);
         }
 
         @Override
-        public void tick() {
-            IceLich lich = IceLich.this;
-            Vec3 motion = lich.getDeltaMovement().multiply(1.0, 0.9, 1.0).add(0.0, Mth.sin(lich.tickCount * 0.08F) * 0.004, 0.0);
-            if (this.operation == MoveControl.Operation.MOVE_TO) {
-                Vec3 toWanted = new Vec3(this.wantedX - lich.getX(), this.wantedY - lich.getY(), this.wantedZ - lich.getZ());
-                double distance = toWanted.length();
-                if (distance < 0.5) {
-                    this.operation = MoveControl.Operation.WAIT;
-                } else {
-                    motion = motion.add(toWanted.scale(this.speedModifier * 0.02 / distance));
-                }
-            }
-            lich.setDeltaMovement(motion);
-            LivingEntity target = lich.getTarget();
+        protected Vec3 drift(Vec3 motion) {
+            return motion.multiply(1.0, 0.9, 1.0).add(0.0, Mth.sin(this.mob.tickCount * 0.08F) * 0.004, 0.0);
+        }
+
+        @Override
+        protected void face(@Nullable Vec3 heading) {
+            LivingEntity target = this.mob.getTarget();
             if (target != null) {
-                lich.setYRot(-((float) Mth.atan2(target.getX() - lich.getX(), target.getZ() - lich.getZ())) * Mth.RAD_TO_DEG);
-                lich.yBodyRot = lich.getYRot();
+                this.mob.setYRot(-((float) Mth.atan2(target.getX() - this.mob.getX(), target.getZ() - this.mob.getZ())) * Mth.RAD_TO_DEG);
+                this.mob.yBodyRot = this.mob.getYRot();
             }
         }
     }
@@ -942,18 +936,13 @@ public class IceLich extends Monster implements RangedAttackMob, GeoEntity {
                 return;
             }
             this.repickTicks = 40 + IceLich.this.random.nextInt(40);
-            for (int attempt = 0; attempt < 10; ++attempt) {
-                double angle = IceLich.this.random.nextDouble() * Math.PI * 2.0;
-                double radius = 6.0 + IceLich.this.random.nextDouble() * 3.0;
-                Vec3 spot = new Vec3(target.getX() + Math.cos(angle) * radius, target.getY() + 2.0 + IceLich.this.random.nextDouble() * 2.0,
-                        target.getZ() + Math.sin(angle) * radius);
-                // Steering is a straight line, so only take spots it can fly to and see from.
-                if (ColdEffects.isOpen(IceLich.this.level(), BlockPos.containing(spot), 3)
-                        && ColdEffects.clearPath(IceLich.this, IceLich.this.getEyePosition(), spot)
-                        && ColdEffects.clearPath(IceLich.this, spot.add(0.0, IceLich.this.getEyeHeight(), 0.0), target.getEyePosition())) {
-                    IceLich.this.getMoveControl().setWantedPosition(spot.x, spot.y, spot.z, 1.0);
-                    return;
-                }
+            IceLich lich = IceLich.this;
+            Vec3 spot = ColdEffects.findSpot(10, () -> ColdEffects.ringPoint(lich.random, target.position(), 6.0, 3.0, 2.0 + lich.random.nextDouble() * 2.0),
+                    at -> ColdEffects.isOpen(lich.level(), BlockPos.containing(at), 3)
+                            && ColdEffects.clearPath(lich, lich.getEyePosition(), at)
+                            && ColdEffects.clearPath(lich, at.add(0.0, lich.getEyeHeight(), 0.0), target.getEyePosition()));
+            if (spot != null) {
+                lich.getMoveControl().setWantedPosition(spot.x, spot.y, spot.z, 1.0);
             }
         }
     }

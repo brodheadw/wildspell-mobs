@@ -10,10 +10,13 @@ import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.Deque;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import javax.annotation.Nullable;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.nbt.CompoundTag;
@@ -24,6 +27,7 @@ import net.minecraft.sounds.SoundSource;
 import net.minecraft.util.Mth;
 import net.minecraft.world.Difficulty;
 import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
@@ -119,21 +123,32 @@ public class PhylacteryBlockEntity extends BlockEntity {
     }
 
     /** The interior of the crypt whose altar is at {@code altar}, facing {@code facing}. */
-    public static AABB cryptBounds(BlockPos altar, net.minecraft.core.Direction facing) {
+    public static AABB cryptBounds(BlockPos altar, Direction facing) {
         BlockPos center = altar.relative(facing, CRYPT_CENTER);
         return new AABB(center.getX() - CRYPT_HALF, altar.getY() - CRYPT_BELOW, center.getZ() - CRYPT_HALF,
                 center.getX() + CRYPT_HALF + 1, altar.getY() + CRYPT_ABOVE, center.getZ() + CRYPT_HALF + 1);
     }
 
-    /** Every block position in the crypt. */
-    public Iterable<BlockPos> cryptBlocks() {
-        AABB crypt = this.cryptBounds();
-        return BlockPos.betweenClosed(BlockPos.containing(crypt.minX, crypt.minY, crypt.minZ), BlockPos.containing(crypt.maxX - 1, crypt.maxY - 1, crypt.maxZ - 1));
+    public static Iterable<BlockPos> cryptBlocks(BlockPos altar, Direction facing) {
+        AABB crypt = cryptBounds(altar, facing);
+        return BlockPos.betweenClosed(cryptMin(crypt), cryptMax(crypt));
+    }
+
+    private static BlockPos cryptMin(AABB crypt) {
+        return BlockPos.containing(crypt.minX, crypt.minY, crypt.minZ);
+    }
+
+    private static BlockPos cryptMax(AABB crypt) {
+        return BlockPos.containing(crypt.maxX - 1, crypt.maxY - 1, crypt.maxZ - 1);
+    }
+
+    private Iterable<BlockPos> cryptBlocks() {
+        return cryptBlocks(this.worldPosition, this.getBlockState().getValue(PhylacteryBlock.FACING));
     }
 
     private boolean cryptLoaded(Level level) {
         AABB crypt = this.cryptBounds();
-        return level.hasChunksAt(BlockPos.containing(crypt.minX, crypt.minY, crypt.minZ), BlockPos.containing(crypt.maxX - 1, crypt.maxY - 1, crypt.maxZ - 1));
+        return level.hasChunksAt(cryptMin(crypt), cryptMax(crypt));
     }
 
     public boolean isAwake() {
@@ -343,7 +358,7 @@ public class PhylacteryBlockEntity extends BlockEntity {
 
     /** As above, choosing among {@code candidates} (the tests' mock players are not in level.players()). */
     public static void ambushFromAfar(ServerLevel level, List<LichSouls.Soul> souls, List<? extends Player> candidates) {
-        List<LichSouls.Soul> waiting = new java.util.ArrayList<>();
+        List<LichSouls.Soul> waiting = new ArrayList<>();
         for (LichSouls.Soul soul : souls) {
             if (soul.dimension() != level.dimension() || !soul.canStalk(level)) {
                 continue;
@@ -357,7 +372,7 @@ public class PhylacteryBlockEntity extends BlockEntity {
             return;
         }
         double range = ambushRange();
-        java.util.Map<LichSouls.Soul, List<Player>> prey = new java.util.HashMap<>();
+        Map<LichSouls.Soul, List<Player>> prey = new HashMap<>();
         for (Player player : candidates) {
             if (!isPrey(player) || !level.getBiome(player.blockPosition()).is(ZombieFreezing.FREEZES_ZOMBIES)) {
                 continue;
@@ -372,11 +387,11 @@ public class PhylacteryBlockEntity extends BlockEntity {
                 }
             }
             if (nearest != null) {
-                prey.computeIfAbsent(nearest, k -> new java.util.ArrayList<>()).add(player);
+                prey.computeIfAbsent(nearest, k -> new ArrayList<>()).add(player);
             }
         }
         double chance = SpawnBalance.LICH_AMBUSH_CHANCE.get();
-        for (java.util.Map.Entry<LichSouls.Soul, List<Player>> entry : prey.entrySet()) {
+        for (Map.Entry<LichSouls.Soul, List<Player>> entry : prey.entrySet()) {
             LichSouls.Soul soul = entry.getKey();
             if (soul.ambushCooldown() > 0) {
                 soul.coolAmbush();
@@ -448,7 +463,7 @@ public class PhylacteryBlockEntity extends BlockEntity {
         Vec3 at = Vec3.atCenterOf(this.worldPosition);
         soul.moved(level, this.worldPosition, null);
         ItemStack stack = PhylacteryItem.bound(soul.id);
-        net.minecraft.world.entity.item.ItemEntity item = new net.minecraft.world.entity.item.ItemEntity(level, at.x, at.y, at.z, stack);
+        ItemEntity item = new ItemEntity(level, at.x, at.y, at.z, stack);
         item.setDefaultPickUpDelay();
         level.addFreshEntity(item);
         level.sendParticles(ParticleTypes.SOUL, at.x, at.y, at.z, 30, 0.3, 0.5, 0.3, 0.05);
