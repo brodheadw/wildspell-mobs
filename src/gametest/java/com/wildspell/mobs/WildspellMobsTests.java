@@ -1,5 +1,6 @@
 package com.wildspell.mobs;
 
+import com.wildspell.mobs.crypt.CryptTestAccess;
 import com.wildspell.mobs.crypt.LichCryptPiece;
 import com.wildspell.mobs.crypt.LichSouls;
 import com.wildspell.mobs.crypt.PhylacteryBlock;
@@ -28,6 +29,9 @@ import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.gametest.framework.GameTest;
 import net.minecraft.gametest.framework.GameTestHelper;
+import net.minecraft.gametest.framework.GameTestInfo;
+import net.minecraft.gametest.framework.GameTestListener;
+import net.minecraft.gametest.framework.GameTestRunner;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.resources.ResourceLocation;
@@ -491,12 +495,7 @@ public class WildspellMobsTests {
         FrozenZombie zombie = helper.spawn(WildspellMobs.FROZEN_ZOMBIE.get(), 7.5F, 1.0F, 7.5F);
         zombie.setNoAi(true);
         ChunkPos center = new ChunkPos(helper.absolutePos(altar));
-        forceChunks(helper, center, true);
-        Runnable cleanup = () -> {
-            LichSouls.get(helper.getLevel()).forgetCleansed(helper.getLevel(), helper.absolutePos(altar));
-            forceChunks(helper, center, false);
-        };
-        helper.runAtTickTime(199, cleanup);
+        forceChunks(helper, center);
         helper.destroyBlock(altar);
         helper.getEntities(EntityType.ITEM).getFirst().hurt(helper.getLevel().damageSources().lava(), 10.0F);
         IceLich last = helper.getEntities(WildspellMobs.ICE_LICH.get()).getFirst();
@@ -516,14 +515,13 @@ public class WildspellMobsTests {
             helper.assertBlockNotPresent(Blocks.SNOW, new BlockPos(1, 1, 1));
             helper.assertTrue(LichSouls.isCleansedZone(helper.getLevel(), helper.absolutePos(altar)), "the crypt isn't a safe zone");
             helper.assertTrue(LichSouls.get(helper.getLevel()).soul(soul.id) == null, "a cleansed soul is still on record");
-            cleanup.run();
         });
     }
 
-    private static void forceChunks(GameTestHelper helper, ChunkPos center, boolean forced) {
+    private static void forceChunks(GameTestHelper helper, ChunkPos center) {
         for (int dx = -3; dx <= 3; ++dx) {
             for (int dz = -3; dz <= 3; ++dz) {
-                helper.getLevel().setChunkForced(center.x + dx, center.z + dz, forced);
+                helper.getLevel().setChunkForced(center.x + dx, center.z + dz, true);
             }
         }
     }
@@ -617,7 +615,10 @@ public class WildspellMobsTests {
         Player player = addMockPlayer(helper, new Vec3(4.5, 1.0, 6.5));
         double chance = SpawnBalance.LICH_AMBUSH_CHANCE.get();
         SpawnBalance.LICH_AMBUSH_CHANCE.set(1.0);
-        helper.runAtTickTime(150, () -> SpawnBalance.LICH_AMBUSH_CHANCE.set(chance));
+        onFinish(helper, () -> {
+            SpawnBalance.LICH_AMBUSH_CHANCE.set(chance);
+            player.discard();
+        });
         // The roll runs from the soul's tick over level.players(), which a mock player is not in: hand it the player.
         helper.onEachTick(() -> {
             if (helper.getTick() % 20 == 5) {
@@ -630,8 +631,6 @@ public class WildspellMobsTests {
             IceLich lich = liches.getFirst();
             helper.assertTrue(lich.isBound() && lich.getTarget() == player && lich.getUUID().equals(phylactery.lichId()), "ambusher isn't the phylactery's lich hunting the player");
             helper.assertTrue(lich.distanceTo(player) >= 9.0, "rose right on top of the player: " + lich.distanceTo(player));
-            SpawnBalance.LICH_AMBUSH_CHANCE.set(chance);
-            player.discard();
         });
     }
 
@@ -645,11 +644,11 @@ public class WildspellMobsTests {
         SpawnBalance.LICH_AMBUSH_CHANCE.set(1.0);
         SpawnBalance.LICH_AMBUSH_RANGE.set(4);
         helper.assertTrue(PhylacteryBlockEntity.leash() == 4.0, "the chase ends at the same range");
-        Runnable restore = () -> {
+        onFinish(helper, () -> {
             SpawnBalance.LICH_AMBUSH_CHANCE.set(chance);
             SpawnBalance.LICH_AMBUSH_RANGE.set(range);
-        };
-        helper.runAtTickTime(150, restore);
+            player.discard();
+        });
         PhylacteryBlockEntity phylactery = (PhylacteryBlockEntity) helper.getBlockEntity(new BlockPos(4, 1, 0));
         helper.onEachTick(() -> {
             if (helper.getTick() % 20 == 5) {
@@ -657,13 +656,8 @@ public class WildspellMobsTests {
             }
         });
         helper.runAfterDelay(100, () -> {
-            try {
-                helper.assertTrue(helper.getLevel().getEntitiesOfClass(IceLich.class, player.getBoundingBox().inflate(24.0)).isEmpty(),
-                        "six blocks out with a range of four, and something rose");
-            } finally {
-                restore.run();
-                player.discard();
-            }
+            helper.assertTrue(helper.getLevel().getEntitiesOfClass(IceLich.class, player.getBoundingBox().inflate(24.0)).isEmpty(),
+                    "six blocks out with a range of four, and something rose");
             helper.succeed();
         });
     }
@@ -676,7 +670,10 @@ public class WildspellMobsTests {
         Player player = addMockPlayer(helper, new Vec3(7.5, 1.0, 7.5));
         double chance = SpawnBalance.LICH_AMBUSH_CHANCE.get();
         SpawnBalance.LICH_AMBUSH_CHANCE.set(1.0);
-        helper.runAtTickTime(190, () -> SpawnBalance.LICH_AMBUSH_CHANCE.set(chance));
+        onFinish(helper, () -> {
+            SpawnBalance.LICH_AMBUSH_CHANCE.set(chance);
+            player.discard();
+        });
         helper.onEachTick(() -> {
             if (helper.getTick() % 20 == 5) {
                 PhylacteryBlockEntity.ambushFromAfar(helper.getLevel(), List.of(far.soul(helper.getLevel()), near.soul(helper.getLevel())), List.of(player));
@@ -685,8 +682,6 @@ public class WildspellMobsTests {
         helper.succeedWhen(() -> {
             helper.assertTrue(near.lichId() != null, "the nearer crypt's lich has not risen");
             helper.assertTrue(far.lichId() == null, "the farther crypt's lich rose too");
-            SpawnBalance.LICH_AMBUSH_CHANCE.set(chance);
-            player.discard();
         });
     }
 
@@ -722,12 +717,12 @@ public class WildspellMobsTests {
         old.setNoAi(true);
         double chance = SpawnBalance.LICH_AMBUSH_CHANCE.get();
         SpawnBalance.LICH_AMBUSH_CHANCE.set(1.0);
-        LichSouls.ASSUME_BODY_AWAY_FOR_TEST = true;
-        Runnable restore = () -> {
+        CryptTestAccess.assumeBodyAway(true);
+        onFinish(helper, () -> {
             SpawnBalance.LICH_AMBUSH_CHANCE.set(chance);
-            LichSouls.ASSUME_BODY_AWAY_FOR_TEST = false;
-        };
-        helper.runAtTickTime(190, restore);
+            CryptTestAccess.assumeBodyAway(false);
+            player.discard();
+        });
         helper.onEachTick(() -> {
             if (helper.getTick() % 20 == 5) {
                 PhylacteryBlockEntity.ambushFromAfar(helper.getLevel(), List.of(soul), List.of(player));
@@ -738,8 +733,6 @@ public class WildspellMobsTests {
             helper.assertTrue(now != null && !now.equals(old.getUUID()), "no fresh body has risen");
             helper.assertTrue(helper.getLevel().getEntity(now) instanceof IceLich fresh && fresh.getTarget() == player, "the fresh body isn't hunting the player");
             helper.assertFalse(old.isAlive(), "the old body should have vanished as a stale copy");
-            restore.run();
-            player.discard();
             helper.killAllEntities();
         });
     }
@@ -785,6 +778,7 @@ public class WildspellMobsTests {
             helper.assertTrue(helper.getLevel().getBlockEntity(at) instanceof PhylacteryBlockEntity, facing + ": no phylactery at " + at);
             PhylacteryBlockEntity phylactery = (PhylacteryBlockEntity) helper.getLevel().getBlockEntity(at);
             AABB crypt = phylactery.cryptBounds();
+            onFinish(helper, () -> CryptTestAccess.forgetWithin(helper.getLevel(), crypt.inflate(2.0)));
             int wards = 0, braziers = 0, candles = 0, iceFloor = 0;
             for (BlockPos p : BlockPos.betweenClosed(BlockPos.containing(crypt.minX, crypt.minY, crypt.minZ), BlockPos.containing(crypt.maxX - 1, crypt.maxY - 1, crypt.maxZ - 1))) {
                 BlockState state = helper.getLevel().getBlockState(p);
@@ -1221,7 +1215,31 @@ public class WildspellMobsTests {
 
     private static PhylacteryBlockEntity placePhylactery(GameTestHelper helper, BlockPos pos, Direction facing) {
         helper.setBlock(pos, WildspellMobs.FROZEN_PHYLACTERY_BLOCK.get().defaultBlockState().setValue(PhylacteryBlock.FACING, facing));
+        AABB area = helper.getBounds().inflate(2.0);
+        onFinish(helper, () -> CryptTestAccess.forgetWithin(helper.getLevel(), area));
         return (PhylacteryBlockEntity) helper.getLevel().getBlockEntity(helper.absolutePos(pos));
+    }
+
+    static void onFinish(GameTestHelper helper, Runnable cleanup) {
+        helper.testInfo.addListener(new GameTestListener() {
+            @Override
+            public void testStructureLoaded(GameTestInfo info) {
+            }
+
+            @Override
+            public void testPassed(GameTestInfo info, GameTestRunner runner) {
+                cleanup.run();
+            }
+
+            @Override
+            public void testFailed(GameTestInfo info, GameTestRunner runner) {
+                cleanup.run();
+            }
+
+            @Override
+            public void testAddedForRerun(GameTestInfo oldInfo, GameTestInfo newInfo, GameTestRunner runner) {
+            }
+        });
     }
 
     // getBiome samples a jittered position that can fall in a neighbouring 4x4x4 cell, so paint a margin;

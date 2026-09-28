@@ -36,7 +36,7 @@ import net.neoforged.neoforge.event.tick.ServerTickEvent;
 public class LichSouls extends SavedData {
     private static final String NAME = "wildspellmobs_lich_souls";
     private static final int MISSING_LIMIT = 60 * 20;
-    public static boolean ASSUME_BODY_AWAY_FOR_TEST = false;
+    static boolean assumeBodyAway;
     public static final double SAFE_RADIUS = 64.0;
 
     private final Map<UUID, Soul> souls = new HashMap<>();
@@ -74,8 +74,17 @@ public class LichSouls extends SavedData {
         return false;
     }
 
-    public void forgetCleansed(Level level, BlockPos crypt) {
-        this.cleansed.removeIf(zone -> zone.dimension() == level.dimension() && zone.pos().equals(crypt));
+    void forgetWithin(ServerLevel level, AABB area) {
+        this.souls.values().removeIf(soul -> {
+            if (soul.cryptDimension != level.dimension() || !area.contains(Vec3.atCenterOf(soul.crypt))) {
+                return false;
+            }
+            if (soul.lichId != null && level.getEntity(soul.lichId) instanceof IceLich lich) {
+                lich.discard();
+            }
+            return true;
+        });
+        this.cleansed.removeIf(zone -> zone.dimension() == level.dimension() && area.contains(Vec3.atCenterOf(zone.pos())));
         this.setDirty();
     }
 
@@ -177,7 +186,7 @@ public class LichSouls extends SavedData {
             if (this.lichId == null) {
                 return true;
             }
-            boolean bodyAway = ASSUME_BODY_AWAY_FOR_TEST || (this.findLich(level) == null && !level.isLoaded(this.anchor));
+            boolean bodyAway = assumeBodyAway || (this.findLich(level) == null && !level.isLoaded(this.anchor));
             return bodyAway;
         }
 

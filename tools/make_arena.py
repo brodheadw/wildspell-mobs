@@ -33,6 +33,6 @@ def write(path, size):
         f.write(b"\x0a" + name("") + root)
 
 
-write("src/main/resources/data/wildspellmobs/structure/arena.nbt", [9, 7, 9])
-write("src/main/resources/data/wildspellmobs/structure/sky_arena.nbt", [31, 24, 31])
+write("src/gametest/resources/data/wildspellmobs/structure/arena.nbt", [9, 7, 9])
+write("src/gametest/resources/data/wildspellmobs/structure/sky_arena.nbt", [31, 24, 31])
 print("arenas written")
