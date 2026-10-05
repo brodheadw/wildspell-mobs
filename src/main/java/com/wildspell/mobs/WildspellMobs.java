@@ -8,6 +8,8 @@ import com.wildspell.mobs.crypt.LichSouls;
 import com.wildspell.mobs.crypt.PhylacteryBlock;
 import com.wildspell.mobs.crypt.PhylacteryBlockEntity;
 import com.wildspell.mobs.crypt.PhylacteryItem;
+import com.wildspell.mobs.entity.Apollo;
+import com.wildspell.mobs.entity.Diana;
 import com.wildspell.mobs.entity.ElectricEel;
 import com.wildspell.mobs.entity.FlytrapHead;
 import com.wildspell.mobs.entity.FrostOrb;
@@ -16,11 +18,14 @@ import com.wildspell.mobs.entity.FrozenZombie;
 import com.wildspell.mobs.entity.IceLich;
 import com.wildspell.mobs.entity.LichWisp;
 import com.wildspell.mobs.entity.LuminousMoth;
+import com.wildspell.mobs.entity.MoonArrow;
 import com.wildspell.mobs.entity.Pegasus;
 import com.wildspell.mobs.entity.RimeSkull;
+import com.wildspell.mobs.entity.SolarRay;
 import com.wildspell.mobs.flytrap.FlytrapBlock;
 import com.wildspell.mobs.flytrap.FlytrapPatchFeature;
 import com.wildspell.mobs.flytrap.FlytrapStemBlock;
+import com.wildspell.mobs.gods.Heavens;
 import com.wildspell.mobs.item.FrostboundStaffItem;
 import com.wildspell.mobs.item.SoulseekerItem;
 import com.wildspell.mobs.item.SoulseekerRecipe;
@@ -223,6 +228,37 @@ public class WildspellMobs {
     public static final DeferredHolder<Feature<?>, FlytrapPatchFeature> FLYTRAP_PATCH =
             FEATURES.register("flytrap_patch", FlytrapPatchFeature::new);
 
+    public static final DeferredHolder<EntityType<?>, EntityType<Apollo>> APOLLO = ENTITY_TYPES.register("apollo",
+            () -> EntityType.Builder.of(Apollo::new, MobCategory.MONSTER)
+                    .sized(1.0F, 3.4F)
+                    .eyeHeight(3.0F)
+                    .fireImmune()
+                    .clientTrackingRange(16)
+                    .build("apollo"));
+
+    public static final DeferredHolder<EntityType<?>, EntityType<SolarRay>> SOLAR_RAY = ENTITY_TYPES.register("solar_ray",
+            () -> EntityType.Builder.<SolarRay>of(SolarRay::new, MobCategory.MISC)
+                    .sized(0.4F, 0.4F)
+                    .clientTrackingRange(8)
+                    .updateInterval(2)
+                    .fireImmune()
+                    .build("solar_ray"));
+
+    public static final DeferredHolder<EntityType<?>, EntityType<Diana>> DIANA = ENTITY_TYPES.register("diana",
+            () -> EntityType.Builder.of(Diana::new, MobCategory.MONSTER)
+                    .sized(0.7F, 2.4F)
+                    .eyeHeight(2.1F)
+                    .clientTrackingRange(16)
+                    .build("diana"));
+
+    public static final DeferredHolder<EntityType<?>, EntityType<MoonArrow>> MOON_ARROW = ENTITY_TYPES.register("moon_arrow",
+            () -> EntityType.Builder.<MoonArrow>of(MoonArrow::new, MobCategory.MISC)
+                    .sized(0.5F, 0.5F)
+                    .eyeHeight(0.13F)
+                    .clientTrackingRange(10)
+                    .updateInterval(20)
+                    .build("moon_arrow"));
+
     public static final DeferredHolder<Block, PhylacteryBlock> FROZEN_PHYLACTERY_BLOCK = BLOCKS.register("frozen_phylactery",
             () -> new PhylacteryBlock(BlockBehaviour.Properties.of()
                     .mapColor(MapColor.ICE)
@@ -330,6 +366,8 @@ public class WildspellMobs {
         NeoForge.EVENT_BUS.addListener(ZombieFreezing::onEntityTick);
         NeoForge.EVENT_BUS.addListener(IceMelting::onPlayerTick);
         NeoForge.EVENT_BUS.addListener(LichSouls::onServerTick);
+        NeoForge.EVENT_BUS.addListener(Heavens::onServerTick);
+        NeoForge.EVENT_BUS.addListener(Heavens::onLogin);
     }
 
     public static ResourceLocation id(String path) {
@@ -348,6 +386,8 @@ public class WildspellMobs {
         event.put(ELECTRIC_EEL.get(), ElectricEel.createAttributes().build());
         event.put(PEGASUS.get(), Pegasus.createAttributes().build());
         event.put(FLYTRAP_HEAD.get(), FlytrapHead.createAttributes().build());
+        event.put(APOLLO.get(), Apollo.createAttributes().build());
+        event.put(DIANA.get(), Diana.createAttributes().build());
     }
 
     private static void registerSpawnPlacements(RegisterSpawnPlacementsEvent event) {
