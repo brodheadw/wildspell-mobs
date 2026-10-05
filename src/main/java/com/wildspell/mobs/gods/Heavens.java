@@ -39,6 +39,9 @@ import net.neoforged.neoforge.event.tick.ServerTickEvent;
 public class Heavens extends SavedData {
     private static final String NAME = "wildspellmobs_heavens";
     public static final String SPARED = WildspellMobs.MODID + ":spared";
+    public static final String WARDENS = WildspellMobs.MODID + ":wardens_slain";
+    public static final ResourceLocation SUN_SPIRIT = ResourceLocation.fromNamespaceAndPath("aether", "sun_spirit");
+    public static final double WARDEN_WITNESS = 48.0;
     public static final String APOLLO = "apollo";
     public static final String DIANA = "diana";
     public static final long NIGHT_TIME = 18000L;
@@ -89,6 +92,36 @@ public class Heavens extends SavedData {
         }
         persisted.put(SPARED, spared);
         player.getPersistentData().put(Player.PERSISTED_NBT_TAG, persisted);
+    }
+
+    public static int wardensSlain(Player player) {
+        return player.getPersistentData().getCompound(Player.PERSISTED_NBT_TAG).getInt(WARDENS);
+    }
+
+    public static boolean sunWillAnswer(Player player) {
+        return wardensSlain(player) >= SpawnBalance.APOLLO_WARDENS.get();
+    }
+
+    public static void wardenFell(ServerLevel level, net.minecraft.world.phys.Vec3 at) {
+        int needed = SpawnBalance.APOLLO_WARDENS.get();
+        for (ServerPlayer player : level.players()) {
+            if (player.isSpectator() || player.position().distanceTo(at) > WARDEN_WITNESS) {
+                continue;
+            }
+            CompoundTag persisted = player.getPersistentData().getCompound(Player.PERSISTED_NBT_TAG);
+            int slain = persisted.getInt(WARDENS) + 1;
+            persisted.putInt(WARDENS, slain);
+            player.getPersistentData().put(Player.PERSISTED_NBT_TAG, persisted);
+            player.displayClientMessage(Component.translatable(slain >= needed ? "message.wildspellmobs.wardens.answered" : "message.wildspellmobs.wardens.fallen",
+                    Math.min(slain, needed), needed).withStyle(ChatFormatting.GOLD), false);
+        }
+    }
+
+    public static void onDeath(net.neoforged.neoforge.event.entity.living.LivingDeathEvent event) {
+        if (event.getEntity().level() instanceof ServerLevel level
+                && SUN_SPIRIT.equals(net.minecraft.core.registries.BuiltInRegistries.ENTITY_TYPE.getKey(event.getEntity().getType()))) {
+            wardenFell(level, event.getEntity().position());
+        }
     }
 
     public static boolean hasSpared(Player player, String god) {
@@ -242,7 +275,7 @@ public class Heavens extends SavedData {
 
     private void watch(ServerPlayer player) {
         int seconds = SpawnBalance.GOD_GAZE_SECONDS.get();
-        if (this.gazeAt(player, Gaze.SUN, this.sunGaze, this.apolloCanCome(player.server)) >= seconds) {
+        if (this.gazeAt(player, Gaze.SUN, this.sunGaze, this.apolloCanCome(player.server) && sunWillAnswer(player)) >= seconds) {
             this.sunGaze.remove(player.getUUID());
             Apollo.descend(player.serverLevel(), player, this.apolloIsWary());
         }

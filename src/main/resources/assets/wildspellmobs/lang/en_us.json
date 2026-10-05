@@ -87,5 +87,7 @@
   "wildspellmobs.configuration.godArrivalHeight": "God Arrival Height",
   "wildspellmobs.configuration.godZenithDegrees": "God Zenith Degrees",
   "wildspellmobs.configuration.godGazeDegrees": "God Gaze Degrees",
-  "wildspellmobs.configuration.godGazeSeconds": "God Gaze Seconds"
+  "wildspellmobs.configuration.godGazeSeconds": "God Gaze Seconds",
+  "message.wildspellmobs.wardens.fallen": "A warden of the sun is dead. The sky's heat turns toward you. (%s of %s)",
+  "message.wildspellmobs.wardens.answered": "The last of the sun's wardens you needed is dead. Climb high and look it in the eye. (%s of %s)"
 }
