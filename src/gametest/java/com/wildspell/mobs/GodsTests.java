@@ -9,6 +9,7 @@ import com.wildspell.mobs.gods.HeavensTestAccess;
 import java.util.List;
 import net.minecraft.gametest.framework.GameTest;
 import net.minecraft.gametest.framework.GameTestHelper;
+import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.Tag;
 import net.minecraft.server.level.ServerLevel;
@@ -45,6 +46,22 @@ public class GodsTests {
         diana.setNoAi(true);
         hunt.claim(diana);
         return diana;
+    }
+
+    @GameTest(template = SKY, batch = "godsWardens")
+    public static void theSunAnswersOnlyAfterItsWardensFall(GameTestHelper helper) {
+        Player player = helper.makeMockPlayer(net.minecraft.world.level.GameType.SURVIVAL);
+        player.moveTo(helper.absoluteVec(new net.minecraft.world.phys.Vec3(4.5, 1.0, 4.5)));
+        helper.assertFalse(Heavens.sunWillAnswer(player), "a player who slew no warden shouldn't be heard");
+        int needed = com.wildspell.mobs.SpawnBalance.APOLLO_WARDENS.get();
+        CompoundTag persisted = player.getPersistentData().getCompound(Player.PERSISTED_NBT_TAG);
+        persisted.putInt(Heavens.WARDENS, needed - 1);
+        player.getPersistentData().put(Player.PERSISTED_NBT_TAG, persisted);
+        helper.assertFalse(Heavens.sunWillAnswer(player), "one warden short shouldn't be heard");
+        persisted.putInt(Heavens.WARDENS, needed);
+        player.getPersistentData().put(Player.PERSISTED_NBT_TAG, persisted);
+        helper.assertTrue(Heavens.sunWillAnswer(player), "enough wardens slain should open the sun");
+        helper.succeed();
     }
 
     @GameTest(template = SKY, batch = "godsSky")
