@@ -17,7 +17,7 @@ CAP = [(64, 10, 12), (92, 16, 18), (122, 24, 24), (150, 34, 30), (176, 52, 44)]
 SPOT = (206, 192, 170)
 GILL = [(34, 14, 18), (54, 22, 26), (78, 34, 36), (104, 52, 50)]
 PORE = (222, 236, 186)
-PORES = {("gill_face", 2, 1), ("gill_face", 5, 2), ("gills", 3, 6)}
+PORES = {("gills", 0, 2), ("gills", 1, 4)}
 
 
 def h(x, y, salt):
@@ -101,6 +101,28 @@ def shard(face, x, y, fw, fh, salt):
     return mix(color, GILL[1], 0.6) if y == 0 or face == "top" else color
 
 
+def head_half(face, x, y, fw, fh, salt):
+    color = stem(face, x, y, fw, fh, salt, 0.02)
+    inner = (face == "left" and cube_side[0] < 0) or (face == "right" and cube_side[0] > 0)
+    if inner:
+        return mix(color, GILL[1], 0.7)
+    if face == "front" and ((cube_side[0] < 0 and x == fw - 1) or (cube_side[0] > 0 and x == 0)):
+        return mix(color, GILL[2], 0.55)
+    return color
+
+
+def bracket(face, x, y, fw, fh, salt):
+    if face == "bottom":
+        return ramp(GILL, 0.5 + 0.3 * h(x, y, salt))
+    color = ramp(CAP, 0.5 + SHADE[face] + 0.25 * (h(x, y, salt) - 0.5))
+    if face == "top" and (x in (0, fw - 1) or y in (0, fh - 1)):
+        color = mix(color, SPOT, 0.5)
+    return color
+
+
+cube_side = [0]
+
+
 def thread(face, x, y, fw, fh, salt):
     return mix(ramp(MYCELIUM, 0.5 + 0.3 * h(x, y, salt)), STEM[3], (y / max(1, fh - 1)) * 0.4)
 
@@ -110,6 +132,8 @@ MATERIALS = {
     "thigh": lambda f, x, y, fw, fh, s: veined(f, x, y, fw, fh, s, 0.25),
     "shin": lambda f, x, y, fw, fh, s: veined(f, x, y, fw, fh, s, 0.85),
     "shard": shard,
+    "head_half": head_half,
+    "bracket": bracket,
     "cap": cap, "cap_brim": cap, "gills": gills, "gill_face": gills, "thread": thread,
 }
 
@@ -119,9 +143,10 @@ def main():
     glow = Image.new("RGBA", (model.TEX, model.TEX), (0, 0, 0, 0))
     for index, (cube, face, x, y, fw, fh, (u, v)) in enumerate(texels(model.BONES)):
         material = cube["material"]
+        cube_side[0] = cube["origin"][0] + cube["size"][0] / 2
         salt = sum(map(ord, material)) + int(cube["origin"][0] * 7 + cube["origin"][1] * 13 + cube["origin"][2] * 17)
         color = MATERIALS[material](face, x, y, fw, fh, salt)
-        if (material, x, y) in PORES and face in ("front", "bottom"):
+        if (material, x, y) in PORES and face == "front":
             color = PORE
             glow.putpixel((u, v), PORE + (255,))
         image.putpixel((u, v), tuple(color) + (255,))
