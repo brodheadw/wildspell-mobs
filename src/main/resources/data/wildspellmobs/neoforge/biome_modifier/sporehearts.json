@@ -1,0 +1,6 @@
+{
+  "type": "neoforge:add_features",
+  "biomes": "#wildspellmobs:has_sporehearts",
+  "features": "wildspellmobs:sporeheart",
+  "step": "vegetal_decoration"
+}
