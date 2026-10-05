@@ -80,6 +80,9 @@ The player-facing description is [publish/DESCRIPTION.md](publish/DESCRIPTION.md
   sparkles in its coat's colours while it flies. The wings are bird-built (humerus, forearm, hand;
   tertials, secondaries, primaries, two covert rows), spread in the air and folded along the flank
   on the ground.
+  Herds come in twos to fives, and now and then one horse leads its herd up: every untamed adult within 24
+  blocks lifts off with it, climbs about 24 blocks and crosses the sky for half a minute in a loose V behind
+  the leader, then comes down and lands together. A rider, a leash or taming takes a horse out of the flight.
 - **Flytrap**: a snapping plant, half block and half entity. The block (`wildspellmobs:flytrap`,
   `age` 0-2) is the leaves and stalk; its jaws are `wildspellmobs:flytrap_head` entities (GeckoLib
   model) anchored to it, which never leave their place on the plant and turn to follow whatever moves

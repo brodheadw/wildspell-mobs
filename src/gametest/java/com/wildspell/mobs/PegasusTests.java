@@ -83,6 +83,38 @@ public class PegasusTests {
         });
     }
 
+    @GameTest(template = SKY, timeoutTicks = 300, batch = "pegasusHerd")
+    public static void aHerdTakesWingTogetherInFormation(GameTestHelper helper) {
+        Pegasus leader = helper.spawn(WildspellMobs.PEGASUS.get(), 15.5F, 0.0F, 15.5F);
+        Pegasus left = helper.spawn(WildspellMobs.PEGASUS.get(), 12.5F, 0.0F, 12.5F);
+        Pegasus right = helper.spawn(WildspellMobs.PEGASUS.get(), 18.5F, 0.0F, 12.5F);
+        double[] ground = {Double.NaN};
+        int[] joined = {-1};
+        int[] flown = {0};
+        helper.onEachTick(() -> {
+            if (joined[0] < 0 && leader.onGround() && left.onGround() && right.onGround()) {
+                ground[0] = leader.getY();
+                joined[0] = leader.startHerdFlight();
+            } else if (joined[0] > 0) {
+                ++flown[0];
+            }
+        });
+        helper.succeedWhen(() -> {
+            helper.assertTrue(joined[0] == 2, "two followers should join the flight, got " + joined[0]);
+            helper.assertTrue(flown[0] >= 60, "still taking off");
+            for (Pegasus horse : new Pegasus[] {leader, left, right}) {
+                helper.assertTrue(horse.getY() - ground[0] > 3.0, "a horse hasn't risen with the herd: " + (horse.getY() - ground[0]));
+            }
+            for (Pegasus follower : new Pegasus[] {left, right}) {
+                helper.assertTrue(follower.getHerdLeader() == leader, "a follower lost the herd");
+                double off = follower.position().distanceTo(leader.herdPlace(follower == left ? 0 : 1));
+                double offOther = follower.position().distanceTo(leader.herdPlace(follower == left ? 1 : 0));
+                helper.assertTrue(Math.min(off, offOther) < 6.0, "a follower is out of formation by " + Math.min(off, offOther));
+            }
+            helper.killAllEntities();
+        });
+    }
+
     @GameTest(template = SKY, timeoutTicks = 500, batch = "pegasusSoar")
     public static void wildPegasusSoarsAndComesBack(GameTestHelper helper) {
         Pegasus pegasus = helper.spawn(WildspellMobs.PEGASUS.get(), 15.5F, 0.0F, 15.5F);
