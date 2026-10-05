@@ -84,6 +84,16 @@ The player-facing description is [publish/DESCRIPTION.md](publish/DESCRIPTION.md
   Herds come in twos to fives, and now and then one horse leads its herd up: every untamed adult within 24
   blocks lifts off with it, climbs about 24 blocks and crosses the sky for half a minute in a loose V behind
   the leader, then comes down and lands together. A rider, a leash or taming takes a horse out of the flight.
+- **Stemwalker**: a hostile creature of the mushroom fields' stem groves (`#wildspellmobs:stemwalker_spawns`:
+  mushroom fields and `#c:is_mushroom`; on soil, in the dark, one to three). It is one of the grove's stems, white
+  and twelve blocks tall with red cap pads, and stands among the real ones; only a wetter pad, a seamed pad and
+  gill-like joints give it away. It never moves while any player is looking anywhere along its length, and it
+  freezes mid-lean or half-sunk. A player within 10 blocks, or a blow, wakes every stemwalker within 32 blocks,
+  and they turn their pads to the quarry. They don't walk: out of reach (3.5-9.5 blocks), one sinks into the soil
+  and rises as a stem 5-7.5 blocks from its quarry, behind them if it can. In reach it creaks, leans for a second
+  and slams its cap 6.5 blocks out: 9 damage, blindness and nausea to everything within 2.5 blocks. 60 health,
+  6 armour, no knockback. Drops mushroom stems and red mushroom blocks, and red mushrooms to a player.
+  `tools/make_stemwalker_model.py` and `paint_stemwalker.py` generate its model, animations and texture.
 - **Flytrap**: a snapping plant, half block and half entity. The block (`wildspellmobs:flytrap`,
   `age` 0-2) is the leaves and stalk; its jaws are `wildspellmobs:flytrap_head` entities (GeckoLib
   model) anchored to it, which never leave their place on the plant and turn to follow whatever moves
