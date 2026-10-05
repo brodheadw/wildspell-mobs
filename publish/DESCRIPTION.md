@@ -48,6 +48,7 @@ A great winged horse, a little bigger than a horse, grazing the meadows of the A
 - In flight its wings spread wide and it leaves a trail of tiny sparkles; on the ground it folds them along its back.
 - It never takes fall damage, so walking off the edge of an island is a glide, not a fall.
 - Wild ones sometimes spread their wings and circle up over the meadow before coming back down, and take to the air when struck.
+- Now and then a whole herd takes wing together: one horse leads, the rest fall in behind it in a loose V, and they cross the sky for half a minute before landing together.
 
 ## Flytrap
 A snapping flytrap of the jungle floor and the Lush Caves. It never moves, but its jaws turn to follow anything that does.
@@ -59,7 +60,7 @@ A snapping flytrap of the jungle floor and the Lush Caves. It never moves, but i
 - Break it and you get a **Flytrap Sprout** to plant your own, and from a grown plant, **Trap Jaws**.
 
 ## Apollo
-Fly higher above the Aether than anything was built to reach, at noon, and stare into the sun. Hold it. Something steps out of the glare: a gilded statue of a god, smiling the old archaic smile, light leaking through the cracks in his gold, a crown of rays burning behind his head.
+The Aether's Sun Spirits are the sun's wardens, and the sun ignores anyone who hasn't brought down four of them. After that, fly higher above the Aether than anything was built to reach, at noon, and stare into the sun. Hold it. Something steps out of the glare: a gilded statue of a god, smiling the old archaic smile, light leaking through the cracks in his gold, a crown of rays burning behind his head.
 - **The fight:** there's nothing up there to stand on and nowhere to hide. He keeps himself between you and the sun, so you're always squinting into it. He plucks rays from his crown and hurls them (watch his crown empty and regrow), sends a burning-glass point of focused sunlight crawling after you, and when his corona swells, **look away**: whoever is facing him when it flares is burned and blinded.
 - **The choice:** beaten, he lowers his rays and offers to buy his life. Put your weapon away and he pays you and leaves (he'll remember, and be warier if you meet again). Strike him and the sky warns you. Strike him again and he dies, and **the sun goes out in your world forever**. It's always night after that.
 - Bring friends: anyone flying up there joins the fight. If everyone leaves or falls, he goes back into the sun and the fight starts over next time.
@@ -71,6 +72,13 @@ The same climb by night, gazing at the moon, calls the huntress. A horn sounds, 
 - **Her face is the moon.** It wanes as you hurt her. She can't be killed: bring her low and she yields, or survive until dawn and she lowers her bow. Either way, she won't forget it.
 - If the sun has been put out in your world, she meets you grieving, and whoever killed her brother gets no dawn.
 
+## Stemwalker and Sporeheart
+Deep in the stem groves of the mushroom fields, one stem in a great many has a wound in it: a **Sporeheart**, split open on dark gills. By day it sleeps. At night it wakes, and when you come near it raises **Stemwalkers** out of the soil around you.
+- A Stemwalker is a gaunt, hunched thing about three blocks tall, all pale stem and grey mycelium, its head its own stem split down the face over two dim pores. It stalks you and strikes overhead, and its head parts like jaws as it does.
+- **While its heart lives, it can't be hurt.** Hit it and it only shrugs, and a thread of mycelium and spores runs along the ground back to the heart. Follow the thread.
+- Break the Sporeheart and its walkers crumble. At dawn they sink back into the soil anyway.
+- The heart drops red mushrooms, or itself to Silk Touch.
+
 ## Drops
 - **Enchanted Ice Crystal:** YUNG's Enchanted Ice now drops one when mined normally, on top of its burst of experience. Silk Touch still gives the block.
 - **Ice:** YUNG's Ice Cubes now shatter into Ice when killed.
@@ -80,8 +88,8 @@ Creepers and other monsters are thinned out underground, including a local cap s
 
 ## Requirements
 - NeoForge 1.21.1
-- **GeckoLib** (the Ice Lich's, the Flytrap's and the gods' models and animations)
-- **The Aether** (optional): where the gods are met. Diana needs the Aether's nights, which come once its Sun Spirit has fallen.
+- **GeckoLib** (the Ice Lich's, the Flytrap's, the Stemwalker's and the gods' models and animations)
+- **The Aether** (optional): where the gods are met. Apollo answers only after four Sun Spirits have fallen, and Diana needs the Aether's nights, which come once its Sun Spirit has fallen.
 - **YUNG's Cave Biomes** (optional, but it's where the cold-cave mobs spawn and where the lich's crypts generate). Without it you still get the Luminous Moth, the spawn eggs and the cave spawn balancing.
 - **Creeper Overhaul** (optional): Snowy Creepers in the Frosted Caves.
 
