@@ -190,7 +190,7 @@ The player-facing description is [publish/DESCRIPTION.md](publish/DESCRIPTION.md
   - `entity/`: `RimeSkull`, `FrozenZombie`, `IceLich`, `LichWisp` (its soul in flight), `FrostShard`
     (every frost projectile), `Frost` (the shared freezing rules), `ElectricEel`, `FlytrapHead`,
     `ColdEffects` (spot searches and shared effects), `ThrustMoveControl` (the flyers' steering),
-    `MotionSense` (what moved, for the moth and the flytrap).
+    `MotionSense` (what moved, for the moth and the flytrap), `Stemwalker`.
   - `crypt/`: the crypt structure and its piece, the phylactery block and its block entity (ambushes,
     re-forming, the braziers, the wards).
   - `item/`: `FrostboundStaffItem`, `SoulseekerItem` and its recipe type.
@@ -199,6 +199,8 @@ The player-facing description is [publish/DESCRIPTION.md](publish/DESCRIPTION.md
   - `gods/`: the sun and moon gods' arrival (`Gaze`: where the sun and moon stand, who is gazing) and their world
     state (`Heavens`: the slain sun and holding the night, the spared marks, Diana's hunt); `Apollo`, `Diana`,
     `SolarRay` and `MoonArrow` are in `entity/`.
+  - `grove/`: the Sporeheart block, its block entity (waking at night, raising and felling its walkers) and its
+    world-generation feature (the base of a tall grove stem); the Stemwalker is in `entity/`.
   - `client/`: models, renderers, the frost mote particle.
 - `src/main/resources/`: textures, sounds, lang, loot tables, biome modifiers and biome tags.
 - `tools/`: generators for the art and sound. Edit these, not the PNG/OGG files directly.
@@ -224,6 +226,9 @@ The player-facing description is [publish/DESCRIPTION.md](publish/DESCRIPTION.md
     the corona's haze is a translucent glow over nothing), and the solar ray.
   - `make_diana_model.py`, `paint_diana.py` (needs Pillow): Diana's GeckoLib model and animations, her ten textures
     (five moon phases, plain and grieving; the moon is lit per texel from its sphere normal) and the moonlit arrow.
+  - `make_stemwalker_model.py`, `paint_stemwalker.py`, `paint_sporeheart.py` (needs Pillow and numpy): the
+    Stemwalker's GeckoLib model and animations, its texture and glowmask (the pores), and the Sporeheart's
+    dormant, alive and top textures.
   - `make_arena.py`: the empty gametest arena structures (the small arena, and the tall sky arena flight
     tests need).
 - `publish/`: Modrinth/CurseForge page text, icon and gallery image.
@@ -257,7 +262,11 @@ or mud, and its patches generating in jungles and lush caves with their heads), 
 stand and only a gaze from the god sky's heights counting, Apollo conceding instead of dying, sparing him marking the
 player and leaving him wary, the warning blow and the killing blow putting out the sun and the night holding, Diana
 yielding instead of dying and the hunt being recorded, dawn releasing the quarry but not the sun's killers, the glint
-showing for the whole draw and cover holding the shot, and her grief in a sunless world). They need
+showing for the whole draw and cover holding the shot, her grief in a sunless world, and the sun answering only
+after its wardens fall), the Pegasus herd taking wing in formation, and the Stemwalker and Sporeheart (the heart
+waking only at night in its stem, a bound walker shrugging off blows until its heart breaks, the heart raising a
+walker on soil near its quarry, dawn sinking the bound, an unbound walker bleeding, and the heart taking only a
+tall stem's base). They need
 YUNG's Cave Biomes and its
 dependencies at dev runtime: put `YungsCaveBiomes`, `YungsApi`, `geckolib` and `TerraBlender` jars
 for NeoForge 1.21.1 in `libs/` (gitignored, never shipped; GeckoLib is compiled against from its Maven, so a
