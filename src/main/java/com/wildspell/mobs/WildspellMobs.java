@@ -229,6 +229,21 @@ public class WildspellMobs {
     public static final DeferredHolder<Feature<?>, FlytrapPatchFeature> FLYTRAP_PATCH =
             FEATURES.register("flytrap_patch", FlytrapPatchFeature::new);
 
+    public static final DeferredHolder<Feature<?>, com.wildspell.mobs.grove.SporeheartFeature> SPOREHEART_FEATURE =
+            FEATURES.register("sporeheart", com.wildspell.mobs.grove.SporeheartFeature::new);
+
+    public static final DeferredHolder<Block, com.wildspell.mobs.grove.SporeheartBlock> SPOREHEART = BLOCKS.register("sporeheart",
+            () -> new com.wildspell.mobs.grove.SporeheartBlock(BlockBehaviour.Properties.of()
+                    .mapColor(MapColor.WOOL)
+                    .strength(2.5F, 6.0F)
+                    .sound(SoundType.WART_BLOCK)
+                    .lightLevel(state -> state.getValue(com.wildspell.mobs.grove.SporeheartBlock.ACTIVE) ? 5 : 0)));
+
+    public static final DeferredItem<net.minecraft.world.item.BlockItem> SPOREHEART_ITEM = ITEMS.registerSimpleBlockItem(SPOREHEART);
+
+    public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<com.wildspell.mobs.grove.SporeheartBlockEntity>> SPOREHEART_ENTITY =
+            BLOCK_ENTITY_TYPES.register("sporeheart", () -> BlockEntityType.Builder.of(com.wildspell.mobs.grove.SporeheartBlockEntity::new, SPOREHEART.get()).build(null));
+
     public static final DeferredHolder<EntityType<?>, EntityType<Apollo>> APOLLO = ENTITY_TYPES.register("apollo",
             () -> EntityType.Builder.of(Apollo::new, MobCategory.MONSTER)
                     .sized(1.0F, 3.4F)
@@ -247,9 +262,9 @@ public class WildspellMobs {
 
     public static final DeferredHolder<EntityType<?>, EntityType<Stemwalker>> STEMWALKER = ENTITY_TYPES.register("stemwalker",
             () -> EntityType.Builder.of(Stemwalker::new, MobCategory.MONSTER)
-                    .sized(0.98F, 12.0F)
-                    .eyeHeight(11.5F)
-                    .clientTrackingRange(12)
+                    .sized(0.7F, 2.9F)
+                    .eyeHeight(2.5F)
+                    .clientTrackingRange(10)
                     .build("stemwalker"));
 
     public static final DeferredHolder<EntityType<?>, EntityType<Diana>> DIANA = ENTITY_TYPES.register("diana",
@@ -404,8 +419,6 @@ public class WildspellMobs {
     }
 
     private static void registerSpawnPlacements(RegisterSpawnPlacementsEvent event) {
-        event.register(STEMWALKER.get(), SpawnPlacementTypes.ON_GROUND, Heightmap.Types.MOTION_BLOCKING_NO_LEAVES,
-                Stemwalker::checkStemwalkerSpawnRules, RegisterSpawnPlacementsEvent.Operation.REPLACE);
         event.register(RIME_SKULL.get(), SpawnPlacementTypes.NO_RESTRICTIONS, Heightmap.Types.MOTION_BLOCKING_NO_LEAVES,
                 RimeSkull::checkRimeSkullSpawnRules, RegisterSpawnPlacementsEvent.Operation.REPLACE);
         event.register(FROZEN_ZOMBIE.get(), SpawnPlacementTypes.ON_GROUND, Heightmap.Types.MOTION_BLOCKING_NO_LEAVES,
@@ -422,6 +435,7 @@ public class WildspellMobs {
         if (event.getTabKey() == CreativeModeTabs.SPAWN_EGGS) {
             event.accept(RIME_SKULL_SPAWN_EGG);
             event.accept(STEMWALKER_SPAWN_EGG);
+            event.accept(SPOREHEART_ITEM);
             event.accept(FROZEN_ZOMBIE_SPAWN_EGG);
             event.accept(ICE_LICH_SPAWN_EGG);
             event.accept(LUMINOUS_MOTH_SPAWN_EGG);
