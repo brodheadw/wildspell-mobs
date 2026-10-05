@@ -1,10 +1,6 @@
-import glob
-import io
 import math
 import os
-import random
 import sys
-import zipfile
 
 from PIL import Image
 
@@ -14,152 +10,124 @@ from geckolib_model import texels  # noqa: E402
 from painting import mix  # noqa: E402
 
 OUT = "src/main/resources/assets/wildspellmobs/textures/entity"
-CLIENT = glob.glob(os.path.expanduser("~/.gradle/caches/neoformruntime/artifacts/minecraft_1.21.1_client.jar"))[0]
 
-with zipfile.ZipFile(CLIENT) as jar:
-    def vanilla(name):
-        return Image.open(io.BytesIO(jar.read(f"assets/minecraft/textures/block/{name}.png"))).convert("RGBA")
-    STEM = vanilla("mushroom_stem")
-    CAP = vanilla("red_mushroom_block")
-    INSIDE = vanilla("mushroom_block_inside")
-
-SEAM_SEGMENTS = range(1, 11)
-SEAM_COLUMN = 6
-STAIN_FACE = "left"
-SEAM_FACE = "back"
-TOWARD_STEM = {(1, 0): "right", (-1, 0): "left", (0, 1): "front", (0, -1): "back"}
+STEM = [(122, 114, 108), (160, 152, 142), (190, 182, 170), (210, 203, 190), (226, 220, 208)]
+MYCELIUM = [(70, 60, 74), (98, 88, 102), (128, 118, 130), (156, 148, 156)]
+CAP = [(64, 10, 12), (92, 16, 18), (122, 24, 24), (150, 34, 30), (176, 52, 44)]
+SPOT = (206, 192, 170)
+GILL = [(34, 14, 18), (54, 22, 26), (78, 34, 36), (104, 52, 50)]
+PORE = (222, 236, 186)
+PORES = {("gill_face", 2, 1), ("gill_face", 5, 2), ("gills", 3, 6)}
 
 
-def hash01(*v):
-    h = 2166136261
-    for n in v:
-        h = ((h ^ (n & 0xFFFFFFFF)) * 16777619) & 0xFFFFFFFF
-    return h / 0xFFFFFFFF
+def h(x, y, salt):
+    v = (x * 73856093) ^ (y * 19349663) ^ (salt * 83492791)
+    return ((v * 2654435761) & 0xFFFFFFFF) / 0xFFFFFFFF
 
 
-def px(img, x, y):
-    return img.getpixel((x % 16, y % 16))[:3]
+def ramp(palette, level):
+    return palette[int(round(max(0.0, min(1.0, level)) * (len(palette) - 1)))]
 
 
-def shade(color, k):
-    return tuple(max(0, min(255, int(c * k))) for c in color)
+SHADE = {"top": 0.12, "front": 0.0, "back": -0.06, "left": -0.04, "right": -0.04, "bottom": -0.25}
 
 
-def stem_side(k, face, x, y):
-    color = px(STEM, x, y)
-    if face == SEAM_FACE and k in SEAM_SEGMENTS:
-        wobble = 1 if hash01(k, y // 5, 3) > 0.7 else 0
-        col = SEAM_COLUMN + wobble
-        broken = hash01(k, y, 11) > 0.86
-        if x == col and not broken:
-            color = mix(color, (150, 128, 122), 0.42)
-        elif x == col + 1 and not broken and hash01(k, y, 5) > 0.45:
-            color = mix(color, (226, 220, 214), 0.5)
-    if face == STAIN_FACE:
-        drop = (1 - k) * 16 + y
-        if 0 <= drop < 26:
-            centre = 8.5 + 0.8 * math.sin(drop * 0.45)
-            width = 2.6 * (1 - drop / 30)
-            d = abs(x + 0.5 - centre)
-            if d < width:
-                wet = (1 - d / width) * (1 - drop / 34)
-                color = mix(color, (172, 160, 136), 0.55 * wet)
-                if d < 0.6 and hash01(x, drop, 9) > 0.55:
-                    color = mix(color, (238, 234, 226), 0.7)
+def stem(face, x, y, fw, fh, salt, dark=0.0):
+    grain = h(x, 0, salt) * 0.5 + h(x, y // 3, salt + 1) * 0.25
+    level = 0.62 + 0.25 * grain - 0.18 * (y / max(1, fh - 1)) ** 2 + SHADE[face] - dark
+    if h(x, y, salt + 2) > 0.94:
+        level -= 0.25
+    color = ramp(STEM, level)
+    if face == "bottom" or (y >= fh - 1 and fh > 3):
+        color = mix(color, MYCELIUM[2], 0.5)
     return color
 
 
-def raw_inside(x, y, wet):
-    color = px(INSIDE, x, y)
-    if wet:
-        d = math.hypot(x - 7.5, y - 7.5) / 8
-        color = mix(color, (150, 98, 78), max(0.0, 0.55 - 0.45 * d))
-        if hash01(x, y, 21) > 0.9:
-            color = mix(color, (244, 226, 206), 0.6)
+def trunk(face, x, y, fw, fh, salt):
+    twist = (x + y // 2) % max(2, fw)
+    color = veined(face, twist, y, fw, fh, salt, 0.3)
+    if face != "front" and h(twist, y // 3, salt + 11) > 0.8:
+        color = mix(color, MYCELIUM[1], 0.55)
+    if face == "front" and x == fw // 2 and 2 <= y <= fh - 2:
+        color = mix(color, GILL[0], 0.75)
+    if face == "front" and abs(x - fw // 2) == 1 and 3 <= y <= fh - 3 and h(x, y, salt) > 0.5:
+        color = mix(color, GILL[2], 0.4)
     return color
 
 
-def gills(x, y):
-    dx, dy = x - 7.5, y - 7.5
-    r = math.hypot(dx, dy)
-    if r < 1.6:
-        return (196, 172, 150)
-    a = math.atan2(dy, dx)
-    lamella = 0.5 + 0.5 * math.cos(a * 14 + 0.4 * math.sin(r))
-    base = mix((68, 34, 30), (170, 120, 96), lamella ** 1.6)
-    base = mix(base, (120, 38, 34), max(0.0, (r - 6.0) / 2.5))
-    if lamella > 0.92 and hash01(x, y, 31) > 0.5:
-        base = mix(base, (250, 222, 210), 0.55)
-    return base
+def root(face, x, y, fw, fh, salt):
+    level = 0.35 + 0.5 * h(x, y, salt) + SHADE[face]
+    return ramp(MYCELIUM, level)
 
 
-def cap(i, x, y, face, wet):
-    rot = (i * 5 + {"top": 0, "front": 1, "back": 2, "left": 3, "right": 1, "bottom": 2}[face]) % 4
-    sx, sy = [(x, y), (15 - y, x), (15 - x, 15 - y), (y, 15 - x)][rot]
-    color = px(CAP, sx, sy)
-    if not wet:
-        return color
-    spot = color[1] > 120
-    color = shade(color, 0.86) if not spot else mix(color, (236, 150, 146), 0.55)
-    color = mix(color, (150, 14, 22), 0.25)
-    if face != "bottom" and y < 2 and hash01(x, y, i) > 0.6:
-        color = mix(color, (255, 214, 206), 0.6)
-    if face not in ("top", "bottom") and y > 12:
-        color = shade(color, 0.85 - 0.04 * (y - 12))
-        if y == 15 and x in (5, 11):
-            color = mix(color, (230, 120, 110), 0.6)
+def finger(face, x, y, fw, fh, salt):
+    color = stem(face, x, y, fw, fh, salt, 0.12)
+    return mix(color, MYCELIUM[1], (y / max(1, fh - 1)) ** 1.5)
+
+
+def cap(face, x, y, fw, fh, salt):
+    if face == "bottom":
+        return gills(face, x, y, fw, fh, salt)
+    light = 0.55 + SHADE[face] * 1.5 + 0.2 * (h(x // 2, y // 2, salt) - 0.5)
+    if face != "top":
+        light -= 0.25 * (y / max(1, fh - 1))
+    color = ramp(CAP, light)
+    if h(x // 2, y // 2, salt + 7) > 0.92 and h(x, y, salt + 3) > 0.35:
+        color = mix(color, SPOT, 0.8 if face == "top" else 0.6)
+    if face == "top" and h(x, y, salt + 9) > 0.97:
+        color = mix(color, (240, 190, 180), 0.5)
     return color
 
 
-def joint(x, y):
-    strand = 0.5 + 0.5 * math.sin(x * 1.9 + 3 * hash01(x, 0, 41))
-    color = mix((128, 108, 96), (214, 200, 186), strand)
-    if hash01(x, y, 43) > 0.82:
-        color = mix(color, (174, 120, 110), 0.5)
+def gills(face, x, y, fw, fh, salt):
+    if face == "top":
+        return ramp(CAP, 0.4)
+    lamella = (x % 2 == 0) if face in ("front", "back", "bottom") else (y % 2 == 0)
+    level = (0.6 if lamella else 0.15) + 0.2 * (h(x, y, salt) - 0.5)
+    return ramp(GILL, level)
+
+
+def veined(face, x, y, fw, fh, salt, reach):
+    color = stem(face, x, y, fw, fh, salt, 0.04)
+    climb = (y / max(1, fh - 1)) - (1.0 - reach)
+    vein = h(x, 0, salt + 5) > 0.45 and h(x, y // 2, salt + 6) > 0.35
+    if climb > 0 and (vein or climb > 0.5):
+        color = mix(color, MYCELIUM[1 if vein else 2], min(0.85, 0.35 + climb))
     return color
 
 
-def glint(i, face, x, y):
-    if i != model.WET_PAD or face in ("bottom",):
-        return 0
-    if (face, x, y) in {("top", 4, 9), ("top", 11, 3), ("left", 3, 0), ("front", 12, 1), ("back", 6, 0)}:
-        return 120
-    return 0
+def shard(face, x, y, fw, fh, salt):
+    color = stem(face, x, y, fw, fh, salt, 0.12)
+    return mix(color, GILL[1], 0.6) if y == 0 or face == "top" else color
 
 
-def paint():
-    img = Image.new("RGBA", (model.TEX, model.TEX), (0, 0, 0, 0))
+def thread(face, x, y, fw, fh, salt):
+    return mix(ramp(MYCELIUM, 0.5 + 0.3 * h(x, y, salt)), STEM[3], (y / max(1, fh - 1)) * 0.4)
+
+
+MATERIALS = {
+    "stem": lambda f, x, y, fw, fh, s: veined(f, x, y, fw, fh, s, 0.35), "stem_thin": lambda f, x, y, fw, fh, s: stem(f, x, y, fw, fh, s, 0.06), "trunk": trunk, "root": root, "finger": finger,
+    "thigh": lambda f, x, y, fw, fh, s: veined(f, x, y, fw, fh, s, 0.25),
+    "shin": lambda f, x, y, fw, fh, s: veined(f, x, y, fw, fh, s, 0.85),
+    "shard": shard,
+    "cap": cap, "cap_brim": cap, "gills": gills, "gill_face": gills, "thread": thread,
+}
+
+
+def main():
+    image = Image.new("RGBA", (model.TEX, model.TEX), (0, 0, 0, 0))
     glow = Image.new("RGBA", (model.TEX, model.TEX), (0, 0, 0, 0))
-    pads = {f"pad{i}": (i, dx, dz) for i, (_, dx, dz, _) in enumerate(model.PADS)}
-    for cube, face, x, y, fw, fh, (u, v) in texels(model.BONES):
-        m = cube["material"]
-        if m.startswith("stem"):
-            k = int(m[4:])
-            if face in ("top", "bottom"):
-                color = raw_inside(x, y, k == model.SEGMENTS - 1 and face == "top")
-            else:
-                color = stem_side(k, face, x, y)
-        elif m == "crown":
-            color = gills(x, y) if face == "bottom" else cap(len(model.PADS), x, y, face, False)
-        elif m == "joint":
-            color = joint(x, y)
-        else:
-            i, dx, dz = pads[m]
-            wet = i == model.WET_PAD
-            if TOWARD_STEM.get((dx, dz)) == face:
-                color = raw_inside(x, y, wet)
-            else:
-                color = cap(i, x, y, face, wet)
-            a = glint(i, face, x, y)
-            if a:
-                glow.putpixel((u, v), (255, 226, 220, a))
-        img.putpixel((u, v), color + (255,))
-    os.makedirs(OUT, exist_ok=True)
-    img.save(f"{OUT}/stemwalker.png")
+    for index, (cube, face, x, y, fw, fh, (u, v)) in enumerate(texels(model.BONES)):
+        material = cube["material"]
+        salt = sum(map(ord, material)) + int(cube["origin"][0] * 7 + cube["origin"][1] * 13 + cube["origin"][2] * 17)
+        color = MATERIALS[material](face, x, y, fw, fh, salt)
+        if (material, x, y) in PORES and face in ("front", "bottom"):
+            color = PORE
+            glow.putpixel((u, v), PORE + (255,))
+        image.putpixel((u, v), tuple(color) + (255,))
+    image.save(f"{OUT}/stemwalker.png")
     glow.save(f"{OUT}/stemwalker_glowmask.png")
 
 
 if __name__ == "__main__":
-    random.seed(7)
-    paint()
-    print("stemwalker textures written")
+    main()

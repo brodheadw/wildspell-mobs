@@ -1,0 +1,10 @@
+{
+  "variants": {
+    "active=false": {
+      "model": "wildspellmobs:block/sporeheart"
+    },
+    "active=true": {
+      "model": "wildspellmobs:block/sporeheart_active"
+    }
+  }
+}
