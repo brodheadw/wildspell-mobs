@@ -1,13 +1,13 @@
 package com.wildspell.mobs;
 
 import com.wildspell.mobs.entity.Stemwalker;
+import com.wildspell.mobs.grove.SporeheartBlock;
+import com.wildspell.mobs.grove.SporeheartBlockEntity;
+import com.wildspell.mobs.grove.SporeheartFeature;
 import net.minecraft.core.BlockPos;
 import net.minecraft.gametest.framework.GameTest;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.server.level.ServerLevel;
-import net.minecraft.world.entity.EntityType;
-import net.minecraft.world.entity.MobSpawnType;
-import net.minecraft.world.entity.animal.Sheep;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.GameType;
 import net.minecraft.world.level.block.Blocks;
@@ -19,123 +19,120 @@ import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
 @PrefixGameTestTemplate(false)
 public class StemwalkerTests {
     private static final String SKY = "sky_arena";
+    private static final BlockPos HEART = new BlockPos(15, 2, 15);
 
-    private static void grove(GameTestHelper helper) {
+    private static SporeheartBlockEntity grove(GameTestHelper helper, int stemAbove) {
         for (int x = 0; x < 31; ++x) {
             for (int z = 0; z < 31; ++z) {
                 helper.setBlock(x, 0, z, Blocks.MYCELIUM);
             }
         }
+        helper.setBlock(HEART.below(), Blocks.MUSHROOM_STEM);
+        helper.setBlock(HEART, WildspellMobs.SPOREHEART.get());
+        for (int y = 1; y <= stemAbove; ++y) {
+            helper.setBlock(HEART.above(y), Blocks.MUSHROOM_STEM);
+        }
+        return (SporeheartBlockEntity) helper.getBlockEntity(HEART);
     }
 
-    private static Stemwalker stem(GameTestHelper helper, double x, double z) {
-        Stemwalker stem = helper.spawn(WildspellMobs.STEMWALKER.get(), new Vec3(x, 1.0, z));
-        stem.setNoAi(true);
-        return stem;
+    private static void at(GameTestHelper helper, long time) {
+        helper.getLevel().setDayTime(time);
+        WildspellMobsTests.onFinish(helper, () -> helper.getLevel().setDayTime(6000L));
     }
 
-    private static Player player(GameTestHelper helper, double x, double z, Vec3 lookAt) {
+    private static void pulse(GameTestHelper helper, SporeheartBlockEntity heart) {
+        heart.pulse(helper.getLevel(), helper.getBlockState(HEART));
+    }
+
+    private static Stemwalker bound(GameTestHelper helper, SporeheartBlockEntity heart) {
+        Stemwalker walker = helper.spawn(WildspellMobs.STEMWALKER.get(), new Vec3(20.5, 1.0, 15.5));
+        walker.setNoAi(true);
+        walker.bindTo(heart.getBlockPos());
+        return walker;
+    }
+
+    @GameTest(template = SKY, batch = "sporeheartNight")
+    public static void theHeartWakesOnlyAtNightInsideAStem(GameTestHelper helper) {
+        at(helper, 18000L);
+        SporeheartBlockEntity heart = grove(helper, 6);
+        pulse(helper, heart);
+        helper.assertTrue(helper.getBlockState(HEART).getValue(SporeheartBlock.ACTIVE), "a heart in its stem at night stayed dormant");
+        helper.setBlock(HEART.above(), Blocks.AIR);
+        pulse(helper, heart);
+        helper.assertFalse(helper.getBlockState(HEART).getValue(SporeheartBlock.ACTIVE), "a heart cut out of its stem stayed awake");
+        helper.succeed();
+    }
+
+    @GameTest(template = SKY, batch = "sporeheartNight")
+    public static void aBoundWalkerShrugsOffBlowsUntilItsHeartBreaks(GameTestHelper helper) {
+        at(helper, 18000L);
+        SporeheartBlockEntity heart = grove(helper, 6);
+        pulse(helper, heart);
+        Stemwalker walker = bound(helper, heart);
         Player player = helper.makeMockPlayer(GameType.SURVIVAL);
-        Vec3 at = helper.absoluteVec(new Vec3(x, 1.0, z));
-        player.moveTo(at.x, at.y, at.z, 0.0F, 0.0F);
-        player.lookAt(net.minecraft.commands.arguments.EntityAnchorArgument.Anchor.EYES, helper.absoluteVec(lookAt));
-        return player;
+        walker.hurt(helper.getLevel().damageSources().playerAttack(player), 12.0F);
+        helper.assertTrue(walker.getHealth() == walker.getMaxHealth(), "a walker with a living heart took the blow");
+        helper.destroyBlock(HEART);
+        helper.assertTrue(walker.isDeadOrDying(), "breaking the heart didn't fell its walker");
+        helper.succeed();
     }
 
-    @GameTest(template = SKY, batch = "stemwalker")
-    public static void itSeesBeingSeenUpAndDownItsLength(GameTestHelper helper) {
-        grove(helper);
-        Stemwalker stem = stem(helper, 15.5, 15.5);
-        helper.assertTrue(Stemwalker.sees(player(helper, 15.5, 9.5, new Vec3(15.5, 2.0, 15.5)), stem), "looking at its foot didn't count");
-        helper.assertTrue(Stemwalker.sees(player(helper, 15.5, 9.5, new Vec3(15.5, 12.0, 15.5)), stem), "looking up at its crown didn't count");
-        helper.assertFalse(Stemwalker.sees(player(helper, 15.5, 9.5, new Vec3(15.5, 2.0, 2.5)), stem), "looking away counted");
+    @GameTest(template = SKY, batch = "sporeheartNight")
+    public static void theHeartRaisesAWalkerNearItsQuarry(GameTestHelper helper) {
+        at(helper, 18000L);
+        SporeheartBlockEntity heart = grove(helper, 6);
+        pulse(helper, heart);
+        Player player = helper.makeMockPlayer(GameType.SURVIVAL);
+        player.moveTo(helper.absoluteVec(new Vec3(15.5, 1.0, 26.5)));
+        Stemwalker walker = heart.summon(helper.getLevel(), player);
+        helper.assertTrue(walker != null, "the heart raised nothing");
+        helper.assertTrue(heart.getBlockPos().equals(walker.getHeart()) && heart.bound().contains(walker.getUUID()), "the walker isn't bound to its heart");
+        helper.assertTrue(walker.getPhase() == Stemwalker.EMERGING, "it didn't rise out of the ground");
+        double away = walker.position().subtract(Vec3.atBottomCenterOf(heart.getBlockPos())).horizontalDistance();
+        helper.assertTrue(away >= SporeheartBlockEntity.NEAREST - 1 && away <= SporeheartBlockEntity.FARTHEST + 1, "it rose " + away + " from its heart");
+        helper.assertTrue(SporeheartFeature.soil(helper.getLevel().getBlockState(walker.blockPosition().below())), "it rose out of something that isn't soil");
         helper.killAllEntities();
         helper.succeed();
     }
 
-    @GameTest(template = SKY, batch = "stemwalker")
-    public static void strikingOneWakesTheGrove(GameTestHelper helper) {
-        grove(helper);
-        Stemwalker struck = stem(helper, 5.5, 5.5);
-        Stemwalker near = stem(helper, 25.5, 25.5);
-        Player player = player(helper, 8.5, 8.5, new Vec3(5.5, 2.0, 5.5));
-        helper.assertTrue(near.getAction() == Stemwalker.DORMANT, "a grove stem started awake");
-        struck.hurt(helper.getLevel().damageSources().playerAttack(player), 2.0F);
-        helper.assertTrue(near.getAction() == Stemwalker.AWAKE && near.getQuarry() == player, "the rest of the grove didn't wake to the blow");
+    @GameTest(template = SKY, batch = "sporeheartDay", timeoutTicks = 200)
+    public static void atDawnTheBoundSinkAway(GameTestHelper helper) {
+        at(helper, 6000L);
+        SporeheartBlockEntity heart = grove(helper, 6);
+        Stemwalker walker = bound(helper, heart);
+        helper.succeedWhen(() -> helper.assertTrue(walker.isRemoved() && !walker.isDeadOrDying(), "the walker lingered past dawn"));
+    }
+
+    @GameTest(template = SKY, batch = "sporeheartDay")
+    public static void anUnboundWalkerBleeds(GameTestHelper helper) {
+        Stemwalker walker = helper.spawn(WildspellMobs.STEMWALKER.get(), new Vec3(15.5, 1.0, 15.5));
+        walker.setNoAi(true);
+        walker.hurt(helper.getLevel().damageSources().generic(), 6.0F);
+        helper.assertTrue(walker.getHealth() < walker.getMaxHealth(), "a walker with no heart shrugged off a blow");
         helper.killAllEntities();
         helper.succeed();
     }
 
-    @GameTest(template = SKY, batch = "stemwalker")
-    public static void watchedItHoldsUnwatchedItLeansAndSlams(GameTestHelper helper) {
-        grove(helper);
+    @GameTest(template = SKY, batch = "sporeheartDay")
+    public static void theHeartTakesTheBaseOfATallGroveStem(GameTestHelper helper) {
         ServerLevel level = helper.getLevel();
-        Stemwalker stem = stem(helper, 15.5, 8.5);
-        Player player = player(helper, 15.5, 15.0, new Vec3(15.5, 2.0, 8.5));
-        stem.wake(player);
-        for (int i = 0; i < 40; ++i) {
-            stem.step(level, true);
+        for (int x = 0; x < 31; ++x) {
+            for (int z = 0; z < 31; ++z) {
+                helper.setBlock(x, 0, z, Blocks.MYCELIUM);
+            }
         }
-        helper.assertTrue(stem.getAction() == Stemwalker.AWAKE, "it moved while watched");
-        stem.step(level, false);
-        helper.assertTrue(stem.getAction() == Stemwalker.LEANING, "unwatched and in reach, it didn't lean");
-        for (int i = 0; i < 5; ++i) {
-            stem.step(level, false);
+        for (int y = 1; y <= 9; ++y) {
+            helper.setBlock(5, y, 5, Blocks.MUSHROOM_STEM);
         }
-        int leaned = stem.actionTicks();
-        for (int i = 0; i < 40; ++i) {
-            stem.step(level, true);
+        helper.setBlock(5, 10, 5, Blocks.RED_MUSHROOM_BLOCK);
+        for (int y = 1; y <= 3; ++y) {
+            helper.setBlock(20, y, 20, Blocks.MUSHROOM_STEM);
         }
-        helper.assertTrue(stem.getAction() == Stemwalker.LEANING && stem.actionTicks() == leaned, "the lean went on while watched");
-        Vec3 impact = stem.impactPoint();
-        helper.assertTrue(impact.subtract(player.position()).horizontalDistance() < Stemwalker.SLAM_RADIUS, "the cap won't come down on the player");
-        Sheep sheep = EntityType.SHEEP.create(level);
-        sheep.moveTo(impact.x, impact.y, impact.z);
-        level.addFreshEntity(sheep);
-        float before = sheep.getHealth();
-        for (int i = 0; i < Stemwalker.LEAN_TICKS + Stemwalker.SLAM_TICKS + 2; ++i) {
-            stem.step(level, false);
-        }
-        helper.assertTrue(stem.getAction() == Stemwalker.RECOVERING, "it never slammed");
-        helper.assertTrue(sheep.getHealth() < before, "the slam missed what stood under the cap");
-        helper.killAllEntities();
-        helper.succeed();
-    }
-
-    @GameTest(template = SKY, batch = "stemwalker")
-    public static void outOfReachItSinksAndRisesNearTheQuarry(GameTestHelper helper) {
-        grove(helper);
-        ServerLevel level = helper.getLevel();
-        Stemwalker stem = stem(helper, 3.5, 3.5);
-        Player player = player(helper, 20.5, 20.5, new Vec3(27.5, 2.0, 27.5));
-        stem.wake(player);
-        stem.step(level, false);
-        helper.assertTrue(stem.getAction() == Stemwalker.SINKING, "far from its quarry, it didn't sink");
-        int sunk = stem.actionTicks();
-        for (int i = 0; i < 20; ++i) {
-            stem.step(level, true);
-        }
-        helper.assertTrue(stem.getAction() == Stemwalker.SINKING && stem.actionTicks() == sunk, "it kept sinking while watched");
-        for (int i = 0; i < Stemwalker.SINK_TICKS; ++i) {
-            stem.step(level, false);
-        }
-        helper.assertTrue(stem.getAction() == Stemwalker.RISING, "it never rose");
-        double away = stem.position().subtract(player.position()).horizontalDistance();
-        helper.assertTrue(away > Stemwalker.SLAM_NEAREST - 1.0 && away < Stemwalker.SLAM_FARTHEST, "it rose " + away + " from its quarry");
-        helper.assertFalse(Stemwalker.sees(player, stem), "it rose where its quarry was looking");
-        helper.killAllEntities();
-        helper.succeed();
-    }
-
-    @GameTest(template = SKY, batch = "stemwalker")
-    public static void itTakesRootOnlyInSoil(GameTestHelper helper) {
-        grove(helper);
-        helper.setBlock(4, 0, 4, Blocks.STONE);
-        ServerLevel level = helper.getLevel();
-        BlockPos soil = helper.absolutePos(new BlockPos(10, 1, 10));
-        BlockPos stone = helper.absolutePos(new BlockPos(4, 1, 4));
-        helper.assertTrue(Stemwalker.checkStemwalkerSpawnRules(WildspellMobs.STEMWALKER.get(), level, MobSpawnType.TRIAL_SPAWNER, soil, level.random), "no root in mycelium");
-        helper.assertFalse(Stemwalker.checkStemwalkerSpawnRules(WildspellMobs.STEMWALKER.get(), level, MobSpawnType.TRIAL_SPAWNER, stone, level.random), "took root in stone");
+        BlockPos tall = helper.absolutePos(new BlockPos(5, 0, 5));
+        BlockPos shortStem = helper.absolutePos(new BlockPos(20, 0, 20));
+        BlockPos base = SporeheartFeature.stemBase(level, tall.getX(), tall.getZ());
+        helper.assertTrue(base != null && base.equals(tall.above()), "the base of a tall stem wasn't found: " + base);
+        helper.assertTrue(SporeheartFeature.stemBase(level, shortStem.getX(), shortStem.getZ()) == null, "a stump took a heart");
         helper.succeed();
     }
 }
