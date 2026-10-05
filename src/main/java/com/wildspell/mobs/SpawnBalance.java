@@ -53,6 +53,29 @@ public final class SpawnBalance {
                     "and only the nearest crypt to a player stalks them.")
             .defineInRange("lichAmbushRange", 200, 16, 4096);
 
+    public static final ModConfigSpec.ConfigValue<String> GOD_SKY_DIMENSION = BUILDER
+            .comment("The dimension whose heights the sun and moon gods are met in, by id. The Aether's by default; it need not be",
+                    "installed (without it nobody can get there and neither god comes).")
+            .define("godSkyDimension", "aether:the_aether");
+
+    public static final ModConfigSpec.IntValue GOD_ARRIVAL_HEIGHT = BUILDER
+            .comment("How high (y) a player must be in that dimension to meet a god. The Aether's build limit is 256, so 400 can",
+                    "only be reached by flying. Dropping below it leaves Apollo's fight.")
+            .defineInRange("godArrivalHeight", 400, -64, 4096);
+
+    public static final ModConfigSpec.DoubleValue GOD_ZENITH_DEGREES = BUILDER
+            .comment("How near the top of the sky (degrees from straight up) the sun must stand for Apollo, or the moon for Diana.",
+                    "30 is roughly the two hours either side of noon or midnight.")
+            .defineInRange("godZenithDegrees", 30.0, 1.0, 90.0);
+
+    public static final ModConfigSpec.DoubleValue GOD_GAZE_DEGREES = BUILDER
+            .comment("How close (degrees) a player's gaze must hold to the sun or moon to call its god.")
+            .defineInRange("godGazeDegrees", 5.0, 0.5, 45.0);
+
+    public static final ModConfigSpec.IntValue GOD_GAZE_SECONDS = BUILDER
+            .comment("How many seconds in a row that gaze must hold (it is checked once a second).")
+            .defineInRange("godGazeSeconds", 3, 1, 60);
+
     static final ModConfigSpec SPEC = BUILDER.build();
 
     private static final Long2ObjectOpenHashMap<int[]> NEARBY = new Long2ObjectOpenHashMap<>();

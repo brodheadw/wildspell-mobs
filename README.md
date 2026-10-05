@@ -1,6 +1,7 @@
 # Wildspell Mobs
 
-Cold-cave monsters for YUNG's Cave Biomes' Frosted Caves, and a glowing moth for the Lush Caves, NeoForge 1.21.1. MIT licensed.
+Cold-cave monsters for YUNG's Cave Biomes' Frosted Caves, a glowing moth for the Lush Caves, and the sun and moon gods
+above the Aether, NeoForge 1.21.1. MIT licensed.
 The player-facing description is [publish/DESCRIPTION.md](publish/DESCRIPTION.md); Modrinth project
 `wildspell-mobs` (id `EAr8sZ9J`).
 
@@ -106,6 +107,51 @@ The player-facing description is [publish/DESCRIPTION.md](publish/DESCRIPTION.md
   `flytrap_patch_jungle` and `flytrap_patch_lush_caves`). Wildspell Magic places the block by id at
   any `age` at the edge of runaway growth (placing the grown stage builds its stem) and withers it to
   air on a reversal; `#wildspellmobs:hostile_growth` holds both blocks and the head.
+- **Apollo** (the sun; Apollo and Helios as one, the name is the one lang key `entity.wildspellmobs.apollo`): a
+  boss nothing spawns. Each second the server checks every player: in the god sky (`godSkyDimension`,
+  `aether:the_aether` by id, no compile dependency), above `godArrivalHeight` (400, past the Aether's 256 build
+  limit, so only flight gets there), with the sun within `godZenithDegrees` (30) of straight up, and their gaze
+  within `godGazeDegrees` (5) of the sun's real place in the sky (from the level's time of day, which the Aether's
+  own clock drives) for `godGazeSeconds` (3) checks running; a rising tone plays while the gaze holds. Then he
+  descends out of the glare beside them (GeckoLib model: a gilded archaic kouros with the archaic smile, light leaking
+  from cracks in the gold, beaded hair, a madder kilt with a meander border, and behind his head a radiate crown of
+  twelve alternating straight and wavy rays). One at a time per server; any player aloft within 96 blocks joins and
+  gets his boss bar; once nobody is left aloft near him (dead, fallen below the line, gone, logged out) for 5 seconds he
+  withdraws into the sun and the fight resets (he also withdraws if his chunk was saved mid-fight). He keeps himself
+  between his target and the sun, so to look at him is to look at the sun. Attacks: he plucks rays from his crown and
+  throws them (`wildspellmobs:solar_ray`, 5 damage and fire, deflectable; the crown visibly empties and regrows); he
+  holds out a palm and a burning-glass focus crawls toward his target through the air (outfly it, or it burns); and his
+  corona swells for 1.8 s and flares: anyone facing him (within 70 degrees) is burned, blinded and dazed, anyone looking
+  away is untouched. Close in and a searing pulse throws you off. Faster below half health. 300 health, fire immune.
+  At 15% (30% when wary) he concedes: no blow can kill him while he fights, and he offers to buy his life. The choice
+  is made in the world: every participant near him holding an empty main hand for 3 s spares him (or 60 s pass without
+  a blow, which he takes for mercy); striking him warns (a title, a red message, Darkness, a black ring drawn over the
+  real sun for each participant, 30 s) and a second strike in the warning kills him. Sneak was rejected as the gesture
+  because it dismounts a Pegasus or drops a creative flyer mid-air. **Spared:** each participant gets `apollo` in the
+  string list `wildspellmobs:spared` under `Player.PERSISTED_NBT_TAG` (kept through death; offline participants get it
+  at their next login) for Wildspell Magic to read; he grants nothing else, climbs back into the sun, and is wary
+  next time. **Killed:** the sun goes out in that world for good (world saved data `wildspellmobs_heavens`): the
+  overworld is set to night (time of day 18000) with the daylight cycle off, re-asserted every 2 s so beds and `/time`
+  can't bring the day back, and his gaze never calls him again. Whoever struck him in the concession is remembered.
+- **Diana** (the moon and the hunt): the same check turned over, at night with the moon near the top of the sky (any
+  phase: Aether nights only exist once its Sun Spirit has fallen, and its moon turns once per three-times-longer day,
+  so a full-moon rule would make her a once-in-eight-hours event). A goat horn sounds and she hunts whoever called her
+  (GeckoLib model: a lean huntress in an indigo chiton under a starry veil, her head the moon itself, and a crescent
+  bow). The hunt is world saved data, not the entity: fleeing doesn't end it. She follows the quarry down out of the
+  sky and across the land, into other dimensions and back after a logout; when she loses them (another dimension,
+  past 112 blocks, or unseen 15 s and far) she steps out through moonlight and finds their trail 5 s later, with the
+  horn. She snipes from 24-40 blocks up on a vantage with a clear line: each shot is drawn for 1.5 s with a glint of
+  moonlight where she draws (long-distance particles and a chime, so it shows from far off), aimed where the quarry
+  stands when she looses, so a watchful player can sidestep or break line of sight; with no line she holds the draw
+  1.5 s more, then relaxes. Moonlit arrows (`wildspellmobs:moon_arrow`) fly straight and fast (no gravity, about 8
+  damage). Cover is the refuge: with no vantage on her quarry she closes on where she last saw them, and up close slashes
+  with the bow's horn and leaps back, which is the moment to turn the hunt. Hurt past 40% her shots come in threes. She
+  can't be killed: at a quarter health she yields, kneels and leaves. Her face is her health: the moon on her head wanes
+  from full to new as she's hurt (five textures). The boss bar is the night left until dawn in the sky she was called
+  in. Surviving to that dawn, or bringing her low, records `diana` in the same `spared` list (pending for anyone
+  offline); a quarry who dies is caught and leaves the hunt unmarked. If the sun was killed in that world she grieves:
+  a blood-moon face and a mourning chiton, shorter draws, other words, and anyone who struck the sun down is not released
+  at dawn: only bringing her low ends their hunt. Struck by a player not yet hunted, she hunts them too.
 - **Frost**: every frost hit builds vanilla freezing (the shards a little at a time); like powder snow,
   any piece of leather armour keeps it off.
 - **Ice Cube drops**: YUNG's Ice Cubes have no loot of their own; this gives them 0-2 Ice.
@@ -135,6 +181,9 @@ The player-facing description is [publish/DESCRIPTION.md](publish/DESCRIPTION.md
   - `item/`: `FrostboundStaffItem`, `SoulseekerItem` and its recipe type.
   - `moth/`: the moth's glow block, Luminous Moss and the bottled moth; the moth itself is in `entity/`.
   - `flytrap/`: the flytrap's block, its stem and its world-generation patch; its heads are in `entity/`.
+  - `gods/`: the sun and moon gods' arrival (`Gaze`: where the sun and moon stand, who is gazing) and their world
+    state (`Heavens`: the slain sun and holding the night, the spared marks, Diana's hunt); `Apollo`, `Diana`,
+    `SolarRay` and `MoonArrow` are in `entity/`.
   - `client/`: models, renderers, the frost mote particle.
 - `src/main/resources/`: textures, sounds, lang, loot tables, biome modifiers and biome tags.
 - `tools/`: generators for the art and sound. Edit these, not the PNG/OGG files directly.
@@ -155,6 +204,11 @@ The player-facing description is [publish/DESCRIPTION.md](publish/DESCRIPTION.md
   - `make_flytrap_model.py`, `paint_flytrap.py` (needs Pillow): the Flytrap head's GeckoLib model and
     animations and the plant's block models and blockstates; the head, leaf and stalk textures and the
     Flytrap Sprout and Trap Jaw items.
+  - `make_apollo_model.py`, `paint_apollo.py` (needs Pillow): Apollo's GeckoLib model and animations, his texture and
+    glowmask (GeckoLib's glow layer takes each texel's colour from the base texture and its opacity from the mask, so
+    the corona's haze is a translucent glow over nothing), and the solar ray.
+  - `make_diana_model.py`, `paint_diana.py` (needs Pillow): Diana's GeckoLib model and animations, her ten textures
+    (five moon phases, plain and grieving; the moon is lit per texel from its sphere normal) and the moonlit arrow.
   - `make_arena.py`: the empty gametest arena structures (the small arena, and the tall sky arena flight
     tests need).
 - `publish/`: Modrinth/CurseForge page text, icon and gallery image.
@@ -184,7 +238,11 @@ through its stages with the right heads and reach, placed at any stage and withe
 biting a moth but not a player, a head biting and holding a moving mob, sneaking or still players and
 still mobs slipping past, shears cutting a victim free, double fire damage, heads keeping their place,
 killing a head or breaking any part breaking the whole plant with its drops, rooting only in grass, moss
-or mud, and its patches generating in jungles and lush caves with their heads). They need
+or mud, and its patches generating in jungles and lush caves with their heads), and the gods (where the sun and moon
+stand and only a gaze from the god sky's heights counting, Apollo conceding instead of dying, sparing him marking the
+player and leaving him wary, the warning blow and the killing blow putting out the sun and the night holding, Diana
+yielding instead of dying and the hunt being recorded, dawn releasing the quarry but not the sun's killers, the glint
+showing for the whole draw and cover holding the shot, and her grief in a sunless world). They need
 YUNG's Cave Biomes and its
 dependencies at dev runtime: put `YungsCaveBiomes`, `YungsApi`, `geckolib` and `TerraBlender` jars
 for NeoForge 1.21.1 in `libs/` (gitignored, never shipped; GeckoLib is compiled against from its Maven, so a
