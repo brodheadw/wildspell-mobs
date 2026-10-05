@@ -89,8 +89,8 @@ The player-facing description is [publish/DESCRIPTION.md](publish/DESCRIPTION.md
   stem must be at least six tall and stand on soil). A heart is alive only at night and only while it sits in
   its stem (stem above, stem or soil below); alive, it raises up to two Stemwalkers out of the soil 5-12 blocks
   away, out of a hunting player's sight if it can, every 10 seconds while one is within 32 blocks. A Stemwalker is
-  a gaunt, hunched stem-creature about three blocks tall under a drooping red cap, with a dark gilled face and
-  two dim spore-pores; it stalks and strikes overhead (5 damage), and never strays far (24 blocks, 40 at most).
+  a gaunt, hunched stem-creature about three blocks tall whose head is its own stem, split unevenly down the face
+  over dark gills and two dim spore-pores, with red bracket fungi up one side; it stalks and strikes overhead (5 damage), and never strays far (24 blocks, 40 at most).
   While its heart lives it can't be hurt: a blow makes it shrug, and a thread of mycelium and spores runs along
   the ground back to its heart. Break the heart and its walkers crumble; at dawn they sink back into the soil.
   A spawn-egg walker has no heart and bleeds like anything else (30 health). The heart drops red mushrooms, or

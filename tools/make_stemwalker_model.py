@@ -54,14 +54,22 @@ for side, sx, top, fore in (("right", -1, 36, 15), ("left", 1, 35, 12)):
 bone("neck", "torso", (0, 37, 0), [8, 0, 6], [c((-1, 37, -1), (2, 2, 2), "stem")])
 bone("head", "neck", (0, 39, 0), [-6, 0, -8], [
     c((-1, 40, -1), (2, 7, 3), "gills"),
-    c((-1, 39, 1), (2, 9, 1), "stem"),
+    c((-1, 39, 1), (2, 8, 1), "stem"),
     c((-1, 39, -1), (2, 1, 2), "stem"),
-    c((2.0, 45, -1.5), (3, 1, 3), "bracket"),
-    c((2.0, 47, -1.0), (2, 1, 2), "bracket"),
-    c((-4.5, 43, 0.0), (2, 1, 2), "bracket"),
+    c((2.5, 43, -1.0), (3, 1, 3), "bracket"),
+    c((2.5, 44.5, -0.5), (2, 1, 2), "bracket"),
+    c((-4.5, 46, 0.5), (2, 1, 2), "bracket"),
 ])
-bone("head_left", "head", (-1, 39, 0), cubes=[c((-3, 39, -2), (2, 9, 4), "head_half")])
-bone("head_right", "head", (1, 39, 0), cubes=[c((1, 39, -2), (2, 9, 4), "head_half")])
+bone("head_left", "head", (-1, 39, 0), [0, 4, 3], [
+    c((-3, 39, -2), (2, 11, 4), "head_half"),
+    c((-3.6, 47, -1.5), (1, 4, 2), "head_half"),
+    c((-2.5, 50, -1), (1, 2, 2), "head_half"),
+])
+bone("head_right", "head", (1, 39, 0), [0, -7, -9], [
+    c((1, 39, -1.5), (2, 7, 3), "head_half"),
+    c((1.5, 46, -0.5), (1, 2, 2), "head_half"),
+    c((3, 40, -0.5), (1, 3, 2), "head_half"),
+])
 for i, (x, z, length) in enumerate(THREADS):
     bone(f"thread_{i}", "head", (x, 39, z), cubes=[c((x - 0.5, 39 - length, z - 0.5), (1, length, 1), "thread", -0.35)])
 
