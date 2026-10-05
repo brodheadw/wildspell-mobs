@@ -56,6 +56,17 @@ public class Pegasus extends AbstractHorse {
     private static final float SOAR_TURN = 360.0F / SOAR_CLIMB_TICKS;
     private static final int SOAR_CHANCE = 2400;
 
+    public static final int HERD_FLIGHT_TICKS = 600;
+    public static final int HERD_DESCENT_TICKS = 160;
+    public static final int HERD_CHANCE = 9600;
+    public static final double HERD_REACH = 24.0;
+    public static final int HERD_MAX = 7;
+    public static final double HERD_ALTITUDE = 24.0;
+    public static final double HERD_SPEED = 0.45;
+    public static final double HERD_SPACING = 3.0;
+    private static final double HERD_CLIMB = 0.25;
+    private static final double HERD_KEEP = 0.15;
+
     private static final EntityDataAccessor<Boolean> DATA_ALOFT = SynchedEntityData.defineId(Pegasus.class, EntityDataSerializers.BOOLEAN);
     private static final EntityDataAccessor<Integer> DATA_VARIANT = SynchedEntityData.defineId(Pegasus.class, EntityDataSerializers.INT);
     public static final int PINK_ONE_IN = 200;
@@ -81,6 +92,12 @@ public class Pegasus extends AbstractHorse {
 
     private int soarTicks;
     private float soarTurn;
+    private int herdTicks;
+    private float herdHeading;
+    private double herdCruise;
+    @Nullable
+    private Pegasus herdLeader;
+    private int herdSlot;
     private boolean flightNoGravity;
 
     private float wingSpread;
@@ -172,6 +189,102 @@ public class Pegasus extends AbstractHorse {
         return this.soarTicks > 0;
     }
 
+    public boolean isHerdFlying() {
+        return this.herdTicks > 0 || this.herdLeader != null;
+    }
+
+    @Nullable
+    public Pegasus getHerdLeader() {
+        return this.herdLeader;
+    }
+
+    private boolean canTakeWing() {
+        return !this.isTamed() && !this.isBaby() && !this.isVehicle() && !this.isLeashed() && !this.isInWater()
+                && this.level().noCollision(this, this.getBoundingBox().move(0.0, 3.0, 0.0));
+    }
+
+    public int startHerdFlight() {
+        if (!this.canTakeWing() || !this.onGround() || this.isHerdFlying()) {
+            return 0;
+        }
+        java.util.List<Pegasus> herd = this.level().getEntitiesOfClass(Pegasus.class, this.getBoundingBox().inflate(HERD_REACH),
+                other -> other != this && other.canTakeWing() && !other.isHerdFlying());
+        if (herd.isEmpty()) {
+            return 0;
+        }
+        this.soarTicks = 0;
+        this.herdTicks = HERD_FLIGHT_TICKS;
+        this.herdHeading = this.random.nextFloat() * 360.0F;
+        this.herdCruise = this.getY() + HERD_ALTITUDE;
+        this.setEating(false);
+        this.setStanding(false);
+        this.getNavigation().stop();
+        int slot = 0;
+        for (Pegasus follower : herd) {
+            if (slot >= HERD_MAX) {
+                break;
+            }
+            follower.soarTicks = 0;
+            follower.herdLeader = this;
+            follower.herdSlot = slot++;
+            follower.setEating(false);
+            follower.setStanding(false);
+            follower.getNavigation().stop();
+        }
+        return slot;
+    }
+
+    public Vec3 herdPlace(int slot) {
+        int row = slot / 2 + 1;
+        double side = (slot % 2 == 0 ? 1.0 : -1.0) * HERD_SPACING * row;
+        Vec3 forward = Vec3.directionFromRotation(0.0F, this.herdHeading);
+        Vec3 right = new Vec3(-forward.z, 0.0, forward.x);
+        return this.position().subtract(forward.scale(HERD_SPACING * row)).add(right.scale(side)).add(0.0, 0.6 * row, 0.0);
+    }
+
+    private void leadHerd() {
+        int elapsed = HERD_FLIGHT_TICKS - this.herdTicks;
+        boolean descending = this.herdTicks <= HERD_DESCENT_TICKS;
+        this.herdHeading += 0.35F * Mth.sin(elapsed * 0.02F);
+        this.setYRot(this.herdHeading);
+        this.yBodyRot = this.yHeadRot = this.herdHeading;
+        Vec3 ahead = Vec3.directionFromRotation(0.0F, this.herdHeading).scale(HERD_SPEED);
+        double lift = descending ? -SOAR_LIFT : Mth.clamp((this.herdCruise - this.getY()) * 0.05, -HERD_CLIMB, HERD_CLIMB);
+        Vec3 motion = new Vec3(ahead.x, lift, ahead.z);
+        this.getNavigation().stop();
+        this.move(MoverType.SELF, motion);
+        this.setDeltaMovement(motion);
+        this.resetFallDistance();
+        this.herdTicks--;
+        if (this.horizontalCollision && !descending) {
+            this.herdCruise += 4.0;
+        }
+        if (this.onGround() && (descending || elapsed > 40)) {
+            this.herdTicks = 0;
+        }
+    }
+
+    private void followHerd() {
+        Pegasus leader = this.herdLeader;
+        if (leader == null || !leader.isAlive() || leader.herdTicks <= 0 || leader.level() != this.level()) {
+            this.herdLeader = null;
+            return;
+        }
+        Vec3 place = leader.herdPlace(this.herdSlot);
+        Vec3 toward = place.subtract(this.position()).scale(HERD_KEEP);
+        double max = HERD_SPEED * 1.4;
+        if (toward.length() > max) {
+            toward = toward.normalize().scale(max);
+        }
+        Vec3 motion = toward.add(leader.getDeltaMovement().scale(0.5));
+        this.setYRot(leader.herdHeading);
+        this.yBodyRot = this.yHeadRot = leader.herdHeading;
+        this.getNavigation().stop();
+        this.move(MoverType.SELF, motion);
+        this.setDeltaMovement(motion);
+        this.resetFallDistance();
+    }
+
     public boolean startSoaring() {
         if (this.isTamed() || this.isBaby() || this.isVehicle() || this.isLeashed() || !this.onGround() || this.isInWater()
                 || !this.level().noCollision(this, this.getBoundingBox().move(0.0, 3.0, 0.0))) {
@@ -191,9 +304,13 @@ public class Pegasus extends AbstractHorse {
         if (this.level().isClientSide) {
             return;
         }
-        if (this.isSoaring() && (this.isVehicle() || this.isLeashed())) {
+        if ((this.isSoaring() || this.isHerdFlying()) && (this.isVehicle() || this.isLeashed() || this.isTamed())) {
             this.soarTicks = 0;
-        } else if (!this.isSoaring() && this.random.nextInt(SOAR_CHANCE) == 0) {
+            this.herdTicks = 0;
+            this.herdLeader = null;
+        } else if (!this.isSoaring() && !this.isHerdFlying() && this.random.nextInt(HERD_CHANCE) == 0) {
+            this.startHerdFlight();
+        } else if (!this.isSoaring() && !this.isHerdFlying() && this.random.nextInt(SOAR_CHANCE) == 0) {
             this.startSoaring();
         }
     }
@@ -282,6 +399,16 @@ public class Pegasus extends AbstractHorse {
             this.flyRidden(rider, input);
             return;
         }
+        if (this.isAlive() && this.herdTicks > 0 && !this.level().isClientSide) {
+            this.leadHerd();
+            return;
+        }
+        if (this.isAlive() && this.herdLeader != null && !this.level().isClientSide) {
+            this.followHerd();
+            if (this.herdLeader != null) {
+                return;
+            }
+        }
         if (this.isAlive() && this.isSoaring() && !this.level().isClientSide) {
             this.soar();
             return;
@@ -336,7 +463,7 @@ public class Pegasus extends AbstractHorse {
     @Override
     public boolean hurt(DamageSource source, float amount) {
         boolean hurt = super.hurt(source, amount);
-        if (hurt && !this.level().isClientSide && !this.isSoaring()) {
+        if (hurt && !this.level().isClientSide && !this.isSoaring() && !this.isHerdFlying()) {
             this.startSoaring();
         }
         return hurt;

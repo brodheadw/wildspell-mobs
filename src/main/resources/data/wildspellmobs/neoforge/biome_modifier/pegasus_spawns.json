@@ -4,7 +4,7 @@
   "spawners": {
     "type": "wildspellmobs:pegasus",
     "weight": 6,
-    "minCount": 1,
-    "maxCount": 3
+    "minCount": 2,
+    "maxCount": 5
   }
 }
