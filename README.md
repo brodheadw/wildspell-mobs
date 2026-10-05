@@ -108,7 +108,10 @@ The player-facing description is [publish/DESCRIPTION.md](publish/DESCRIPTION.md
   any `age` at the edge of runaway growth (placing the grown stage builds its stem) and withers it to
   air on a reversal; `#wildspellmobs:hostile_growth` holds both blocks and the head.
 - **Apollo** (the sun; Apollo and Helios as one, the name is the one lang key `entity.wildspellmobs.apollo`): a
-  boss nothing spawns. Each second the server checks every player: in the god sky (`godSkyDimension`,
+  boss nothing spawns. The sun only answers a player who has helped slay `apolloWardens` (4) Sun Spirits, the
+  Aether's gold-dungeon boss and the sun's wardens: every player within 48 blocks of a Sun Spirit when it dies
+  is credited (`wildspellmobs:wardens_slain` in the persisted player data) and told the count. Each second the
+  server checks every player: in the god sky (`godSkyDimension`,
   `aether:the_aether` by id, no compile dependency), above `godArrivalHeight` (400, past the Aether's 256 build
   limit, so only flight gets there), with the sun within `godZenithDegrees` (30) of straight up, and their gaze
   within `godGazeDegrees` (5) of the sun's real place in the sky (from the level's time of day, which the Aether's

@@ -76,6 +76,11 @@ public final class SpawnBalance {
             .comment("How many seconds in a row that gaze must hold (it is checked once a second).")
             .defineInRange("godGazeSeconds", 3, 1, 60);
 
+    public static final ModConfigSpec.IntValue APOLLO_WARDENS = BUILDER
+            .comment("How many Sun Spirits (the Aether's gold-dungeon boss, the sun's wardens) a player must have helped slay",
+                    "before the sun answers their gaze and Apollo comes.")
+            .defineInRange("apolloWardens", 4, 0, 64);
+
     static final ModConfigSpec SPEC = BUILDER.build();
 
     private static final Long2ObjectOpenHashMap<int[]> NEARBY = new Long2ObjectOpenHashMap<>();

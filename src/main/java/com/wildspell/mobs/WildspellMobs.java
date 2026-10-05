@@ -368,6 +368,7 @@ public class WildspellMobs {
         NeoForge.EVENT_BUS.addListener(LichSouls::onServerTick);
         NeoForge.EVENT_BUS.addListener(Heavens::onServerTick);
         NeoForge.EVENT_BUS.addListener(Heavens::onLogin);
+        NeoForge.EVENT_BUS.addListener(Heavens::onDeath);
     }
 
     public static ResourceLocation id(String path) {
