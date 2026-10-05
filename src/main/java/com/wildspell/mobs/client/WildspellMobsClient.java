@@ -57,6 +57,10 @@ public class WildspellMobsClient {
         event.registerEntityRenderer(WildspellMobs.ELECTRIC_EEL.get(), ElectricEelRenderer::new);
         event.registerEntityRenderer(WildspellMobs.PEGASUS.get(), PegasusRenderer::new);
         event.registerEntityRenderer(WildspellMobs.FLYTRAP_HEAD.get(), FlytrapHeadRenderer::new);
+        event.registerEntityRenderer(WildspellMobs.APOLLO.get(), ApolloRenderer::new);
+        event.registerEntityRenderer(WildspellMobs.SOLAR_RAY.get(), SolarRayRenderer::new);
+        event.registerEntityRenderer(WildspellMobs.DIANA.get(), DianaRenderer::new);
+        event.registerEntityRenderer(WildspellMobs.MOON_ARROW.get(), MoonArrowRenderer::new);
     }
 
     @SubscribeEvent
