@@ -19,43 +19,53 @@ bone("body", "root", (0, 25, 0))
 bone("hips", "body", (0, 25, 0), cubes=[c((-3, 23, -1.5), (6, 3, 3), "trunk")])
 for side, sx in (("right", -1), ("left", 1)):
     x0 = -3.5 if side == "right" else 1.5
-    bone(f"{side}_leg", "hips", (2.5 * sx, 24, 0), cubes=[c((x0, 12, -1), (2, 12, 2), "stem")])
-    bone(f"{side}_shin", f"{side}_leg", (2.5 * sx, 12, 0), cubes=[c((x0, 1, -1), (2, 11, 2), "stem", -0.1)])
+    bone(f"{side}_leg", "hips", (2.5 * sx, 24, 0), cubes=[c((x0, 12, -1), (2, 12, 2), "thigh")])
+    bone(f"{side}_shin", f"{side}_leg", (2.5 * sx, 12, 0), cubes=[c((x0, 1, -1), (2, 11, 2), "shin", -0.1)])
     bone(f"{side}_foot", f"{side}_shin", (2.5 * sx, 1, 0), cubes=[
         c((x0 - 0.5, 0, -3), (3, 1, 4), "root"),
         c((x0 + 0.5 * sx, 0, 1), (1, 1, 2), "root", -0.1),
     ])
 
-bone("torso", "body", (0, 26, 0), [6, 0, 0], [
-    c((-2.5, 26, -1.5), (5, 11, 3), "trunk"),
-    c((2.0, 28, -0.5), (1, 9, 1), "stem_thin", 0.1),
-    c((-3.5, 30, 0.0), (1, 6, 1), "stem_thin", 0.1),
+bone("torso", "body", (0, 26, 0), [16, 0, -4], [
+    c((-2, 26, -1.5), (4, 11, 3), "trunk"),
+    c((1.5, 28, -0.5), (1, 9, 1), "stem_thin", 0.1),
+    c((-3.0, 29, 0.0), (1, 7, 1), "stem_thin", 0.1),
+    c((-1.5, 35, 1.0), (1, 6, 1), "shard"),
+    c((0.5, 34, 0.5), (1, 4, 1), "shard"),
+    c((-2.5, 33, 1.5), (3, 1, 2), "cap"),
 ])
-for side, sx in (("right", -1), ("left", 1)):
+bone("growth", "torso", (3, 36, 0), cubes=[
+    c((2.5, 36, -1.5), (2, 1, 2), "cap"),
+    c((3.0, 35, -1.0), (1, 1, 1), "stem_thin"),
+    c((4.0, 35.5, 0.5), (1, 1, 1), "cap"),
+])
+for side, sx, top, fore in (("right", -1, 36, 15), ("left", 1, 35, 12)):
     x0 = -5 if side == "right" else 3
-    bone(f"{side}_arm", "torso", (4 * sx, 36, 0), [0, 0, 5 * sx], [c((x0, 25, -1), (2, 11, 2), "stem")])
-    bone(f"{side}_forearm", f"{side}_arm", (4 * sx, 25, 0), cubes=[c((x0, 13, -1), (2, 12, 2), "stem", -0.15)])
-    bone(f"{side}_hand", f"{side}_forearm", (4 * sx, 13, 0), cubes=[
-        c((x0 - 0.5, 8, -1.5), (1, 5, 1), "finger", -0.1),
-        c((x0 + 0.5, 7, -0.5), (1, 6, 1), "finger", -0.1),
-        c((x0 + 1.5 if sx < 0 else x0 - 0.5, 9, 0.5), (1, 4, 1), "finger", -0.1),
+    elbow = top - 11
+    wrist = elbow - fore
+    bone(f"{side}_arm", "torso", (4 * sx, top, 0), [-12, 0, 6 * sx], [c((x0, elbow, -1), (2, 11, 2), "stem")])
+    bone(f"{side}_forearm", f"{side}_arm", (4 * sx, elbow, 0), [-8, 0, 0], [c((x0, wrist, -1), (2, fore, 2), "stem", -0.15)])
+    bone(f"{side}_hand", f"{side}_forearm", (4 * sx, wrist, 0), cubes=[
+        c((x0 - 0.5, wrist - 5, -1.5), (1, 5, 1), "finger", -0.1),
+        c((x0 + 0.5, wrist - 6, -0.5), (1, 6, 1), "finger", -0.1),
+        c((x0 + 1.5 if sx < 0 else x0 - 0.5, wrist - 4, 0.5), (1, 4, 1), "finger", -0.1),
     ])
 
-bone("neck", "torso", (0, 37, 0), [14, 0, 0], [c((-1, 37, -1), (2, 3, 2), "stem")])
-bone("head", "neck", (0, 40, 0), [12, 0, 0], [
-    c((-1.5, 38, -1.5), (3, 4, 3), "stem"),
-    c((-5, 42, -5), (10, 3, 10), "cap"),
-    c((-4, 45, -4), (8, 2, 8), "cap"),
-    c((-2.5, 47, -2.5), (5, 1, 5), "cap"),
-    c((-5, 39, -6), (10, 4, 1), "cap_brim"),
-    c((-6, 40, -5), (1, 3, 10), "cap_brim"),
-    c((5, 40, -5), (1, 3, 10), "cap_brim"),
-    c((-5, 41, 5), (10, 2, 1), "cap_brim"),
-    c((-4.5, 41.5, -4.5), (9, 1, 9), "gills"),
-    c((-3.5, 38.5, -4.9), (7, 3, 1), "gill_face"),
+bone("neck", "torso", (0, 37, 0), [8, 0, 6], [c((-1, 37, -1), (2, 2, 2), "stem")])
+bone("head", "neck", (0, 39, 0), [-4, 0, -8], [
+    c((-1.5, 37, -1.5), (3, 4, 3), "stem"),
+    c((-5, 41, -5), (10, 3, 10), "cap"),
+    c((-4, 44, -4), (8, 2, 8), "cap"),
+    c((-2.5, 46, -2.5), (5, 1, 5), "cap"),
+    c((-5, 40, -6), (10, 1, 1), "cap_brim"),
+    c((-6, 38, -5), (1, 4, 10), "cap_brim"),
+    c((5, 38, -5), (1, 4, 10), "cap_brim"),
+    c((-5, 39, 5), (10, 3, 1), "cap_brim"),
+    c((-4.5, 40.5, -4.5), (9, 1, 9), "gills"),
+    c((-4, 36.5, -4.9), (8, 4, 1), "gill_face"),
 ])
 for i, (x, z, length) in enumerate(THREADS):
-    top = 40 if z < -4 else 41
+    top = 37 if z < -4 else 39
     bone(f"thread_{i}", "head", (x, top, z), cubes=[c((x - 0.5, top - length, z - 0.5), (1, length, 1), "thread", -0.35)])
 
 MODEL.pack()
