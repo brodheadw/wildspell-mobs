@@ -16,7 +16,6 @@ import net.minecraft.sounds.SoundSource;
 import net.minecraft.tags.BlockTags;
 import net.minecraft.util.Mth;
 import net.minecraft.util.RandomSource;
-import net.minecraft.world.Difficulty;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.effect.MobEffects;
@@ -124,6 +123,10 @@ public class Stemwalker extends Monster implements GeoEntity {
         return this.entityData.get(DATA_WATCHED);
     }
 
+    public int actionTicks() {
+        return this.actionTicks;
+    }
+
     @Nullable
     public Player getQuarry() {
         return this.quarry;
@@ -134,12 +137,14 @@ public class Stemwalker extends Monster implements GeoEntity {
             return false;
         }
         Vec3 eye = player.getEyePosition();
-        double y = Mth.clamp(eye.y, stem.getY(), stem.getY() + stem.getBbHeight());
-        Vec3 toward = new Vec3(stem.getX(), y, stem.getZ()).subtract(eye);
-        if (toward.lengthSqr() < 1.0E-4) {
-            return true;
+        Vec3 view = player.getViewVector(1.0F);
+        for (double y = 0.5; y < stem.getBbHeight(); y += 1.0) {
+            Vec3 toward = new Vec3(stem.getX(), stem.getY() + y, stem.getZ()).subtract(eye);
+            if (toward.lengthSqr() < 1.0E-4 || view.dot(toward.normalize()) > WATCH_DOT) {
+                return player.hasLineOfSight(stem);
+            }
         }
-        return player.getViewVector(1.0F).dot(toward.normalize()) > WATCH_DOT && player.hasLineOfSight(stem);
+        return false;
     }
 
     public boolean watchedByAnyone() {
@@ -180,14 +185,13 @@ public class Stemwalker extends Monster implements GeoEntity {
         super.tick();
         this.setYBodyRot(this.getYRot());
         this.setYHeadRot(this.getYRot());
-        if (this.level() instanceof ServerLevel level && this.isAlive()) {
-            boolean watched = this.watchedByAnyone();
-            this.entityData.set(DATA_WATCHED, watched);
-            this.think(level, watched);
+        if (this.level() instanceof ServerLevel level && this.isAlive() && !this.isNoAi()) {
+            this.step(level, this.watchedByAnyone());
         }
     }
 
-    private void think(ServerLevel level, boolean watched) {
+    public void step(ServerLevel level, boolean watched) {
+        this.entityData.set(DATA_WATCHED, watched);
         if (this.cooldown > 0) {
             --this.cooldown;
         }
@@ -389,7 +393,7 @@ public class Stemwalker extends Monster implements GeoEntity {
     }
 
     public static boolean checkStemwalkerSpawnRules(EntityType<Stemwalker> type, ServerLevelAccessor level, MobSpawnType spawnType, BlockPos pos, RandomSource random) {
-        return level.getDifficulty() != Difficulty.PEACEFUL && rootable(level.getBlockState(pos.below()))
+        return rootable(level.getBlockState(pos.below()))
                 && (MobSpawnType.ignoresLightRequirements(spawnType) || Monster.isDarkEnoughToSpawn(level, pos, random));
     }
 
