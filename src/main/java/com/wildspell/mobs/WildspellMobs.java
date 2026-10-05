@@ -21,6 +21,7 @@ import com.wildspell.mobs.entity.LuminousMoth;
 import com.wildspell.mobs.entity.MoonArrow;
 import com.wildspell.mobs.entity.Pegasus;
 import com.wildspell.mobs.entity.RimeSkull;
+import com.wildspell.mobs.entity.Stemwalker;
 import com.wildspell.mobs.entity.SolarRay;
 import com.wildspell.mobs.flytrap.FlytrapBlock;
 import com.wildspell.mobs.flytrap.FlytrapPatchFeature;
@@ -244,6 +245,13 @@ public class WildspellMobs {
                     .fireImmune()
                     .build("solar_ray"));
 
+    public static final DeferredHolder<EntityType<?>, EntityType<Stemwalker>> STEMWALKER = ENTITY_TYPES.register("stemwalker",
+            () -> EntityType.Builder.of(Stemwalker::new, MobCategory.MONSTER)
+                    .sized(0.98F, 12.0F)
+                    .eyeHeight(11.5F)
+                    .clientTrackingRange(12)
+                    .build("stemwalker"));
+
     public static final DeferredHolder<EntityType<?>, EntityType<Diana>> DIANA = ENTITY_TYPES.register("diana",
             () -> EntityType.Builder.of(Diana::new, MobCategory.MONSTER)
                     .sized(0.7F, 2.4F)
@@ -299,6 +307,9 @@ public class WildspellMobs {
 
     public static final DeferredItem<Item> ENCHANTED_ICE_CRYSTAL = ITEMS.registerSimpleItem("enchanted_ice_crystal",
             new Item.Properties().rarity(Rarity.UNCOMMON).component(DataComponents.ENCHANTMENT_GLINT_OVERRIDE, true));
+
+    public static final DeferredItem<DeferredSpawnEggItem> STEMWALKER_SPAWN_EGG = ITEMS.register("stemwalker_spawn_egg",
+            () -> new DeferredSpawnEggItem(STEMWALKER, 0xE8E2D4, 0x9E1F1F, new Item.Properties()));
 
     public static final DeferredItem<DeferredSpawnEggItem> RIME_SKULL_SPAWN_EGG = ITEMS.register("rime_skull_spawn_egg",
             () -> new DeferredSpawnEggItem(RIME_SKULL, 0xD6F1FF, 0x4FA8D8, new Item.Properties()));
@@ -389,9 +400,12 @@ public class WildspellMobs {
         event.put(FLYTRAP_HEAD.get(), FlytrapHead.createAttributes().build());
         event.put(APOLLO.get(), Apollo.createAttributes().build());
         event.put(DIANA.get(), Diana.createAttributes().build());
+        event.put(STEMWALKER.get(), Stemwalker.createAttributes().build());
     }
 
     private static void registerSpawnPlacements(RegisterSpawnPlacementsEvent event) {
+        event.register(STEMWALKER.get(), SpawnPlacementTypes.ON_GROUND, Heightmap.Types.MOTION_BLOCKING_NO_LEAVES,
+                Stemwalker::checkStemwalkerSpawnRules, RegisterSpawnPlacementsEvent.Operation.REPLACE);
         event.register(RIME_SKULL.get(), SpawnPlacementTypes.NO_RESTRICTIONS, Heightmap.Types.MOTION_BLOCKING_NO_LEAVES,
                 RimeSkull::checkRimeSkullSpawnRules, RegisterSpawnPlacementsEvent.Operation.REPLACE);
         event.register(FROZEN_ZOMBIE.get(), SpawnPlacementTypes.ON_GROUND, Heightmap.Types.MOTION_BLOCKING_NO_LEAVES,
@@ -407,6 +421,7 @@ public class WildspellMobs {
     private static void addToCreativeTabs(BuildCreativeModeTabContentsEvent event) {
         if (event.getTabKey() == CreativeModeTabs.SPAWN_EGGS) {
             event.accept(RIME_SKULL_SPAWN_EGG);
+            event.accept(STEMWALKER_SPAWN_EGG);
             event.accept(FROZEN_ZOMBIE_SPAWN_EGG);
             event.accept(ICE_LICH_SPAWN_EGG);
             event.accept(LUMINOUS_MOTH_SPAWN_EGG);
