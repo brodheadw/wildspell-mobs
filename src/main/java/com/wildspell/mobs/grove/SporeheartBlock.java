@@ -38,8 +38,8 @@ public class SporeheartBlock extends BaseEntityBlock {
     }
 
     public static boolean enshrined(BlockGetter level, BlockPos pos) {
-        return level.getBlockState(pos.above()).is(Blocks.MUSHROOM_STEM) && level.getBlockState(pos.below()).is(Blocks.MUSHROOM_STEM)
-                || level.getBlockState(pos.above()).is(Blocks.MUSHROOM_STEM) && SporeheartFeature.soil(level.getBlockState(pos.below()));
+        BlockState below = level.getBlockState(pos.below());
+        return level.getBlockState(pos.above()).is(Blocks.MUSHROOM_STEM) && (below.is(Blocks.MUSHROOM_STEM) || SporeheartFeature.soil(below));
     }
 
     public static boolean night(Level level) {

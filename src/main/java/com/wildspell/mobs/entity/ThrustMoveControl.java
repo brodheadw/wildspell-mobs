@@ -1,6 +1,8 @@
 package com.wildspell.mobs.entity;
 
 import javax.annotation.Nullable;
+import net.minecraft.util.Mth;
+import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.ai.control.MoveControl;
 import net.minecraft.world.phys.Vec3;
@@ -28,6 +30,14 @@ public class ThrustMoveControl extends MoveControl {
     }
 
     protected void face(@Nullable Vec3 heading) {
+    }
+
+    protected void faceTarget() {
+        LivingEntity target = this.mob.getTarget();
+        if (target != null) {
+            this.mob.setYRot(-((float) Mth.atan2(target.getX() - this.mob.getX(), target.getZ() - this.mob.getZ())) * Mth.RAD_TO_DEG);
+            this.mob.yBodyRot = this.mob.getYRot();
+        }
     }
 
     @Override

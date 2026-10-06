@@ -81,8 +81,8 @@ public class LichCryptPiece extends StructurePiece {
                             ChunkPos chunkPos, BlockPos pivot) {
         for (int x = 0; x < WIDTH; ++x) {
             for (int z = 0; z < WIDTH; ++z) {
+                boolean wall = x == 0 || x == WIDTH - 1 || z == 0 || z == WIDTH - 1;
                 for (int y = 0; y < HEIGHT; ++y) {
-                    boolean wall = x == 0 || x == WIDTH - 1 || z == 0 || z == WIDTH - 1;
                     BlockState state;
                     if (y == 0 || y == HEIGHT - 1) {
                         state = y == 0 ? BRICKS : TILES;
@@ -96,7 +96,7 @@ public class LichCryptPiece extends StructurePiece {
                     }
                     this.placeBlock(level, state, x, y, z, box);
                 }
-                if (x == 0 || x == WIDTH - 1 || z == 0 || z == WIDTH - 1 || (x % 6 == 0 && z % 6 == 0)) {
+                if (wall || x % 6 == 0 && z % 6 == 0) {
                     this.foundation(level, x, z, box);
                 }
             }

@@ -554,8 +554,7 @@ public class ElectricEel extends WaterAnimal {
                 eel.setDeltaMovement(eel.getDeltaMovement().scale(0.5));
                 return;
             }
-            // The goal ticks on the odd ticks without canContinueToUse being asked (it updates every
-            // tick), so the den it gave up on below can already be gone here; the selector stops it next tick.
+            // Odd ticks run this without asking canContinueToUse, so the den given up on below may already be gone.
             if (eel.den == null) {
                 return;
             }

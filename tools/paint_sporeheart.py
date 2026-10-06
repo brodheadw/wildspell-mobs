@@ -1,5 +1,7 @@
 from PIL import Image
 
+from painting import hash01 as h
+
 OUT = "src/main/resources/assets/wildspellmobs/textures/block"
 STEM = [(176, 168, 156), (200, 193, 180), (218, 212, 199), (232, 227, 216)]
 GILL = [(30, 12, 16), (52, 20, 24), (78, 32, 34)]
@@ -9,11 +11,6 @@ PORE_LIT = (226, 240, 188)
 TAN = [(150, 120, 86), (176, 146, 106), (198, 170, 128)]
 SLIT = {7: (6, 9), 6: (6, 9), 5: (6, 8), 4: (7, 8), 8: (6, 9), 9: (6, 9), 10: (6, 9), 11: (7, 8), 3: (7, 8), 12: (7, 8)}
 PORES = [(7, 6), (8, 9), (6, 10)]
-
-
-def h(x, y, salt):
-    v = (x * 73856093) ^ (y * 19349663) ^ (salt * 83492791)
-    return ((v * 2654435761) & 0xFFFFFFFF) / 0xFFFFFFFF
 
 
 def side(active):

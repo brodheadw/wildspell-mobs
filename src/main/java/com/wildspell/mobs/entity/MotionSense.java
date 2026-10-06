@@ -11,7 +11,7 @@ import net.minecraft.world.phys.Vec3;
 public final class MotionSense {
     private static final double MOVED = 0.15;
 
-    private final Map<Integer, Vec3> lastSeen = new HashMap<>();
+    private Map<Integer, Vec3> lastSeen = new HashMap<>();
     private final Set<Integer> moving = new HashSet<>();
 
     public void sense(List<? extends Entity> nearby) {
@@ -24,8 +24,7 @@ public final class MotionSense {
                 this.moving.add(other.getId());
             }
         }
-        this.lastSeen.clear();
-        this.lastSeen.putAll(seen);
+        this.lastSeen = seen;
     }
 
     public boolean isMoving(Entity other) {

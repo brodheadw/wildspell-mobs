@@ -393,9 +393,7 @@ public class IceLich extends Monster implements RangedAttackMob, GeoEntity {
     @Nullable
     private BlockPos findSummonSpot(ServerLevel level) {
         for (int attempt = 0; attempt < 12; ++attempt) {
-            double angle = this.random.nextDouble() * Math.PI * 2.0;
-            double radius = 3.0 + this.random.nextDouble() * 3.0;
-            BlockPos column = BlockPos.containing(this.getX() + Math.cos(angle) * radius, this.getY(), this.getZ() + Math.sin(angle) * radius);
+            BlockPos column = BlockPos.containing(ColdEffects.ringPoint(this.random, this.position(), 3.0, 3.0, 0.0));
             for (int dy = 2; dy >= -8; --dy) {
                 BlockPos pos = column.above(dy);
                 if (level.getBlockState(pos.below()).isFaceSturdy(level, pos.below(), Direction.UP)
@@ -809,11 +807,7 @@ public class IceLich extends Monster implements RangedAttackMob, GeoEntity {
 
         @Override
         protected void face(@Nullable Vec3 heading) {
-            LivingEntity target = this.mob.getTarget();
-            if (target != null) {
-                this.mob.setYRot(-((float) Mth.atan2(target.getX() - this.mob.getX(), target.getZ() - this.mob.getZ())) * Mth.RAD_TO_DEG);
-                this.mob.yBodyRot = this.mob.getYRot();
-            }
+            this.faceTarget();
         }
     }
 

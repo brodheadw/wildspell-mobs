@@ -1,15 +1,11 @@
 import math
-import os
 import random
-import sys
 
 from PIL import Image
 
-sys.path.insert(0, os.path.dirname(__file__))
-import make_lich_model as model  # noqa: E402
-import painting  # noqa: E402
-from geckolib_model import texels  # noqa: E402
-from painting import mix  # noqa: E402
+import make_lich_model as model
+import painting
+from geckolib_model import texels
 
 OUT = "src/main/resources/assets/wildspellmobs/textures"
 rng = random.Random(11)
@@ -48,23 +44,15 @@ lich = Image.new("RGBA", (128, 128), (0, 0, 0, 0))
 lich_glow = Image.new("RGBA", (128, 128), (0, 0, 0, 0))
 
 
-def frost_speckle(y, fh, strength=0.6):
-    return strength * (y / max(1, fh - 1)) ** 2
-
-
 def robe_px(face, x, y, fw, fh, fold_offset=0, frost=0.08):
     shade = FACE_SHADE[face]
     if face not in ("top", "bottom"):
         k = (x + fold_offset) % 4
         shade += {0: -9, 1: 0, 2: 6, 3: 2}[k]
         shade += int(6 - 10 * y / max(1, fh))
-    if face != "bottom" and y >= fh - 3 and rng.random() < frost_speckle(y, fh, frost):
+    if face != "bottom" and y >= fh - 3 and rng.random() < frost * (y / max(1, fh - 1)) ** 2:
         return jitter(rng.choice(RIME), shade - 30, 6)
     return jitter(rng.choice(ROBE), shade, 4)
-
-
-def rime_px(face, x, y, fw, fh, shade=0):
-    return jitter(rng.choice(RIME), FACE_SHADE[face] + shade, 6)
 
 
 def bone_px(face, x, y, fw, fh, shade=0):
@@ -101,7 +89,7 @@ def m_skirt_low(face, x, y, fw, fh, cube):
 
 
 def m_strip(face, x, y, fw, fh, cube):
-    if face in ("top",):
+    if face == "top":
         return jitter(ROBE_DEEP, 0, 3), False
     if face == "bottom":
         return jitter(rng.choice(RIME), -40, 6), False
@@ -139,14 +127,10 @@ def m_ribs(face, x, y, fw, fh, cube):
     return jitter(CAVITY, 0, 3), False
 
 
-def chest_open_half(y):
-    return 4.1 - 0.42 * y
-
-
 def m_robe_chest(face, x, y, fw, fh, cube):
     if face == "front":
         cx = (fw - 1) / 2
-        half = chest_open_half(y)
+        half = 4.1 - 0.42 * y
         off = abs(x - cx)
         if off < half:
             return None, False
@@ -258,10 +242,6 @@ def m_pauldron(face, x, y, fw, fh, cube):
     return jitter(rng.choice(PLATE), s - 4 * y, 4), False
 
 
-def m_ice(face, x, y, fw, fh, cube):
-    return ice_px(face, x, y, fw, fh, spike_palette(cube)), False
-
-
 def m_bone(face, x, y, fw, fh, cube):
     return bone_px(face, x, y, fw, fh), False
 
@@ -333,15 +313,12 @@ def m_crown_band(face, x, y, fw, fh, cube):
 _spike_index = {}
 
 
-def spike_palette(cube):
-    key = tuple(cube["uv"])
-    if key not in _spike_index:
-        _spike_index[key] = len(_spike_index)
-    return SPIKE_SHADES[_spike_index[key] % len(SPIKE_SHADES)]
-
-
 def m_spike(face, x, y, fw, fh, cube):
-    return ice_px(face, x, y, fw, fh, spike_palette(cube)), False
+    index = _spike_index.setdefault(tuple(cube["uv"]), len(_spike_index))
+    return ice_px(face, x, y, fw, fh, SPIKE_SHADES[index % len(SPIKE_SHADES)]), False
+
+
+m_ice = m_spike
 
 
 def m_spike_tip(face, x, y, fw, fh, cube):

@@ -20,15 +20,14 @@ VIAL = [(150, 206, 238), (170, 220, 246), (132, 190, 228)]
 
 def paint_phylactery(warded):
     img = Image.new("RGBA", (16, 16), (0, 0, 0, 0))
-    for x in range(16):
-        for y in range(16):
-            if y < 6 and x < 8 or 8 <= y and x < 8:
-                c = rng.choice(IRON)
-                if (y in (0, 2) and x < 8) or (y >= 8 and (x in (0, 7) or y in (8, 15)) and rng.random() < 0.5):
-                    c = RIME if rng.random() < 0.6 else c
-                img.putpixel((x, y), jitter(c))
+    for x in range(8):
+        for y in (*range(6), *range(8, 16)):
+            c = rng.choice(IRON)
+            if y in (0, 2) or (y >= 8 and (x in (0, 7) or y in (8, 15)) and rng.random() < 0.5):
+                c = RIME if rng.random() < 0.6 else c
+            img.putpixel((x, y), jitter(c))
     for x in range(8, 14):
-        for y in range(0, 14):
+        for y in range(14):
             edge = x in (8, 13) or y in (0, 7, 8, 13)
             c = rng.choice(VIAL)
             alpha = 215 if edge else 150
@@ -68,8 +67,7 @@ for x in range(16):
         r = math.hypot(x - 7.5, y - 7.5) / 7.5
         if r < 1.0:
             k = 1.0 - r
-            color = tuple(int(a + (b - a) * k) for a, b in zip((60, 170, 255), (240, 255, 255)))
-            wisp.putpixel((x, y), color + (int(255 * min(1.0, k * 1.6)),))
+            wisp.putpixel((x, y), painting.mix((60, 170, 255), (240, 255, 255), k) + (int(255 * min(1.0, k * 1.6)),))
 wisp.save(f"{OUT}/entity/lich_wisp.png")
 print("blocks painted")
 
@@ -85,8 +83,7 @@ for x in range(6):
     for y in range(6):
         edge = x in (0, 5) or y in (0, 5)
         c = CORE_EDGE if edge else (CORE_LIGHT if (x, y) in ((2, 1), (3, 1)) else CORE)
-        c = tuple(max(0, min(255, v + soul_rng.randint(-4, 4))) for v in c)
-        soul.putpixel((9 + x, 1 + y), c + (200 if edge else 235,))
+        soul.putpixel((9 + x, 1 + y), painting.jitter(soul_rng, c, spread=4, alpha=200 if edge else 235))
 for x, y in ((1, 2), (4, 2), (2, 4), (3, 4)):
     soul.putpixel((9 + x, 1 + y), HOLLOW + (240,))
 soul.save(f"{OUT}/block/frozen_soul.png")
@@ -101,7 +98,6 @@ for x in range(16):
         if r < 7.0 or spike:
             k = max(0.0, 1.0 - r / 7.0)
             base = (70, 170, 240) if r > 4.5 else (150, 225, 255) if r > 2.2 else (240, 255, 255)
-            c = tuple(max(0, min(255, v + orb_rng.randint(-8, 8))) for v in base)
-            orb.putpixel((x, y), c + (int(255 * min(1.0, 0.35 + k * 1.3)),))
+            orb.putpixel((x, y), painting.jitter(orb_rng, base, spread=8, alpha=int(255 * min(1.0, 0.35 + k * 1.3))))
 orb.save(f"{OUT}/entity/frost_orb.png")
 print("frost orb painted")

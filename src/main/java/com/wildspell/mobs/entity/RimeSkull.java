@@ -421,8 +421,7 @@ public class RimeSkull extends Monster {
                 skull.getMoveControl().setWantedPosition(spot.x, spot.y, spot.z, 0.55);
                 return;
             }
-            BlockPos above = RimeSkull.this.blockPosition().above(2);
-            if (ColdEffects.isOpen(RimeSkull.this.level(), above.below(), 2)) {
+            if (ColdEffects.isOpen(RimeSkull.this.level(), RimeSkull.this.blockPosition().above(), 2)) {
                 RimeSkull.this.getMoveControl().setWantedPosition(RimeSkull.this.getX(), RimeSkull.this.getY() + 2.0, RimeSkull.this.getZ(), 0.55);
             } else {
                 RimeSkull.this.getMoveControl().setWantedPosition(targetEye.x, targetEye.y, targetEye.z, 0.55);

@@ -235,38 +235,33 @@ public class FlytrapHead extends Monster implements GeoEntity {
     protected void customServerAiStep() {
         super.customServerAiStep();
         if (this.tickCount % SENSE_INTERVAL == 0) {
-            this.sense();
+            this.motion.sense(this.level().getEntitiesOfClass(LivingEntity.class, this.getBoundingBox().inflate(SENSE_RADIUS),
+                    e -> e != this && e.isAlive()));
         }
         if (this.cooldown > 0) {
             --this.cooldown;
         }
-        LivingEntity victim = this.held;
-        if (victim != null) {
-            this.tickHold(victim);
+        if (this.held != null) {
+            this.tickHold(this.held);
             return;
         }
         if (this.lungeTicks > 0) {
             this.tickLunge();
             return;
         }
-        LivingEntity prey = this.cooldown <= 0 ? this.findPrey(this.getReach()) : null;
-        if (prey != null) {
+        LivingEntity prey = this.findPrey();
+        if (prey == null) {
+            return;
+        }
+        if (this.cooldown <= 0 && this.reachSqr(prey) <= this.getReach() * this.getReach()) {
             this.lungeTicks = LUNGE_TICKS;
             this.setTarget(prey);
             this.setAction(ACTION_LUNGE);
             this.getLookControl().setLookAt(prey, 60.0F, 60.0F);
             this.playSound(SoundEvents.BIG_DRIPLEAF_TILT_DOWN, 1.0F, 0.7F / this.getScale());
-            return;
+        } else {
+            this.getLookControl().setLookAt(prey, 20.0F, 30.0F);
         }
-        LivingEntity tracked = this.findPrey(SENSE_RADIUS);
-        if (tracked != null) {
-            this.getLookControl().setLookAt(tracked, 20.0F, 30.0F);
-        }
-    }
-
-    private void sense() {
-        this.motion.sense(this.level().getEntitiesOfClass(LivingEntity.class, this.getBoundingBox().inflate(SENSE_RADIUS),
-                e -> e != this && e.isAlive()));
     }
 
     public boolean isMoving(LivingEntity other) {
@@ -292,10 +287,10 @@ public class FlytrapHead extends Monster implements GeoEntity {
     }
 
     @Nullable
-    private LivingEntity findPrey(double range) {
+    private LivingEntity findPrey() {
         LivingEntity nearest = null;
-        double best = range * range;
-        for (LivingEntity other : this.level().getEntitiesOfClass(LivingEntity.class, this.getBoundingBox().inflate(range), this::isSensed)) {
+        double best = SENSE_RADIUS * SENSE_RADIUS;
+        for (LivingEntity other : this.level().getEntitiesOfClass(LivingEntity.class, this.getBoundingBox().inflate(SENSE_RADIUS), this::isSensed)) {
             double distance = this.reachSqr(other);
             if (distance <= best) {
                 best = distance;

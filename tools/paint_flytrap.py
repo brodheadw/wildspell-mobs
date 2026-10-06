@@ -1,14 +1,11 @@
 import math
-import os
 import random
-import sys
 
 from PIL import Image
 
-sys.path.insert(0, os.path.dirname(__file__))
-import make_flytrap_model as model  # noqa: E402
-import painting  # noqa: E402
-from geckolib_model import texels  # noqa: E402
+import make_flytrap_model as model
+import painting
+from geckolib_model import texels
 
 OUT = "src/main/resources/assets/wildspellmobs/textures"
 rng = random.Random(23)
@@ -39,57 +36,48 @@ skin = Image.new("RGBA", (64, 64), (0, 0, 0, 0))
 
 
 def lobe_inside(x, y, fw, fh, face):
-    edge = min(x, fw - 1 - x, y if face == "top" else fh - 1 - y)
-    toward_hinge = (fh - 1 - y) / (fh - 1) if face == "bottom" else y / (fh - 1)
+    row = y if face == "top" else fh - 1 - y
+    edge = min(x, fw - 1 - x, row)
     if edge == 0:
         return jitter(rng.choice(RIM), 0, 5)
     if edge == 1:
         return jitter(mix(rng.choice(RIM), RED[0], 0.55), -6, 5)
-    hairs = {(2, 3), (fw - 3, 3), (fw // 2, 6)}
-    row = y if face == "top" else fh - 1 - y
-    if (x, row) in hairs:
+    if (x, row) in {(2, 3), (fw - 3, 3), (fw // 2, 6)}:
         return jitter(TRIGGER, 0, 4)
+    toward_hinge = row / (fh - 1)
     return jitter(mix(rng.choice(RED), RED_DEEP, 0.2 + 0.6 * toward_hinge), 0, 6)
 
 
-def lobe_outside(face, x, y, fw, fh, rim_rows):
-    s = FACE_SHADE[face]
+def lobe_outside(face, y, blush=None):
     px = rng.choice(GREEN)
-    if rim_rows and y in rim_rows:
-        px = mix(px, RED[0], 0.35 if y == rim_rows[0] else 0.15)
+    if y == blush:
+        px = mix(px, RED[0], 0.35)
     if rng.random() < 0.06:
         px = rng.choice(GREEN_DARK)
-    return jitter(px, s, 5)
+    return jitter(px, FACE_SHADE[face], 5)
+
+
+def jaw(face, x, y, fw, fh, inside, rim, blush):
+    if face == inside:
+        return lobe_inside(x, y, fw, fh, face)
+    if face == "front":
+        return jitter(rng.choice(RIM), 6, 5) if y == rim else lobe_outside(face, y, blush)
+    if face in ("right", "left"):
+        front_col = fw - 1 if face == "right" else 0
+        if y == rim:
+            return jitter(rng.choice(RIM), FACE_SHADE[face], 5)
+        if abs(x - front_col) <= 1:
+            return jitter(mix(rng.choice(GREEN), RED[0], 0.3), FACE_SHADE[face], 5)
+        return lobe_outside(face, y, blush)
+    return lobe_outside(face, y)
 
 
 def m_jaw_upper(face, x, y, fw, fh, cube):
-    if face == "bottom":
-        return lobe_inside(x, y, fw, fh, face)
-    if face == "front":
-        return jitter(rng.choice(RIM), 6, 5) if y == fh - 1 else lobe_outside(face, x, y, fw, fh, (fh - 2,))
-    if face in ("right", "left"):
-        front_col = fw - 1 if face == "right" else 0
-        if y == fh - 1:
-            return jitter(rng.choice(RIM), FACE_SHADE[face], 5)
-        if abs(x - front_col) <= 1:
-            return jitter(mix(rng.choice(GREEN), RED[0], 0.3), FACE_SHADE[face], 5)
-        return lobe_outside(face, x, y, fw, fh, (fh - 2,))
-    return lobe_outside(face, x, y, fw, fh, ())
+    return jaw(face, x, y, fw, fh, "bottom", fh - 1, fh - 2)
 
 
 def m_jaw_lower(face, x, y, fw, fh, cube):
-    if face == "top":
-        return lobe_inside(x, y, fw, fh, face)
-    if face == "front":
-        return jitter(rng.choice(RIM), 6, 5) if y == 0 else lobe_outside(face, x, y, fw, fh, (1,))
-    if face in ("right", "left"):
-        front_col = fw - 1 if face == "right" else 0
-        if y == 0:
-            return jitter(rng.choice(RIM), FACE_SHADE[face], 5)
-        if abs(x - front_col) <= 1:
-            return jitter(mix(rng.choice(GREEN), RED[0], 0.3), FACE_SHADE[face], 5)
-        return lobe_outside(face, x, y, fw, fh, (1,))
-    return lobe_outside(face, x, y, fw, fh, ())
+    return jaw(face, x, y, fw, fh, "top", 0, 1)
 
 
 def m_hinge(face, x, y, fw, fh, cube):

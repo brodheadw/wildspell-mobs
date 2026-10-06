@@ -1,13 +1,10 @@
 import math
-import os
-import sys
 
 from PIL import Image
 
-sys.path.insert(0, os.path.dirname(__file__))
-import make_diana_model as model  # noqa: E402
-from geckolib_model import texel_point, texels, wrap_angle  # noqa: E402
-from painting import mix  # noqa: E402
+import make_diana_model as model
+from geckolib_model import texel_point, texels, wrap_angle
+from painting import hash01, mix, ramp
 
 OUT = "src/main/resources/assets/wildspellmobs/textures/entity"
 PHASES = 5
@@ -47,15 +44,6 @@ MARIA = [
 CRATERS = [(0.18, -0.70)]
 
 
-def hash01(x, y, salt):
-    v = (x * 73856093) ^ (y * 19349663) ^ (salt * 83492791)
-    return ((v * 2654435761) & 0xFFFFFFFF) / 0xFFFFFFFF
-
-
-def ramp(palette, level):
-    return palette[int(round(max(0.0, min(1.0, level)) * (len(palette) - 1)))]
-
-
 def lit(cube, face, x, fh, y, gain=0.0):
     if face == "top":
         return 0.82 + gain
@@ -70,7 +58,7 @@ def terminator(phase):
     return math.cos(math.pi * left)
 
 
-def moon_px(m, phase, cube, face, x, y):
+def m_moon(m, phase, face, x, y, fw, fh, cube):
     px, py, pz = texel_point(cube, face, x, y)
     n = (px - model.MOON_CENTER[0], py - model.MOON_CENTER[1], pz - model.MOON_CENTER[2])
     length = math.sqrt(sum(v * v for v in n))
@@ -88,13 +76,9 @@ def moon_px(m, phase, cube, face, x, y):
     return (m["dark_mare"] if mare else m["dark"]), 0
 
 
-def m_moon(m, phase, face, x, y, fw, fh, cube):
-    return moon_px(m, phase, cube, face, x, y)
-
-
 def veil_px(m, face, x, y, fw, fh, cube, gain=0.0):
     at = (cube["uv"][0] + x, cube["uv"][1] + y)
-    if hash01(at[0], at[1], 3) < m["star_rate"] and face not in ("bottom",):
+    if hash01(at[0], at[1], 3) < m["star_rate"] and face != "bottom":
         bright = hash01(at[0], at[1], 5) < 0.35
         return m["star"], 255 if bright else 130
     level = 0.55 + gain - 0.25 * y / max(1, fh - 1) + (0.12 if x % 3 == 0 else 0.0)
