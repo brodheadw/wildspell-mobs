@@ -27,6 +27,9 @@ import com.wildspell.mobs.flytrap.FlytrapBlock;
 import com.wildspell.mobs.flytrap.FlytrapPatchFeature;
 import com.wildspell.mobs.flytrap.FlytrapStemBlock;
 import com.wildspell.mobs.gods.Heavens;
+import com.wildspell.mobs.grove.SporeheartBlock;
+import com.wildspell.mobs.grove.SporeheartBlockEntity;
+import com.wildspell.mobs.grove.SporeheartFeature;
 import com.wildspell.mobs.item.FrostboundStaffItem;
 import com.wildspell.mobs.item.SoulseekerItem;
 import com.wildspell.mobs.item.SoulseekerRecipe;
@@ -229,20 +232,20 @@ public class WildspellMobs {
     public static final DeferredHolder<Feature<?>, FlytrapPatchFeature> FLYTRAP_PATCH =
             FEATURES.register("flytrap_patch", FlytrapPatchFeature::new);
 
-    public static final DeferredHolder<Feature<?>, com.wildspell.mobs.grove.SporeheartFeature> SPOREHEART_FEATURE =
-            FEATURES.register("sporeheart", com.wildspell.mobs.grove.SporeheartFeature::new);
+    public static final DeferredHolder<Feature<?>, SporeheartFeature> SPOREHEART_FEATURE =
+            FEATURES.register("sporeheart", SporeheartFeature::new);
 
-    public static final DeferredHolder<Block, com.wildspell.mobs.grove.SporeheartBlock> SPOREHEART = BLOCKS.register("sporeheart",
-            () -> new com.wildspell.mobs.grove.SporeheartBlock(BlockBehaviour.Properties.of()
+    public static final DeferredHolder<Block, SporeheartBlock> SPOREHEART = BLOCKS.register("sporeheart",
+            () -> new SporeheartBlock(BlockBehaviour.Properties.of()
                     .mapColor(MapColor.WOOL)
                     .strength(2.5F, 6.0F)
                     .sound(SoundType.WART_BLOCK)
-                    .lightLevel(state -> state.getValue(com.wildspell.mobs.grove.SporeheartBlock.ACTIVE) ? 5 : 0)));
+                    .lightLevel(state -> state.getValue(SporeheartBlock.ACTIVE) ? 5 : 0)));
 
-    public static final DeferredItem<net.minecraft.world.item.BlockItem> SPOREHEART_ITEM = ITEMS.registerSimpleBlockItem(SPOREHEART);
+    public static final DeferredItem<BlockItem> SPOREHEART_ITEM = ITEMS.registerSimpleBlockItem(SPOREHEART);
 
-    public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<com.wildspell.mobs.grove.SporeheartBlockEntity>> SPOREHEART_ENTITY =
-            BLOCK_ENTITY_TYPES.register("sporeheart", () -> BlockEntityType.Builder.of(com.wildspell.mobs.grove.SporeheartBlockEntity::new, SPOREHEART.get()).build(null));
+    public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<SporeheartBlockEntity>> SPOREHEART_ENTITY =
+            BLOCK_ENTITY_TYPES.register("sporeheart", () -> BlockEntityType.Builder.of(SporeheartBlockEntity::new, SPOREHEART.get()).build(null));
 
     public static final DeferredHolder<EntityType<?>, EntityType<Apollo>> APOLLO = ENTITY_TYPES.register("apollo",
             () -> EntityType.Builder.of(Apollo::new, MobCategory.MONSTER)

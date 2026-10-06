@@ -33,7 +33,7 @@ public class SolarRayRenderer extends EntityRenderer<SolarRay> {
         }
         float heading = (float) (Mth.atan2(motion.x, motion.z) * Mth.RAD_TO_DEG);
         float pitch = (float) (Mth.atan2(motion.y, motion.horizontalDistance()) * Mth.RAD_TO_DEG);
-        float flicker = 1.0F + Mth.sin((ray.tickCount + partialTick) * 1.7F) * 0.12F;
+        float w = WIDTH * (1.0F + Mth.sin((ray.tickCount + partialTick) * 1.7F) * 0.12F);
         poseStack.pushPose();
         poseStack.translate(0.0F, ray.getBbHeight() / 2.0F, 0.0F);
         poseStack.mulPose(Axis.YP.rotationDegrees(heading - 90.0F));
@@ -42,7 +42,6 @@ public class SolarRayRenderer extends EntityRenderer<SolarRay> {
         for (int i = 0; i < 2; ++i) {
             poseStack.mulPose(Axis.XP.rotationDegrees(90.0F));
             Matrix4f pose = poseStack.last().pose();
-            float w = WIDTH * flicker;
             vertex(buffer, pose, poseStack, -LENGTH, -w, 0.0F, 1.0F);
             vertex(buffer, pose, poseStack, LENGTH * 0.25F, -w, 1.0F, 1.0F);
             vertex(buffer, pose, poseStack, LENGTH * 0.25F, w, 1.0F, 0.0F);

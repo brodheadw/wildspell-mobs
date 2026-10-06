@@ -1,4 +1,4 @@
-from geckolib_model import Model, anim, c, kf, write
+from geckolib_model import Model, anim, animations, c, write
 
 ASSETS = "src/main/resources/assets/wildspellmobs"
 GEO_OUT = f"{ASSETS}/geo/entity/flytrap_head.geo.json"
@@ -8,7 +8,6 @@ TEX = 64
 MODEL = Model("geometry.flytrap_head", TEX, 3, 3, [0, 1, 0])
 BONES = MODEL.bones
 bone = MODEL.bone
-geometry = MODEL.geometry
 
 
 bone("root", None, (0, 0, 0))
@@ -90,24 +89,12 @@ def wither():
     })
 
 
-def animations():
-    return {"format_version": "1.8.0", "animations": {
-        "animation.flytrap_head.idle": idle(),
-        "animation.flytrap_head.lunge": lunge(),
-        "animation.flytrap_head.hold": hold(),
-        "animation.flytrap_head.wither": wither(),
-    }}
-
-
 BRANCH_REACH = 14
 BRANCH_HEIGHT = 9
 
 
-def face(uv, texture="#stem", cull=None):
-    out = {"uv": uv, "texture": texture}
-    if cull:
-        out["cullface"] = cull
-    return out
+def face(uv, texture="#stem"):
+    return {"uv": uv, "texture": texture}
 
 
 def rosette(half):
@@ -116,15 +103,14 @@ def rosette(half):
             "faces": {"up": face([0, 0, 16, 16], "#leaves"), "down": face([0, 16, 16, 0], "#leaves")}}
 
 
-def post(x0, x1, y0, y1, z0=None, z1=None, ends=True):
-    z0, z1 = (x0, x1) if z0 is None else (z0, z1)
-    w, d = x1 - x0, z1 - z0
+def post(x0, x1, y0, y1, ends=True):
+    w = x1 - x0
     faces = {"north": face([0, 16 - y1 + y0, w, 16]), "south": face([2, 16 - y1 + y0, 2 + w, 16]),
-             "west": face([4, 16 - y1 + y0, 4 + d, 16]), "east": face([6, 16 - y1 + y0, 6 + d, 16])}
+             "west": face([4, 16 - y1 + y0, 4 + w, 16]), "east": face([6, 16 - y1 + y0, 6 + w, 16])}
     if ends:
-        faces["up"] = face([10, 0, 10 + w, d])
-        faces["down"] = face([10, 0, 10 + w, d])
-    return {"from": [x0, y0, z0], "to": [x1, y1, z1], "faces": faces}
+        faces["up"] = face([10, 0, 10 + w, w])
+        faces["down"] = face([10, 0, 10 + w, w])
+    return {"from": [x0, y0, x0], "to": [x1, y1, x1], "faces": faces}
 
 
 def arm(x0, x1):
@@ -161,8 +147,8 @@ BLOCKSTATES = {
 
 
 if __name__ == "__main__":
-    write(GEO_OUT, geometry())
-    write(ANIM_OUT, animations())
+    write(GEO_OUT, MODEL.geometry())
+    write(ANIM_OUT, animations("flytrap_head", {"idle": idle(), "lunge": lunge(), "hold": hold(), "wither": wither()}))
     for name, model in BLOCK_MODELS.items():
         write(f"{ASSETS}/models/block/{name}.json", model)
     for name, state in BLOCKSTATES.items():

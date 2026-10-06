@@ -66,10 +66,16 @@ def kf(frames):
 
 
 def anim(length, loop, bones):
-    out = {"loop": loop, "animation_length": length, "bones": {}}
-    for name, channels in bones.items():
-        out["bones"][name] = {k: kf(v) for k, v in channels.items()}
-    return out
+    return {"loop": loop, "animation_length": length,
+            "bones": {name: {k: kf(v) for k, v in channels.items()} for name, channels in bones.items()}}
+
+
+def loop(length, frames):
+    return {round(t, 3): v for t, v in frames} | {length: frames[0][1]}
+
+
+def animations(name, clips):
+    return {"format_version": "1.8.0", "animations": {f"animation.{name}.{clip}": a for clip, a in clips.items()}}
 
 
 def write(path, data):
@@ -95,22 +101,28 @@ def texels(bones):
                         yield cube, face, x, y, fw, fh, (x0 + x, y0 + y)
 
 
+def face_corners(x0, y0, z0, x1, y1, z1):
+    return {"right": ((x0, y1, z1), (x0, y1, z0), (x0, y0, z1)), "front": ((x0, y1, z0), (x1, y1, z0), (x0, y0, z0)),
+            "left": ((x1, y1, z0), (x1, y1, z1), (x1, y0, z0)), "back": ((x1, y1, z1), (x0, y1, z1), (x1, y0, z1)),
+            "top": ((x0, y1, z1), (x1, y1, z1), (x0, y1, z0)), "bottom": ((x0, y0, z0), (x1, y0, z0), (x0, y0, z1))}
+
+
 def texel_point(cube, face, x, y):
     (x0, y0, z0), (w, h, d) = cube["origin"], cube["size"]
-    x1, y1, z1 = x0 + w, y0 + h, z0 + d
-    corners = {"right": ((x0, y1, z1), (x0, y1, z0), (x0, y0, z1)), "front": ((x0, y1, z0), (x1, y1, z0), (x0, y0, z0)),
-               "left": ((x1, y1, z0), (x1, y1, z1), (x1, y0, z0)), "back": ((x1, y1, z1), (x0, y1, z1), (x1, y0, z1)),
-               "top": ((x0, y1, z1), (x1, y1, z1), (x0, y1, z0)), "bottom": ((x0, y0, z0), (x1, y0, z0), (x0, y0, z1))}
-    p0, pu, pv = corners[face]
+    p0, pu, pv = face_corners(x0, y0, z0, x0 + w, y0 + h, z0 + d)[face]
     _, _, fw, fh = faces_of(cube)[face]
     su, sv = (x + 0.5) / fw, (y + 0.5) / fh
     return tuple(p0[i] + (pu[i] - p0[i]) * su + (pv[i] - p0[i]) * sv for i in range(3))
 
 
+def perimeter_x(cube, face, x):
+    w, _, d = [int(s) for s in cube["size"]]
+    return {"right": 0, "front": d, "left": d + w, "back": 2 * d + w}[face] + x
+
+
 def wrap_angle(cube, face, x):
     w, _, d = [int(s) for s in cube["size"]]
-    start = {"right": 0, "front": d, "left": d + w, "back": 2 * d + w}[face]
-    return 2 * math.pi * (start + x + 0.5 - (d + w / 2)) / (2 * (w + d))
+    return 2 * math.pi * (perimeter_x(cube, face, x) + 0.5 - (d + w / 2)) / (2 * (w + d))
 
 
 def rot_matrix(rx, ry, rz):

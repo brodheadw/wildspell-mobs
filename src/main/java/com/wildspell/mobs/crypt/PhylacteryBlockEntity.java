@@ -149,10 +149,6 @@ public class PhylacteryBlockEntity extends BlockEntity {
         return this.soulId == null || !(this.level instanceof ServerLevel level) ? null : this.soul(level).lichId();
     }
 
-    private static boolean canRaise(Level level) {
-        return level.getDifficulty() != Difficulty.PEACEFUL;
-    }
-
     private void changed() {
         this.dirty = true;
     }
@@ -175,7 +171,7 @@ public class PhylacteryBlockEntity extends BlockEntity {
         LichSouls.Soul soul = this.soul(level);
         IceLich lich = soul.findLich(level);
         List<Player> near = level.getEntitiesOfClass(Player.class, new AABB(this.worldPosition).inflate(NEAR), PhylacteryBlockEntity::isPrey);
-        if (near.isEmpty()) {
+        if (near.isEmpty() && !this.awake) {
             return;
         }
         AABB crypt = this.cryptBounds();
@@ -185,17 +181,16 @@ public class PhylacteryBlockEntity extends BlockEntity {
     }
 
     private void tendCrypt(ServerLevel level, LichSouls.Soul soul, @Nullable IceLich lich, List<Player> near, AABB crypt) {
-        List<BlockPos> wards = new ArrayList<>();
+        boolean warded = false;
         List<BlockPos> braziers = new ArrayList<>();
         for (BlockPos p : this.cryptBlocks()) {
             BlockState state = level.getBlockState(p);
             if (state.is(WildspellMobs.RIME_WARD.get())) {
-                wards.add(p.immutable());
+                warded = true;
             } else if (isFlame(state)) {
                 braziers.add(p.immutable());
             }
         }
-        boolean warded = !wards.isEmpty();
         if (this.getBlockState().getValue(PhylacteryBlock.WARDED) != warded) {
             level.setBlock(this.worldPosition, this.getBlockState().setValue(PhylacteryBlock.WARDED, warded), 3);
         }
@@ -302,7 +297,7 @@ public class PhylacteryBlockEntity extends BlockEntity {
             if (soul.dimension() != level.dimension() || !soul.canStalk(level)) {
                 continue;
             }
-            if (level.isLoaded(soul.anchor()) && level.getBlockEntity(soul.anchor()) instanceof PhylacteryBlockEntity crypt && crypt.isAwake()) {
+            if (level.shouldTickBlocksAt(soul.anchor()) && level.getBlockEntity(soul.anchor()) instanceof PhylacteryBlockEntity crypt && crypt.isAwake()) {
                 continue;
             }
             waiting.add(soul);
@@ -336,7 +331,7 @@ public class PhylacteryBlockEntity extends BlockEntity {
                 soul.coolAmbush();
                 continue;
             }
-            if (!canRaise(level)) {
+            if (level.getDifficulty() == Difficulty.PEACEFUL) {
                 continue;
             }
             for (Player player : entry.getValue()) {

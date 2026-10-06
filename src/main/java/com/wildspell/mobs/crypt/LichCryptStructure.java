@@ -103,8 +103,7 @@ public class LichCryptStructure extends Structure {
     }
 
     private static boolean isAir(NoiseColumn column, int y) {
-        BlockState state = column.getBlock(y);
-        return state.isAir();
+        return column.getBlock(y).isAir();
     }
 
     private static boolean isSolid(NoiseColumn column, int y) {

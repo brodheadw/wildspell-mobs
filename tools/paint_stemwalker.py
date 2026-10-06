@@ -1,13 +1,8 @@
-import math
-import os
-import sys
-
 from PIL import Image
 
-sys.path.insert(0, os.path.dirname(__file__))
-import make_stemwalker_model as model  # noqa: E402
-from geckolib_model import texels  # noqa: E402
-from painting import mix  # noqa: E402
+import make_stemwalker_model as model
+from geckolib_model import texels
+from painting import hash01 as h, mix, ramp
 
 OUT = "src/main/resources/assets/wildspellmobs/textures/entity"
 
@@ -18,17 +13,6 @@ SPOT = (206, 192, 170)
 GILL = [(34, 14, 18), (54, 22, 26), (78, 34, 36), (104, 52, 50)]
 PORE = (222, 236, 186)
 PORES = {("gills", 0, 2), ("gills", 1, 4)}
-
-
-def h(x, y, salt):
-    v = (x * 73856093) ^ (y * 19349663) ^ (salt * 83492791)
-    return ((v * 2654435761) & 0xFFFFFFFF) / 0xFFFFFFFF
-
-
-def ramp(palette, level):
-    return palette[int(round(max(0.0, min(1.0, level)) * (len(palette) - 1)))]
-
-
 SHADE = {"top": 0.12, "front": 0.0, "back": -0.06, "left": -0.04, "right": -0.04, "bottom": -0.25}
 
 
@@ -134,14 +118,14 @@ MATERIALS = {
     "shard": shard,
     "head_half": head_half,
     "bracket": bracket,
-    "cap": cap, "cap_brim": cap, "gills": gills, "gill_face": gills, "thread": thread,
+    "cap": cap, "gills": gills, "thread": thread,
 }
 
 
 def main():
     image = Image.new("RGBA", (model.TEX, model.TEX), (0, 0, 0, 0))
     glow = Image.new("RGBA", (model.TEX, model.TEX), (0, 0, 0, 0))
-    for index, (cube, face, x, y, fw, fh, (u, v)) in enumerate(texels(model.BONES)):
+    for cube, face, x, y, fw, fh, (u, v) in texels(model.BONES):
         material = cube["material"]
         cube_side[0] = cube["origin"][0] + cube["size"][0] / 2
         salt = sum(map(ord, material)) + int(cube["origin"][0] * 7 + cube["origin"][1] * 13 + cube["origin"][2] * 17)

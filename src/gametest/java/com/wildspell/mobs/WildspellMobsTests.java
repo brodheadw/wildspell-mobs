@@ -608,6 +608,23 @@ public class WildspellMobsTests {
         });
     }
 
+    @GameTest(template = ARENA, timeoutTicks = 1000, batch = "cryptSleeps")
+    public static void anAwakeCryptSleepsOnceEveryoneIsGone(GameTestHelper helper) {
+        shade(helper);
+        placePhylactery(helper, new BlockPos(4, 1, 1), Direction.SOUTH);
+        Player intruder = addMockPlayer(helper, new Vec3(4.5, 1.0, 6.5));
+        PhylacteryBlockEntity crypt = helper.getBlockEntity(new BlockPos(4, 1, 1));
+        boolean[] woke = {false};
+        helper.succeedWhen(() -> {
+            if (crypt.isAwake() && !woke[0]) {
+                woke[0] = true;
+                intruder.discard();
+            }
+            helper.assertTrue(woke[0] && !crypt.isAwake(), "the crypt is still awake");
+            helper.killAllEntities();
+        });
+    }
+
     @GameTest(template = ARENA, timeoutTicks = 200, batch = "lichAmbush")
     public static void lichAmbushesAPlayerNearItsCrypt(GameTestHelper helper) {
         paintFrostedCaves(helper);
@@ -1186,7 +1203,7 @@ public class WildspellMobsTests {
         });
     }
 
-    private static Player addMockPlayer(GameTestHelper helper, Vec3 at) {
+    static Player addMockPlayer(GameTestHelper helper, Vec3 at) {
         Player player = helper.makeMockPlayer(GameType.SURVIVAL);
         Vec3 pos = helper.absoluteVec(at);
         player.moveTo(pos.x, pos.y, pos.z, 0.0F, 0.0F);
@@ -1265,7 +1282,7 @@ public class WildspellMobsTests {
         });
     }
 
-    private static void sealCave(GameTestHelper helper) {
+    static void sealCave(GameTestHelper helper) {
         for (int x = 2; x <= 6; ++x) {
             for (int y = 0; y <= 4; ++y) {
                 for (int z = 2; z <= 6; ++z) {

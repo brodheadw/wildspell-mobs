@@ -50,10 +50,9 @@ public class GodsTests {
 
     @GameTest(template = SKY, batch = "godsWardens")
     public static void theSunAnswersOnlyAfterItsWardensFall(GameTestHelper helper) {
-        Player player = helper.makeMockPlayer(net.minecraft.world.level.GameType.SURVIVAL);
-        player.moveTo(helper.absoluteVec(new net.minecraft.world.phys.Vec3(4.5, 1.0, 4.5)));
+        Player player = aloftPlayer(helper, new Vec3(4.5, 1.0, 4.5));
         helper.assertFalse(Heavens.sunWillAnswer(player), "a player who slew no warden shouldn't be heard");
-        int needed = com.wildspell.mobs.SpawnBalance.APOLLO_WARDENS.get();
+        int needed = SpawnBalance.APOLLO_WARDENS.get();
         CompoundTag persisted = player.getPersistentData().getCompound(Player.PERSISTED_NBT_TAG);
         persisted.putInt(Heavens.WARDENS, needed - 1);
         player.getPersistentData().put(Player.PERSISTED_NBT_TAG, persisted);

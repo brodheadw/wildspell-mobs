@@ -2,7 +2,7 @@ import math
 
 import numpy as np
 
-from geckolib_model import Model, anim, c, kf, rot_matrix, write
+from geckolib_model import Model, anim, animations, c, rot_matrix, write
 
 GEO_OUT = "src/main/resources/assets/wildspellmobs/geo/entity/ice_lich.geo.json"
 ANIM_OUT = "src/main/resources/assets/wildspellmobs/animations/entity/ice_lich.animation.json"
@@ -11,7 +11,6 @@ TEX = 128
 MODEL = Model("geometry.ice_lich", TEX, 5, 4.5, [0, 2, 0])
 BONES = MODEL.bones
 bone = MODEL.bone
-geometry = MODEL.geometry
 
 
 bone("root", None, (0, 0, 0))
@@ -27,9 +26,8 @@ STRIPS = [
     ("left_0", -3.5, 3, 7, "left"), ("left_1", -0.5, 2, 9, "left"), ("left_2", 1.5, 2, 8, "left"),
 ]
 FLARE = {"front": (-9, 0, 0), "back": (9, 0, 0), "right": (0, 0, 9), "left": (0, 0, -9)}
-STRIP_TOP = 13
 for suffix, start, width, length, side in STRIPS:
-    top = STRIP_TOP
+    top = 13
     if side in ("front", "back"):
         z = -4 if side == "front" else 3
         origin, size, pivot = (start, top - length, z), (width, length, 1), (start + width / 2, top, z + 0.5)
@@ -136,10 +134,6 @@ bone("staff_crystal", "staff", (-7, 40.5, 0), [0, 45, 0], [
 MODEL.pack()
 
 
-def ch(**frames):
-    return frames
-
-
 def strip_sway(amp, phase, length, flare=0.0):
     bones = {}
     for i, (suffix, _start, _w, _l, side) in enumerate(STRIPS):
@@ -148,7 +142,6 @@ def strip_sway(amp, phase, length, flare=0.0):
         for k in range(steps + 1):
             t = length * k / steps
             s = [0, 1, 0, -1][(k + i + phase) % 4] * amp
-            out = [0.0, 0.0, 0.0]
             if side == "front":
                 out = [-flare + s, 0, s * 0.3]
             elif side == "back":
@@ -300,7 +293,6 @@ def hand_hold(side, pose):
 STAFF_PIVOT = np.array(BONE_BY_NAME["staff"]["pivot"], float)
 STAFF_REST = np.array(BONE_BY_NAME["staff"]["rotation"], float)
 STAFF_MID = 11.0
-STAFF_TIP = 33.5
 
 
 def solve_staff(pose, grip_world, W, prev):
@@ -361,12 +353,16 @@ def sample_times(length, fine=()):
     return sorted(ts)
 
 
+def pose_at(sparse, t):
+    return {name: {ch_: track(keys, t) for ch_, keys in chans.items()} for name, chans in sparse.items()}
+
+
 def dense(length, sparse, staff_at, fine=()):
     out = {name: {ch_: {} for ch_ in chans} for name, chans in sparse.items()}
     out["staff"] = {"position": {}, "rotation": {}}
     prev = np.zeros(3)
     for t in sample_times(length, fine):
-        pose = {name: {ch_: track(keys, t) for ch_, keys in chans.items()} for name, chans in sparse.items()}
+        pose = pose_at(sparse, t)
         grip, W = staff_at(t, pose)
         pos, rot = solve_staff(pose, grip, W, prev)
         prev = rot
@@ -429,11 +425,9 @@ def toss():
         R, _t = world_of("torso", pose)
         return grip, R @ rot_matrix(0, 0, tilt)
 
-    def flight(t, pose, t0, t1, src, dst, src_tilt, dst_tilt, spin, apex, bulge):
-        pose0 = {n: {c_: track(k, t0) for c_, k in ch_.items()} for n, ch_ in sparse.items()}
-        pose1 = {n: {c_: track(k, t1) for c_, k in ch_.items()} for n, ch_ in sparse.items()}
-        g0, W0 = held(src, pose0, src_tilt)
-        g1, W1 = held(dst, pose1, dst_tilt)
+    def flight(t, t0, t1, src, dst, src_tilt, dst_tilt, spin, apex, bulge):
+        g0, W0 = held(src, pose_at(sparse, t0), src_tilt)
+        g1, W1 = held(dst, pose_at(sparse, t1), dst_tilt)
         c0, c1 = g0 + W0 @ mid, g1 + W1 @ mid
         s = (t - t0) / (t1 - t0)
         W = rot_matrix(0, 0, spin * s) @ slerp(W0, W1, s)
@@ -443,11 +437,11 @@ def toss():
         if t <= R_OUT:
             return held("right", pose, float(np.interp(t, list(tilt_r), list(tilt_r.values()))))
         if t < R_CATCH:
-            return flight(t, pose, R_OUT, R_CATCH, "right", "left", tilt_r[R_OUT], twirl_l[R_CATCH], 360, 13, 6)
+            return flight(t, R_OUT, R_CATCH, "right", "left", tilt_r[R_OUT], twirl_l[R_CATCH], 360, 13, 6)
         if t <= L_OUT:
             return held("left", pose, float(np.interp(t, list(twirl_l), list(twirl_l.values()))))
         if t < L_CATCH:
-            return flight(t, pose, L_OUT, L_CATCH, "left", "right", twirl_l[L_OUT], -10, -360, 10, 6)
+            return flight(t, L_OUT, L_CATCH, "left", "right", twirl_l[L_OUT], -10, -360, 10, 6)
         return held("right", pose, -10 * (1 - smooth((t - L_CATCH) / (L - L_CATCH))))
 
     bones = dense(L, sparse, staff_at, fine=((R_OUT, R_CATCH), (L_OUT, L_CATCH)))
@@ -508,19 +502,8 @@ def spin():
     return anim(L, False, bones)
 
 
-def animations():
-    return {"format_version": "1.8.0", "animations": {
-        "animation.ice_lich.idle": idle(),
-        "animation.ice_lich.cast": cast(),
-        "animation.ice_lich.summon": summon(),
-        "animation.ice_lich.beam": beam(),
-        "animation.ice_lich.burst": burst(),
-        "animation.ice_lich.toss": toss(),
-        "animation.ice_lich.spin": spin(),
-    }}
-
-
 if __name__ == "__main__":
-    write(GEO_OUT, geometry())
-    write(ANIM_OUT, animations())
+    write(GEO_OUT, MODEL.geometry())
+    write(ANIM_OUT, animations("ice_lich", {"idle": idle(), "cast": cast(), "summon": summon(), "beam": beam(),
+                                            "burst": burst(), "toss": toss(), "spin": spin()}))
     print("ice lich model and animations written")

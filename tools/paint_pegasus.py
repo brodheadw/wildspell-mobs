@@ -1,4 +1,3 @@
-import glob
 import io
 import os
 import random
@@ -6,8 +5,10 @@ import zipfile
 
 from PIL import Image
 
+import painting
+
 OUT = "src/main/resources/assets/wildspellmobs/textures/entity/pegasus_{}.png"
-CLIENT = glob.glob(os.path.expanduser("~/.gradle/caches/neoformruntime/artifacts/minecraft_1.21.1_client.jar"))[0]
+CLIENT = os.path.expanduser("~/.gradle/caches/neoformruntime/artifacts/minecraft_1.21.1_client.jar")
 
 
 DUSK = [
@@ -73,7 +74,7 @@ def paint(name, c):
     rng = random.Random(7)
 
     def jitter(color, spread=5):
-        return tuple(max(0, min(255, v + rng.randint(-spread, spread))) for v in color) + (255,)
+        return painting.jitter(rng, color, spread=spread)
 
     img = Image.new("RGBA", (128, 128), (0, 0, 0, 0))
     img.paste(HORSE, (0, 0))

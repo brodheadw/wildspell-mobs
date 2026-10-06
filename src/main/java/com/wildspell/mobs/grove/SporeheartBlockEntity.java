@@ -1,6 +1,7 @@
 package com.wildspell.mobs.grove;
 
 import com.wildspell.mobs.WildspellMobs;
+import com.wildspell.mobs.entity.ColdEffects;
 import com.wildspell.mobs.entity.Stemwalker;
 import java.util.ArrayList;
 import java.util.List;
@@ -22,6 +23,7 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 
 public class SporeheartBlockEntity extends BlockEntity {
@@ -95,12 +97,9 @@ public class SporeheartBlockEntity extends BlockEntity {
     private BlockPos findSoil(ServerLevel level, Player quarry) {
         BlockPos fallback = null;
         for (int attempt = 0; attempt < 24; ++attempt) {
-            double angle = level.random.nextDouble() * Math.PI * 2.0;
-            double distance = NEAREST + level.random.nextDouble() * (FARTHEST - NEAREST);
-            int x = Mth.floor(this.worldPosition.getX() + 0.5 + Math.cos(angle) * distance);
-            int z = Mth.floor(this.worldPosition.getZ() + 0.5 + Math.sin(angle) * distance);
+            BlockPos column = BlockPos.containing(ColdEffects.ringPoint(level.random, Vec3.atBottomCenterOf(this.worldPosition), NEAREST, FARTHEST - NEAREST, 0.0));
             for (int dy = 4; dy >= -6; --dy) {
-                BlockPos ground = new BlockPos(x, this.worldPosition.getY() + dy, z);
+                BlockPos ground = column.above(dy);
                 BlockPos stand = ground.above();
                 if (!SporeheartFeature.soil(level.getBlockState(ground))
                         || !level.noCollision(WildspellMobs.STEMWALKER.get().getSpawnAABB(stand.getX() + 0.5, stand.getY(), stand.getZ() + 0.5))) {
@@ -125,7 +124,7 @@ public class SporeheartBlockEntity extends BlockEntity {
                 walker.crumble();
             }
         }
-        for (Stemwalker walker : level.getEntitiesOfClass(Stemwalker.class, new net.minecraft.world.phys.AABB(this.worldPosition).inflate(Stemwalker.TETHER),
+        for (Stemwalker walker : level.getEntitiesOfClass(Stemwalker.class, new AABB(this.worldPosition).inflate(Stemwalker.TETHER),
                 w -> w.isAlive() && this.worldPosition.equals(w.getHeart()))) {
             walker.crumble();
         }

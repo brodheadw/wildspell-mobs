@@ -1,6 +1,6 @@
 import math
 
-from geckolib_model import Model, anim, c, write
+from geckolib_model import Model, anim, animations, c, loop, write
 
 ASSETS = "src/main/resources/assets/wildspellmobs"
 GEO_OUT = f"{ASSETS}/geo/entity/diana.geo.json"
@@ -10,7 +10,6 @@ TEX = 128
 MODEL = Model("geometry.diana", TEX, 4, 4, [0, 1.5, 0])
 BONES = MODEL.bones
 bone = MODEL.bone
-geometry = MODEL.geometry
 
 MOON_CENTER = (0, 33.5, 0)
 GRIP = (5, 11, 0)
@@ -74,10 +73,6 @@ MODEL.pack()
 STRING_ANGLE = math.degrees(math.atan2(DRAW_BACK, TIP_Y))
 
 
-def loop(length, frames):
-    return {round(t, 3): v for t, v in frames} | {length: frames[0][1]}
-
-
 def veil(length, amp, lift=0.0):
     out = {}
     for i in range(3):
@@ -91,17 +86,12 @@ def veil(length, amp, lift=0.0):
     return out
 
 
-POISE = {
-    "left_leg": {"rotation": {0: [-40, 0, 0]}},
-    "left_shin": {"rotation": {0: [60, 0, 0]}},
-    "right_leg": {"rotation": {0: [8, 0, 0]}},
-    "right_shin": {"rotation": {0: [14, 0, 0]}},
-}
+POISE = {"left_leg": [-40, 0, 0], "left_shin": [60, 0, 0], "right_leg": [8, 0, 0], "right_shin": [14, 0, 0]}
 
 
 def held(bones, length):
-    for name, channels in POISE.items():
-        bones.setdefault(name, {"rotation": {0: channels["rotation"][0], length: channels["rotation"][0]}})
+    for name, rotation in POISE.items():
+        bones.setdefault(name, {"rotation": {0: rotation, length: rotation}})
     return bones
 
 
@@ -192,7 +182,7 @@ def yield_():
     bones = {}
     for name, channels in KNEEL.items():
         for ch, value in channels.items():
-            start = POISE.get(name, {}).get("rotation", {0: [0, 0, 0]})[0] if ch == "rotation" else [0, 0, 0]
+            start = POISE.get(name, [0, 0, 0]) if ch == "rotation" else [0, 0, 0]
             bones.setdefault(name, {})[ch] = {0: start, 0.6: [v * 1.1 for v in value], L: value}
     bones.update(veil(L, 2, 2))
     return anim(L, False, bones)
@@ -206,19 +196,8 @@ def kneel():
     return anim(L, True, bones)
 
 
-def animations():
-    return {"format_version": "1.8.0", "animations": {
-        "animation.diana.idle": idle(),
-        "animation.diana.draw": draw(),
-        "animation.diana.hold": hold(),
-        "animation.diana.loose": loose(),
-        "animation.diana.slash": slash(),
-        "animation.diana.yield": yield_(),
-        "animation.diana.kneel": kneel(),
-    }}
-
-
 if __name__ == "__main__":
-    write(GEO_OUT, geometry())
-    write(ANIM_OUT, animations())
+    write(GEO_OUT, MODEL.geometry())
+    write(ANIM_OUT, animations("diana", {"idle": idle(), "draw": draw(), "hold": hold(), "loose": loose(),
+                                         "slash": slash(), "yield": yield_(), "kneel": kneel()}))
     print("diana model and animations written")

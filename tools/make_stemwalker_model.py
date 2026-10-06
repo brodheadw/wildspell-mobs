@@ -1,6 +1,6 @@
 import math
 
-from geckolib_model import Model, anim, c, write
+from geckolib_model import Model, anim, animations, c, loop, write
 
 ASSETS = "src/main/resources/assets/wildspellmobs"
 GEO_OUT = f"{ASSETS}/geo/entity/stemwalker.geo.json"
@@ -10,7 +10,6 @@ TEX = 128
 MODEL = Model("geometry.stemwalker", TEX, 3, 4, [0, 1.5, 0])
 BONES = MODEL.bones
 bone = MODEL.bone
-geometry = MODEL.geometry
 
 THREADS = [(-2.0, -1.5, 4), (0.0, -0.5, 6), (2.0, -1.5, 3)]
 
@@ -66,10 +65,6 @@ for i, (x, z, length) in enumerate(THREADS):
     bone(f"thread_{i}", "head", (x, 39, z), cubes=[c((x - 0.5, 39 - length, z - 0.5), (1, length, 1), "thread", -0.35)])
 
 MODEL.pack()
-
-
-def loop(length, frames):
-    return {round(t, 3): v for t, v in frames} | {length: frames[0][1]}
 
 
 def threads(length, amp):
@@ -182,18 +177,7 @@ def crumble():
     })
 
 
-def animations():
-    return {"format_version": "1.8.0", "animations": {
-        "animation.stemwalker.idle": idle(),
-        "animation.stemwalker.walk": walk(),
-        "animation.stemwalker.attack": attack(),
-        "animation.stemwalker.shrug": shrug(),
-        "animation.stemwalker.emerge": emerge(),
-        "animation.stemwalker.sink": sink(),
-        "animation.stemwalker.crumble": crumble(),
-    }}
-
-
 if __name__ == "__main__":
-    write(GEO_OUT, geometry())
-    write(ANIM_OUT, animations())
+    write(GEO_OUT, MODEL.geometry())
+    write(ANIM_OUT, animations("stemwalker", {"idle": idle(), "walk": walk(), "attack": attack(), "shrug": shrug(),
+                                              "emerge": emerge(), "sink": sink(), "crumble": crumble()}))

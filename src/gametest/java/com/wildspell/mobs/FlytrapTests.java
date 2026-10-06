@@ -113,7 +113,7 @@ public class FlytrapTests {
         plant(helper, PLANT, 0);
         LuminousMoth moth = helper.spawn(WildspellMobs.LUMINOUS_MOTH.get(), 5.3F, 1.2F, 4.5F);
         moth.setNoAi(true);
-        Player player = addMockPlayer(helper, new Vec3(4.5, 1.0, 5.4));
+        Player player = WildspellMobsTests.addMockPlayer(helper, new Vec3(4.5, 1.0, 5.4));
         int[] tick = {0};
         helper.onEachTick(() -> {
             double sway = (tick[0]++ / 4) % 2 == 0 ? 0.0 : 0.3;
@@ -165,10 +165,10 @@ public class FlytrapTests {
         lawn(helper);
         plant(helper, PLANT, 1);
         plant(helper, new BlockPos(1, 1, 1), 1);
-        Player sneaker = addMockPlayer(helper, new Vec3(2.5, 1.0, 4.5));
+        Player sneaker = WildspellMobsTests.addMockPlayer(helper, new Vec3(2.5, 1.0, 4.5));
         sneaker.setShiftKeyDown(true);
-        Player still = addMockPlayer(helper, new Vec3(4.5, 1.0, 2.5));
-        Player walker = addMockPlayer(helper, new Vec3(6.5, 1.0, 4.5));
+        Player still = WildspellMobsTests.addMockPlayer(helper, new Vec3(4.5, 1.0, 2.5));
+        Player walker = WildspellMobsTests.addMockPlayer(helper, new Vec3(6.5, 1.0, 4.5));
         Pig pig = helper.spawn(EntityType.PIG, 4.5F, 1.0F, 6.5F);
         pig.setNoAi(true);
         int[] tick = {0};
@@ -439,14 +439,6 @@ public class FlytrapTests {
                 helper.setBlock(x, 0, z, Blocks.GRASS_BLOCK);
             }
         }
-    }
-
-    private static Player addMockPlayer(GameTestHelper helper, Vec3 at) {
-        Player player = helper.makeMockPlayer(GameType.SURVIVAL);
-        place(helper, player, at);
-        player.setInvulnerable(true);
-        helper.getLevel().addFreshEntity(player);
-        return player;
     }
 
     private static void place(GameTestHelper helper, Player player, Vec3 at) {

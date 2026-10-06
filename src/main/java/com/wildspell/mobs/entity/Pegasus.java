@@ -1,6 +1,7 @@
 package com.wildspell.mobs.entity;
 
 import com.wildspell.mobs.WildspellMobs;
+import java.util.List;
 import javax.annotation.Nullable;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.particles.DustParticleOptions;
@@ -207,7 +208,7 @@ public class Pegasus extends AbstractHorse {
         if (!this.canTakeWing() || !this.onGround() || this.isHerdFlying()) {
             return 0;
         }
-        java.util.List<Pegasus> herd = this.level().getEntitiesOfClass(Pegasus.class, this.getBoundingBox().inflate(HERD_REACH),
+        List<Pegasus> herd = this.level().getEntitiesOfClass(Pegasus.class, this.getBoundingBox().inflate(HERD_REACH),
                 other -> other != this && other.canTakeWing() && !other.isHerdFlying());
         if (herd.isEmpty()) {
             return 0;
@@ -246,15 +247,9 @@ public class Pegasus extends AbstractHorse {
         int elapsed = HERD_FLIGHT_TICKS - this.herdTicks;
         boolean descending = this.herdTicks <= HERD_DESCENT_TICKS;
         this.herdHeading += 0.35F * Mth.sin(elapsed * 0.02F);
-        this.setYRot(this.herdHeading);
-        this.yBodyRot = this.yHeadRot = this.herdHeading;
         Vec3 ahead = Vec3.directionFromRotation(0.0F, this.herdHeading).scale(HERD_SPEED);
         double lift = descending ? -SOAR_LIFT : Mth.clamp((this.herdCruise - this.getY()) * 0.05, -HERD_CLIMB, HERD_CLIMB);
-        Vec3 motion = new Vec3(ahead.x, lift, ahead.z);
-        this.getNavigation().stop();
-        this.move(MoverType.SELF, motion);
-        this.setDeltaMovement(motion);
-        this.resetFallDistance();
+        this.fly(this.herdHeading, new Vec3(ahead.x, lift, ahead.z));
         this.herdTicks--;
         if (this.horizontalCollision && !descending) {
             this.herdCruise += 4.0;
@@ -276,9 +271,12 @@ public class Pegasus extends AbstractHorse {
         if (toward.length() > max) {
             toward = toward.normalize().scale(max);
         }
-        Vec3 motion = toward.add(leader.getDeltaMovement().scale(0.5));
-        this.setYRot(leader.herdHeading);
-        this.yBodyRot = this.yHeadRot = leader.herdHeading;
+        this.fly(leader.herdHeading, toward.add(leader.getDeltaMovement().scale(0.5)));
+    }
+
+    private void fly(float heading, Vec3 motion) {
+        this.setYRot(heading);
+        this.yBodyRot = this.yHeadRot = heading;
         this.getNavigation().stop();
         this.move(MoverType.SELF, motion);
         this.setDeltaMovement(motion);
@@ -286,8 +284,7 @@ public class Pegasus extends AbstractHorse {
     }
 
     public boolean startSoaring() {
-        if (this.isTamed() || this.isBaby() || this.isVehicle() || this.isLeashed() || !this.onGround() || this.isInWater()
-                || !this.level().noCollision(this, this.getBoundingBox().move(0.0, 3.0, 0.0))) {
+        if (!this.canTakeWing() || !this.onGround()) {
             return false;
         }
         this.soarTicks = SOAR_TICKS;
@@ -304,13 +301,14 @@ public class Pegasus extends AbstractHorse {
         if (this.level().isClientSide) {
             return;
         }
-        if ((this.isSoaring() || this.isHerdFlying()) && (this.isVehicle() || this.isLeashed() || this.isTamed())) {
+        boolean flying = this.isSoaring() || this.isHerdFlying();
+        if (flying && (this.isVehicle() || this.isLeashed() || this.isTamed())) {
             this.soarTicks = 0;
             this.herdTicks = 0;
             this.herdLeader = null;
-        } else if (!this.isSoaring() && !this.isHerdFlying() && this.random.nextInt(HERD_CHANCE) == 0) {
+        } else if (!flying && this.random.nextInt(HERD_CHANCE) == 0) {
             this.startHerdFlight();
-        } else if (!this.isSoaring() && !this.isHerdFlying() && this.random.nextInt(SOAR_CHANCE) == 0) {
+        } else if (!flying && this.random.nextInt(SOAR_CHANCE) == 0) {
             this.startSoaring();
         }
     }
@@ -319,8 +317,7 @@ public class Pegasus extends AbstractHorse {
     public void tick() {
         super.tick();
         if (!this.level().isClientSide) {
-            // Flying without gravity keeps a rider from being kicked for "floating a vehicle" on servers that
-            // don't allow flight (ServerGamePacketListenerImpl skips no-gravity vehicles); flight supplies its own sink.
+            // ServerGamePacketListenerImpl kicks the rider of a "floating" vehicle unless it has no gravity; ridden flight sinks on its own.
             boolean flying = this.isAloft() && this.isSaddled() && this.getControllingPassenger() instanceof Player;
             if (flying != this.flightNoGravity) {
                 this.flightNoGravity = flying;
@@ -427,10 +424,9 @@ public class Pegasus extends AbstractHorse {
             this.level().playLocalSound(this.getX(), this.getY(), this.getZ(), SoundEvents.ENDER_DRAGON_FLAP, this.getSoundSource(), 0.6F, 1.3F, false);
         } else {
             Vec3 look = Vec3.directionFromRotation(rider.getXRot(), this.getYRot());
-            double forward = input.z;
             double speed = CRUISE + (look.y < 0.0 ? -look.y * DIVE_BONUS : 0.0);
             Vec3 side = new Vec3(look.z, 0.0, -look.x).normalize().scale(input.x * 0.5);
-            Vec3 wanted = look.scale(forward * speed).add(side).add(0.0, rider.jumping ? CLIMB : -GLIDE_SINK, 0.0);
+            Vec3 wanted = look.scale(input.z * speed).add(side).add(0.0, rider.jumping ? CLIMB : -GLIDE_SINK, 0.0);
             motion = motion.add(wanted.subtract(motion).scale(RESPONSE));
         }
         this.move(MoverType.SELF, motion);
@@ -443,14 +439,8 @@ public class Pegasus extends AbstractHorse {
         int elapsed = SOAR_TICKS - this.soarTicks;
         boolean climbing = elapsed < SOAR_CLIMB_TICKS;
         float heading = this.getYRot() + this.soarTurn;
-        this.setYRot(heading);
-        this.yBodyRot = this.yHeadRot = heading;
         Vec3 ahead = Vec3.directionFromRotation(0.0F, heading).scale(SOAR_SPEED);
-        Vec3 motion = new Vec3(ahead.x, climbing ? SOAR_LIFT : -SOAR_LIFT, ahead.z);
-        this.getNavigation().stop();
-        this.move(MoverType.SELF, motion);
-        this.setDeltaMovement(motion);
-        this.resetFallDistance();
+        this.fly(heading, new Vec3(ahead.x, climbing ? SOAR_LIFT : -SOAR_LIFT, ahead.z));
         this.soarTicks--;
         if (this.horizontalCollision && climbing) {
             this.soarTicks = SOAR_CLIMB_TICKS;

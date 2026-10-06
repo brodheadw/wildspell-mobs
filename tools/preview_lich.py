@@ -5,7 +5,7 @@ import sys
 import numpy as np
 from PIL import Image
 
-from geckolib_model import rot_matrix
+from geckolib_model import face_corners, faces_of, rot_matrix
 
 GEO = "src/main/resources/assets/wildspellmobs/geo/entity/ice_lich.geo.json"
 ANIM = "src/main/resources/assets/wildspellmobs/animations/entity/ice_lich.animation.json"
@@ -14,25 +14,16 @@ GLOW = "src/main/resources/assets/wildspellmobs/textures/entity/ice_lich_glowmas
 
 
 def cube_faces(cube):
-    (x0, y0, z0), (w, h, d) = cube["origin"], cube["size"]
     i = cube.get("inflate", 0)
-    X0, Y0, Z0, X1, Y1, Z1 = x0 - i, y0 - i, z0 - i, x0 + w + i, y0 + h + i, z0 + d + i
-    u, v = cube["uv"]
-    w, h, d = int(w), int(h), int(d)
-    P = lambda x, y, z: np.array([x, y, z], float)
-    return [
-        (P(X0, Y1, Z1), P(X0, Y1, Z0), P(X0, Y0, Z1), u, v + d, d, h, (-1, 0, 0)),
-        (P(X0, Y1, Z0), P(X1, Y1, Z0), P(X0, Y0, Z0), u + d, v + d, w, h, (0, 0, -1)),
-        (P(X1, Y1, Z0), P(X1, Y1, Z1), P(X1, Y0, Z0), u + d + w, v + d, d, h, (1, 0, 0)),
-        (P(X1, Y1, Z1), P(X0, Y1, Z1), P(X1, Y0, Z1), u + 2 * d + w, v + d, w, h, (0, 0, 1)),
-        (P(X0, Y1, Z1), P(X1, Y1, Z1), P(X0, Y1, Z0), u + d, v, w, d, (0, 1, 0)),
-        (P(X0, Y0, Z0), P(X1, Y0, Z0), P(X0, Y0, Z1), u + d + w, v, w, d, (0, -1, 0)),
-    ]
+    lo = [o - i for o in cube["origin"]]
+    hi = [o + s + i for o, s in zip(cube["origin"], cube["size"])]
+    rects = faces_of(cube)
+    return [(*(np.array(p, float) for p in corners), *rects[face]) for face, corners in face_corners(*lo, *hi).items()]
 
 
 def sample(channel, t):
     times = sorted(channel, key=float)
-    vals = [np.array(channel[k]["post"] if isinstance(channel[k], dict) else channel[k], float) for k in times]
+    vals = [np.array(channel[k]["post"], float) for k in times]
     ts = [float(k) for k in times]
     if t <= ts[0]:
         return vals[0]
@@ -67,7 +58,7 @@ def world_faces(geo, pose=None):
     for b in geo["bones"]:
         tf = transform(b["name"])
         for cube in b.get("cubes", []):
-            for (P0, Pu, Pv, u0, v0, fw, fh, n) in cube_faces(cube):
+            for P0, Pu, Pv, u0, v0, fw, fh in cube_faces(cube):
                 a, bu, bv = tf(P0), tf(Pu), tf(Pv)
                 normal = np.cross(bu - a, bv - a)
                 ln = np.linalg.norm(normal)
@@ -141,17 +132,12 @@ def render(faces, tex, glow, yaw, scale, night=False, size=(620, 660), ground=No
 
 
 def pose_at(anims, name, t):
-    a = anims["animations"][name]
-    pose = {}
-    for bone, chans in a["bones"].items():
-        pose[bone] = {k: sample(v, t) for k, v in chans.items() if k in ("rotation", "position")}
-    return pose
+    return {bone: {k: sample(v, t) for k, v in chans.items()} for bone, chans in anims["animations"][name]["bones"].items()}
 
 
-def sheet(faces, tex, glow, title):
-    views = [render(faces, tex, glow, 0, 12, ground=True), render(faces, tex, glow, 35, 12, ground=True),
-             render(faces, tex, glow, -35, 12, ground=True), render(faces, tex, glow, 90, 12, ground=True),
-             render(faces, tex, glow, 180, 12, ground=True), render(faces, tex, glow, 25, 12, night=True)]
+def sheet(faces, tex, glow):
+    views = [render(faces, tex, glow, yaw, 12, ground=True) for yaw in (0, 35, -35, 90, 180)]
+    views.append(render(faces, tex, glow, 25, 12, night=True))
     W, H = views[0].size
     out = Image.new("RGB", (W * 3, H * 2))
     for i, v in enumerate(views):
@@ -164,12 +150,9 @@ def main():
     geo = json.load(open(GEO))["minecraft:geometry"][0]
     anims = json.load(open(ANIM))
     tex = np.array(Image.open(TEX).convert("RGBA"), float)
-    try:
-        glow = np.array(Image.open(GLOW).convert("RGBA"), float)
-    except FileNotFoundError:
-        glow = np.zeros_like(tex)
+    glow = np.array(Image.open(GLOW).convert("RGBA"), float)
     faces = world_faces(geo)
-    sheet(faces, tex, glow, "rest").save(f"{out_dir}/lich_rest.png")
+    sheet(faces, tex, glow).save(f"{out_dir}/lich_rest.png")
     close = Image.new("RGB", (1200, 700))
     for i, yaw in enumerate((0, 30)):
         full = render(faces, tex, glow, yaw, 30, size=(600, 1300))

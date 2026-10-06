@@ -91,8 +91,8 @@ public class ElectricEelTests {
         pool(helper);
         ElectricEel eel = helper.spawn(WildspellMobs.ELECTRIC_EEL.get(), 2.5F, 1.2F, 4.5F);
         eel.setNoAi(true);
-        Player swimmer = addMockPlayer(helper, new Vec3(4.5, 1.5, 4.5));
-        Player ashore = addMockPlayer(helper, new Vec3(7.5, 4.0, 4.5));
+        Player swimmer = WildspellMobsTests.addMockPlayer(helper, new Vec3(4.5, 1.5, 4.5));
+        Player ashore = WildspellMobsTests.addMockPlayer(helper, new Vec3(7.5, 4.0, 4.5));
         helper.runAfterDelay(10, () -> {
             helper.assertTrue(swimmer.isInWater(), "swimmer isn't in the water");
             helper.assertTrue(eel.isIntruder(swimmer), "eel ignores a swimmer two blocks off");
@@ -202,14 +202,5 @@ public class ElectricEelTests {
             helper.assertTrue(discharged[0] && discharged[1], "not every eel discharged");
             helper.succeed();
         });
-    }
-
-    private static Player addMockPlayer(GameTestHelper helper, Vec3 at) {
-        Player player = helper.makeMockPlayer(GameType.SURVIVAL);
-        Vec3 pos = helper.absoluteVec(at);
-        player.moveTo(pos.x, pos.y, pos.z, 0.0F, 0.0F);
-        player.setInvulnerable(true);
-        helper.getLevel().addFreshEntity(player);
-        return player;
     }
 }
