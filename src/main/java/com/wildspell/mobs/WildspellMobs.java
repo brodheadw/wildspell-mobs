@@ -14,7 +14,9 @@ import com.wildspell.mobs.entity.ElectricEel;
 import com.wildspell.mobs.entity.FlytrapHead;
 import com.wildspell.mobs.entity.FrostOrb;
 import com.wildspell.mobs.entity.FrostShard;
+//? if <26.4 {
 import com.wildspell.mobs.entity.FrozenZombie;
+//?}
 import com.wildspell.mobs.entity.IceLich;
 import com.wildspell.mobs.entity.LichWisp;
 import com.wildspell.mobs.entity.LuminousMoth;
@@ -105,8 +107,10 @@ public class WildspellMobs {
     public static final DeferredHolder<MapCodec<? extends BiomeModifier>, MapCodec<ReweighSpawnsBiomeModifier>> REWEIGH_SPAWNS =
             BIOME_MODIFIER_SERIALIZERS.register("reweigh_spawns", () -> ReweighSpawnsBiomeModifier.CODEC);
 
+//? if <26.4 {
     public static final DeferredHolder<SoundEvent, SoundEvent> FROZEN_ZOMBIE_CRUNCH = sound("entity.frozen_zombie.crunch");
-    public static final DeferredHolder<SoundEvent, SoundEvent> FROZEN_ZOMBIE_SHATTER = sound("entity.frozen_zombie.shatter");
+//?}
+    public static final DeferredHolder<SoundEvent, SoundEvent> ICE_SHATTER = sound("ice.shatter");
 
     public static final DeferredHolder<ParticleType<?>, SimpleParticleType> FROST_MOTE = PARTICLE_TYPES.register("frost_mote",
             () -> new SimpleParticleType(false));
@@ -124,6 +128,7 @@ public class WildspellMobs {
                     .updateInterval(10)
                     .build("frost_shard"));
 
+//? if <26.4 {
     public static final DeferredHolder<EntityType<?>, EntityType<FrozenZombie>> FROZEN_ZOMBIE = ENTITY_TYPES.register("frozen_zombie",
             () -> EntityType.Builder.of(FrozenZombie::new, MobCategory.MONSTER)
                     .sized(0.6F, 1.95F)
@@ -132,6 +137,7 @@ public class WildspellMobs {
                     .ridingOffset(-0.7F)
                     .clientTrackingRange(8)
                     .build("frozen_zombie"));
+//?}
 
     public static final DeferredHolder<EntityType<?>, EntityType<IceLich>> ICE_LICH = ENTITY_TYPES.register("ice_lich",
             () -> EntityType.Builder.of(IceLich::new, MobCategory.MONSTER)
@@ -354,8 +360,10 @@ public class WildspellMobs {
     public static final DeferredItem<DeferredSpawnEggItem> ICE_LICH_SPAWN_EGG = ITEMS.register("ice_lich_spawn_egg",
             () -> new DeferredSpawnEggItem(ICE_LICH, 0xCFEFFF, 0x1E2B55, new Item.Properties()));
 
+//? if <26.4 {
     public static final DeferredItem<DeferredSpawnEggItem> FROZEN_ZOMBIE_SPAWN_EGG = ITEMS.register("frozen_zombie_spawn_egg",
             () -> new DeferredSpawnEggItem(FROZEN_ZOMBIE, 0x9FD4E8, 0x3F6B4A, new Item.Properties()));
+//?}
 
     public static final DeferredItem<MothBottleItem> LUMINOUS_MOTH_BOTTLE = ITEMS.register("luminous_moth_bottle",
             () -> new MothBottleItem(new Item.Properties().stacksTo(1)));
@@ -392,7 +400,9 @@ public class WildspellMobs {
         modBus.addListener(WildspellMobs::addToCreativeTabs);
         container.registerConfig(ModConfig.Type.COMMON, SpawnBalance.SPEC);
         NeoForge.EVENT_BUS.addListener(SpawnBalance::onPositionCheck);
+//? if <26.4 {
         NeoForge.EVENT_BUS.addListener(ZombieFreezing::onEntityTick);
+//?}
         NeoForge.EVENT_BUS.addListener(IceMelting::onPlayerTick);
         NeoForge.EVENT_BUS.addListener(LichSouls::onServerTick);
         NeoForge.EVENT_BUS.addListener(Heavens::onServerTick);
@@ -410,7 +420,9 @@ public class WildspellMobs {
 
     private static void registerAttributes(EntityAttributeCreationEvent event) {
         event.put(RIME_SKULL.get(), RimeSkull.createAttributes().build());
+//? if <26.4 {
         event.put(FROZEN_ZOMBIE.get(), FrozenZombie.createAttributes().build());
+//?}
         event.put(ICE_LICH.get(), IceLich.createAttributes().build());
         event.put(LUMINOUS_MOTH.get(), LuminousMoth.createAttributes().build());
         event.put(ELECTRIC_EEL.get(), ElectricEel.createAttributes().build());
@@ -424,8 +436,10 @@ public class WildspellMobs {
     private static void registerSpawnPlacements(RegisterSpawnPlacementsEvent event) {
         event.register(RIME_SKULL.get(), SpawnPlacementTypes.NO_RESTRICTIONS, Heightmap.Types.MOTION_BLOCKING_NO_LEAVES,
                 RimeSkull::checkRimeSkullSpawnRules, RegisterSpawnPlacementsEvent.Operation.REPLACE);
+//? if <26.4 {
         event.register(FROZEN_ZOMBIE.get(), SpawnPlacementTypes.ON_GROUND, Heightmap.Types.MOTION_BLOCKING_NO_LEAVES,
                 Monster::checkMonsterSpawnRules, RegisterSpawnPlacementsEvent.Operation.REPLACE);
+//?}
         event.register(LUMINOUS_MOTH.get(), SpawnPlacementTypes.NO_RESTRICTIONS, Heightmap.Types.MOTION_BLOCKING_NO_LEAVES,
                 LuminousMoth::checkMothSpawnRules, RegisterSpawnPlacementsEvent.Operation.REPLACE);
         event.register(ELECTRIC_EEL.get(), SpawnPlacementTypes.IN_WATER, Heightmap.Types.MOTION_BLOCKING_NO_LEAVES,
@@ -439,7 +453,9 @@ public class WildspellMobs {
             event.accept(RIME_SKULL_SPAWN_EGG);
             event.accept(STEMWALKER_SPAWN_EGG);
             event.accept(SPOREHEART_ITEM);
+//? if <26.4 {
             event.accept(FROZEN_ZOMBIE_SPAWN_EGG);
+//?}
             event.accept(ICE_LICH_SPAWN_EGG);
             event.accept(LUMINOUS_MOTH_SPAWN_EGG);
             event.accept(ELECTRIC_EEL_SPAWN_EGG);

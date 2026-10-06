@@ -242,7 +242,14 @@ The player-facing description is [publish/DESCRIPTION.md](publish/DESCRIPTION.md
 
 Needs JDK 21 (`JAVA_HOME`).
 
-    ./gradlew build          # jar in build/libs/
+    ./gradlew buildAll                        # every version; jars in versions/<v>/build/libs/
+    ./gradlew :1.21.1-neoforge:build          # one version
+
+One source tree builds for several Minecraft versions through [Stonecutter](https://stonecutter.kikugie.dev): each
+target is a line in `settings.gradle` and a `versions/<mc>-neoforge/gradle.properties` holding that version's
+NeoForge, Parchment and GeckoLib versions. Code that only belongs to some versions sits between `//? if <26.4 {`
+and `//?}` comments. The Frozen Zombie is gated that way: Minecraft 26.4 brings its own frozen zombie, the
+Frostbite, so from 26.4 the mod has no Frozen Zombie and the Ice Lich raises Frostbites instead.
 
 ## Test
 
@@ -282,9 +289,9 @@ Frosted Caves); the creeper test checks whichever setup it runs in. Adding `ftb-
 (write it into `run/config/ftbquests/quests/` with the modpack repo's `tools/make_quests.py <folder>`)
 and log any quest that fails to parse.
 
-    ./gradlew runGameTestServer
+    ./gradlew :1.21.1-neoforge:runGameTestServer
 
-`./gradlew runShowcase` opens the dev client straight into `run/saves/showcase`, a staged world for
+`./gradlew :1.21.1-neoforge:runShowcase` opens the dev client straight into `run/saves/showcase`, a staged world for
 looking at the mobs. The world is local-only (under `run/`, gitignored).
 
 ## Release

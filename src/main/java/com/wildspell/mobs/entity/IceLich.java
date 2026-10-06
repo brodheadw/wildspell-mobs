@@ -149,7 +149,7 @@ public class IceLich extends Monster implements RangedAttackMob, GeoEntity {
         }
         ColdEffects.soulBurst(level, at.add(0.0, 1.0, 0.0), 0.8, 1.2);
         level.playSound(null, at.x, at.y, at.z, SoundEvents.WITHER_SPAWN, SoundSource.HOSTILE, 1.0F, 1.6F);
-        level.playSound(null, at.x, at.y, at.z, WildspellMobs.FROZEN_ZOMBIE_SHATTER.get(), SoundSource.HOSTILE, 1.5F, 0.7F);
+        level.playSound(null, at.x, at.y, at.z, WildspellMobs.ICE_SHATTER.get(), SoundSource.HOSTILE, 1.5F, 0.7F);
         return lich;
     }
 
@@ -362,6 +362,15 @@ public class IceLich extends Monster implements RangedAttackMob, GeoEntity {
         return this.level().getEntitiesOfClass(Mob.class, this.getBoundingBox().inflate(32.0), m -> m.getTags().contains(owner) && m.isAlive());
     }
 
+    // The frozen dead it raises: our Frozen Zombie until Minecraft has its own, the Frostbite, from 26.4.
+    private static EntityType<? extends Mob> frozenDead() {
+//? if <26.4 {
+        return WildspellMobs.FROZEN_ZOMBIE.get();
+//?} else {
+/*        return EntityType.FROSTBITE;*/
+//?}
+    }
+
     private void summonMinions(LivingEntity target) {
         ServerLevel level = (ServerLevel) this.level();
         int room = MAX_MINIONS - this.minions().size();
@@ -375,7 +384,7 @@ public class IceLich extends Monster implements RangedAttackMob, GeoEntity {
             if (spot == null) {
                 continue;
             }
-            Mob minion = i < zombies ? WildspellMobs.FROZEN_ZOMBIE.get().create(level) : WildspellMobs.RIME_SKULL.get().create(level);
+            Mob minion = i < zombies ? frozenDead().create(level) : WildspellMobs.RIME_SKULL.get().create(level);
             if (minion == null) {
                 continue;
             }
@@ -509,7 +518,7 @@ public class IceLich extends Monster implements RangedAttackMob, GeoEntity {
             return;
         }
         level.sendParticles(ColdEffects.ICE_CHIPS, this.burstAt.x, this.burstAt.y + 0.5, this.burstAt.z, 60, BURST_RADIUS / 2, 0.6, BURST_RADIUS / 2, 0.2);
-        level.playSound(null, this.burstAt.x, this.burstAt.y, this.burstAt.z, WildspellMobs.FROZEN_ZOMBIE_SHATTER.get(), SoundSource.HOSTILE, 1.5F, 0.8F);
+        level.playSound(null, this.burstAt.x, this.burstAt.y, this.burstAt.z, WildspellMobs.ICE_SHATTER.get(), SoundSource.HOSTILE, 1.5F, 0.8F);
         AABB area = new AABB(this.burstAt, this.burstAt).inflate(BURST_RADIUS, 1.5, BURST_RADIUS);
         for (LivingEntity victim : level.getEntitiesOfClass(LivingEntity.class, area, e -> e != this && !isMinion(e))) {
             if (victim.hurt(this.damageSources().indirectMagic(this, this), 8.0F)) {

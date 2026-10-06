@@ -1,3 +1,4 @@
+//? if <26.4 {
 package com.wildspell.mobs.client;
 
 import com.mojang.blaze3d.vertex.PoseStack;
@@ -63,3 +64,4 @@ public class FrozenZombieRenderer extends AbstractZombieRenderer<FrozenZombie, F
         }
     }
 }
+//?}

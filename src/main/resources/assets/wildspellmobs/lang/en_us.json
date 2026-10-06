@@ -8,7 +8,6 @@
   "wildspellmobs.configuration.undergroundMonsterChance": "Underground Monster Chance",
   "entity.wildspellmobs.frozen_zombie": "Frozen Zombie",
   "item.wildspellmobs.frozen_zombie_spawn_egg": "Frozen Zombie Spawn Egg",
-  "subtitles.wildspellmobs.entity.frozen_zombie.shatter": "Frozen Zombie shatters",
   "wildspellmobs.configuration.undergroundLocalCap": "Underground Local Cap",
   "wildspellmobs.configuration.undergroundCreeperCap": "Underground Creeper Cap",
   "wildspellmobs.configuration.undergroundCapRadius": "Underground Cap Radius",
@@ -92,5 +91,6 @@
   "message.wildspellmobs.wardens.answered": "The last of the sun's wardens you needed is dead. Climb high and look it in the eye. (%s of %s)",
   "entity.wildspellmobs.stemwalker": "Stemwalker",
   "item.wildspellmobs.stemwalker_spawn_egg": "Stemwalker Spawn Egg",
-  "block.wildspellmobs.sporeheart": "Sporeheart"
+  "block.wildspellmobs.sporeheart": "Sporeheart",
+  "subtitles.wildspellmobs.ice.shatter": "Ice shatters"
 }
