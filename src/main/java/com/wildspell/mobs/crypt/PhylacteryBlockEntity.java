@@ -2,7 +2,6 @@ package com.wildspell.mobs.crypt;
 
 import com.wildspell.mobs.SpawnBalance;
 import com.wildspell.mobs.WildspellMobs;
-import com.wildspell.mobs.ZombieFreezing;
 import com.wildspell.mobs.entity.ColdEffects;
 import com.wildspell.mobs.entity.IceLich;
 import java.util.ArrayDeque;
@@ -308,7 +307,7 @@ public class PhylacteryBlockEntity extends BlockEntity {
         double range = ambushRange();
         Map<LichSouls.Soul, List<Player>> prey = new HashMap<>();
         for (Player player : candidates) {
-            if (!isPrey(player) || !level.getBiome(player.blockPosition()).is(ZombieFreezing.FREEZES_ZOMBIES)) {
+            if (!isPrey(player) || !level.getBiome(player.blockPosition()).is(ColdEffects.COLD_CAVES)) {
                 continue;
             }
             LichSouls.Soul nearest = null;

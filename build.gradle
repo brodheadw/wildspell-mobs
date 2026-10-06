@@ -5,15 +5,11 @@ plugins {
     id 'idea'
 }
 
-tasks.named('wrapper', Wrapper).configure {
-    distributionType = Wrapper.DistributionType.BIN
-}
-
 version = mod_version
 group = mod_group_id
 
 sourceSets.main.resources {
-    srcDir('src/generated/resources')
+    srcDir(rootProject.file('src/generated/resources'))
     exclude("**/*.bbmodel")
     exclude("src/generated/**/.cache")
 }
@@ -78,6 +74,7 @@ neoForge {
         }
 
         configureEach {
+            gameDirectory = rootProject.file('run')
             systemProperty 'forge.logging.markers', 'REGISTRIES'
             logLevel = org.slf4j.event.Level.DEBUG
         }
@@ -100,9 +97,9 @@ configurations {
 dependencies {
     gametestImplementation sourceSets.main.output
     // YUNG's Cave Biomes (+ its API) at dev runtime only, so gametests can check the Frosted Caves spawn list; not shipped or declared.
-    localRuntime fileTree(dir: 'libs', include: '*.jar')
+    localRuntime rootProject.fileTree(dir: 'libs', include: '*.jar')
     // Compiled against from its Maven so a clean checkout (and CI) builds; at dev runtime it comes from ./libs.
-    compileOnly "software.bernie.geckolib:geckolib-neoforge-${minecraft_version}:4.9.3"
+    compileOnly "software.bernie.geckolib:geckolib-neoforge-${minecraft_version}:${geckolib_version}"
 }
 
 var generateModMetadata = tasks.register("generateModMetadata", ProcessResources) {
@@ -118,7 +115,7 @@ var generateModMetadata = tasks.register("generateModMetadata", ProcessResources
     ]
     inputs.properties replaceProperties
     expand replaceProperties
-    from "src/main/templates"
+    from rootProject.file("src/main/templates")
     into "build/generated/sources/modMetadata"
 }
 sourceSets.main.resources.srcDir generateModMetadata
@@ -151,7 +148,7 @@ idea {
 // Resolved here: the configuration cache can't reach `project` from the rename closure at execution time.
 def bundledLicenseName = "LICENSE_${mod_id}"
 tasks.named('jar', Jar).configure {
-    from('LICENSE') {
+    from(rootProject.file('LICENSE')) {
         rename { bundledLicenseName }
     }
 }

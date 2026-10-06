@@ -1,5 +1,6 @@
 package com.wildspell.mobs;
 
+import com.wildspell.mobs.entity.ColdEffects;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.particles.ParticleTypes;
@@ -30,7 +31,7 @@ public final class IceMelting {
             return;
         }
         Player player = event.getEntity();
-        if (!level.getBiome(player.blockPosition()).is(ZombieFreezing.FREEZES_ZOMBIES)) {
+        if (!level.getBiome(player.blockPosition()).is(ColdEffects.COLD_CAVES)) {
             return;
         }
         sampleAround(level, player.blockPosition(), SAMPLES);

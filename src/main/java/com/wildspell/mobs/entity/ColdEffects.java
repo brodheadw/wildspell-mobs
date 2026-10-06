@@ -1,5 +1,8 @@
 package com.wildspell.mobs.entity;
 
+import net.minecraft.world.level.biome.Biome;
+import net.minecraft.tags.TagKey;
+import net.minecraft.core.registries.Registries;
 import com.wildspell.mobs.WildspellMobs;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
@@ -21,6 +24,7 @@ import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
 
 public final class ColdEffects {
+    public static final TagKey<Biome> COLD_CAVES = TagKey.create(Registries.BIOME, WildspellMobs.id("cold_caves"));
     public static final BlockParticleOption ICE_CHIPS = new BlockParticleOption(ParticleTypes.BLOCK, Blocks.ICE.defaultBlockState());
 
     private ColdEffects() {
@@ -60,7 +64,7 @@ public final class ColdEffects {
 
     public static void shatter(ServerLevel level, Mob mob, float pitch) {
         level.sendParticles(ICE_CHIPS, mob.getX(), mob.getY(0.5), mob.getZ(), 25, 0.3, 0.6, 0.3, 0.15);
-        mob.playSound(WildspellMobs.FROZEN_ZOMBIE_SHATTER.get(), 1.0F, pitch);
+        mob.playSound(WildspellMobs.ICE_SHATTER.get(), 1.0F, pitch);
         mob.discard();
     }
 

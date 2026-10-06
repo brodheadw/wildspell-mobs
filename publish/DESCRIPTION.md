@@ -10,7 +10,7 @@ A floating, frost-rimed skull that haunts the Frosted Caves, from the great cave
 - Takes double damage from fire, and catches fire in sunlight.
 
 ## Frozen Zombie
-What a zombie becomes after lingering in the Frosted Caves, the way skeletons become strays in powder snow. After a few seconds it shivers and frosts over, then cracks into its frozen form.
+What a zombie becomes after lingering in the Frosted Caves, the way skeletons become strays in powder snow. After a few seconds it shivers and frosts over, then cracks into its frozen form. On Minecraft 26.4 and later this mob is not in the mod: the game's own Frostbite takes its place, and the Ice Lich raises those.
 - Moves slowly and with effort: it drags itself forward with a crunch of frozen joints, then seizes up mid-stride.
 - Its hits frost and slow you.
 - Some lose an arm to the cold. Most have had half their brow torn away to the skull; a few kept a whole face.

@@ -1,3 +1,4 @@
+//? if <26.4 {
 package com.wildspell.mobs.client;
 
 import com.wildspell.mobs.WildspellMobs;
@@ -56,3 +57,4 @@ public class FrozenZombieModel extends ZombieModel<FrozenZombie> {
         this.hat.copyFrom(this.head);
     }
 }
+//?}

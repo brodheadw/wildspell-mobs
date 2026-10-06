@@ -6,8 +6,10 @@ import com.wildspell.mobs.crypt.LichSouls;
 import com.wildspell.mobs.crypt.PhylacteryBlock;
 import com.wildspell.mobs.crypt.PhylacteryBlockEntity;
 import com.wildspell.mobs.crypt.PhylacteryItem;
+import com.wildspell.mobs.entity.ColdEffects;
 import com.wildspell.mobs.entity.Frost;
 import com.wildspell.mobs.entity.FrostShard;
+//? if <26.4
 import com.wildspell.mobs.entity.FrozenZombie;
 import com.wildspell.mobs.entity.IceLich;
 import com.wildspell.mobs.entity.RimeSkull;
@@ -141,6 +143,7 @@ public class WildspellMobsTests {
         helper.succeed();
     }
 
+    //? if <26.4 {
     @GameTest(template = ARENA, timeoutTicks = 300, batch = "freezing")
     public static void zombieFreezesInFrostedCaves(GameTestHelper helper) {
         shade(helper);
@@ -163,7 +166,9 @@ public class WildspellMobsTests {
             helper.assertTrue(helper.relativeVec(frozen.get(0).position()).y < 0.5, "not sunk into the ice: " + helper.relativeVec(frozen.get(0).position()));
         });
     }
+    //?}
 
+    //? if <26.4 {
     @GameTest(template = ARENA, timeoutTicks = 300)
     public static void zombieStaysAZombieOutsideTheCold(GameTestHelper helper) {
         shade(helper);
@@ -176,7 +181,9 @@ public class WildspellMobsTests {
             helper.succeed();
         });
     }
+    //?}
 
+    //? if <26.4 {
     @GameTest(template = ARENA)
     public static void frozenZombieVariantFollowsTheGroundAndIsKept(GameTestHelper helper) {
         shade(helper);
@@ -208,7 +215,9 @@ public class WildspellMobsTests {
                 "reloaded ice-bound zombie can still walk");
         helper.succeed();
     }
+    //?}
 
+    //? if <26.4 {
     @GameTest(template = ARENA, timeoutTicks = 200)
     public static void iceboundZombieIsStuckUntilTheIceBreaks(GameTestHelper helper) {
         shade(helper);
@@ -231,7 +240,9 @@ public class WildspellMobsTests {
             helper.succeed();
         });
     }
+    //?}
 
+    //? if <26.4 {
     private static int pickVariantAt(GameTestHelper helper, BlockPos relative, int[] wholeFaces) {
         FrozenZombie zombie = WildspellMobs.FROZEN_ZOMBIE.get().create(helper.getLevel());
         BlockPos pos = helper.absolutePos(relative);
@@ -240,7 +251,9 @@ public class WildspellMobsTests {
         wholeFaces[0] += zombie.hasWholeFace() ? 1 : 0;
         return zombie.getVariant();
     }
+    //?}
 
+    //? if <26.4 {
     @GameTest(template = ARENA, timeoutTicks = 400)
     public static void iceboundFrozenZombieThrowsSnowballsFromRange(GameTestHelper helper) {
         shade(helper);
@@ -278,6 +291,7 @@ public class WildspellMobsTests {
             helper.assertTrue(closest[0] > 2.0, "closed to melee range: " + closest[0]);
         });
     }
+    //?}
 
     @GameTest(template = ARENA)
     public static void iceCubesDropIce(GameTestHelper helper) {
@@ -318,6 +332,7 @@ public class WildspellMobsTests {
         helper.succeed();
     }
 
+    //? if <26.4 {
     @GameTest(template = ARENA)
     public static void summonedFrozenZombieIsNeverIcebound(GameTestHelper helper) {
         shade(helper);
@@ -329,6 +344,7 @@ public class WildspellMobsTests {
         helper.assertTrue(!raised.isIcebound(), "a zombie the lich raised on ice froze into it");
         helper.succeed();
     }
+    //?}
 
     @GameTest(template = ARENA, timeoutTicks = 400, batch = "lichChannel")
     public static void hittingTheLichBreaksItsSummon(GameTestHelper helper) {
@@ -492,8 +508,9 @@ public class WildspellMobsTests {
         BlockPos brazier = new BlockPos(4, 1, 8);
         helper.setBlock(brazier, Blocks.SOUL_CAMPFIRE.defaultBlockState().setValue(CampfireBlock.LIT, false));
         helper.setBlock(new BlockPos(1, 1, 1), Blocks.SNOW);
-        FrozenZombie zombie = helper.spawn(WildspellMobs.FROZEN_ZOMBIE.get(), 7.5F, 1.0F, 7.5F);
+        Zombie zombie = helper.spawn(EntityType.ZOMBIE, 7.5F, 1.0F, 7.5F);
         zombie.setNoAi(true);
+        zombie.addTag(IceLich.MINION_TAG);
         ChunkPos center = new ChunkPos(helper.absolutePos(altar));
         forceChunks(helper, center);
         helper.destroyBlock(altar);
@@ -508,7 +525,7 @@ public class WildspellMobsTests {
                     i -> i.getItem().is(WildspellMobs.FROSTBOUND_STAFF.get())).isEmpty(), "no staff; items near: " + helper.getLevel().getEntitiesOfClass(
                     ItemEntity.class, last.getBoundingBox().inflate(16.0)).stream().map(i -> i.getItem() + "@" + helper.relativeVec(i.position())).toList()
                     + " last form at " + helper.relativeVec(last.position()) + " lastHurtByPlayer=" + last.getLastHurtByMob());
-            helper.assertTrue(!zombie.isAlive(), "the cold's undead nearby didn't crumble");
+            helper.assertTrue(!zombie.isAlive(), "the dead it raised didn't crumble");
             helper.assertBlockPresent(Blocks.CHEST, altar);
             helper.assertTrue(helper.getBlockState(brazier).is(Blocks.CAMPFIRE) && helper.getBlockState(brazier).getValue(CampfireBlock.LIT),
                     "the soul-fire brazier didn't turn to ordinary fire");
@@ -702,6 +719,7 @@ public class WildspellMobsTests {
         });
     }
 
+    //? if <26.4 {
     @GameTest(template = ARENA, timeoutTicks = 120)
     public static void chillFadesOutsideTheColdButFireClearsIt(GameTestHelper helper) {
         shade(helper);
@@ -722,6 +740,7 @@ public class WildspellMobsTests {
             helper.succeed();
         });
     }
+    //?}
 
     @GameTest(template = ARENA, timeoutTicks = 200, batch = "lichBodyAway")
     public static void lichIdleInAnUnloadedCryptStillStalks(GameTestHelper helper) {
@@ -865,6 +884,7 @@ public class WildspellMobsTests {
         helper.succeed();
     }
 
+    //? if <26.4 {
     @GameTest(template = ARENA, timeoutTicks = 300, batch = "sunThaw")
     public static void frozenZombiesThawInTheSunAndThenBurn(GameTestHelper helper) {
         long time = helper.getLevel().getDayTime();
@@ -879,7 +899,9 @@ public class WildspellMobsTests {
             helper.getLevel().setDayTime(time);
         });
     }
+    //?}
 
+    //? if <26.4 {
     @GameTest(template = ARENA, timeoutTicks = 200, batch = "fireThaw")
     public static void aBurningFrozenZombieMeltsSlowly(GameTestHelper helper) {
         shade(helper);
@@ -894,7 +916,9 @@ public class WildspellMobsTests {
             helper.assertTrue(zombies.getFirst().isOnFire(), "it stopped burning as it thawed");
         });
     }
+    //?}
 
+    //? if <26.4 {
     @GameTest(template = ARENA, timeoutTicks = 200, batch = "fireFear")
     public static void frozenZombiesFleeFire(GameTestHelper helper) {
         shade(helper);
@@ -907,6 +931,7 @@ public class WildspellMobsTests {
         helper.onEachTick(() -> farthest[0] = Math.max(farthest[0], frozen.position().distanceTo(flame)));
         helper.succeedWhen(() -> helper.assertTrue(farthest[0] > 4.0, "it hasn't backed away from the fire: " + farthest[0]));
     }
+    //?}
 
     @GameTest(template = ARENA, timeoutTicks = 400, batch = "sunSkull")
     public static void rimeSkullsBurnInTheSun(GameTestHelper helper) {
@@ -1048,6 +1073,7 @@ public class WildspellMobsTests {
         helper.succeed();
     }
 
+    //? if <26.4 {
     @GameTest(template = ARENA, timeoutTicks = 300)
     public static void frozenZombieLurchesAndSeizes(GameTestHelper helper) {
         shade(helper);
@@ -1079,7 +1105,9 @@ public class WildspellMobsTests {
             helper.succeed();
         });
     }
+    //?}
 
+    //? if <26.4 {
     @GameTest(template = ARENA, timeoutTicks = 300)
     public static void frozenZombieHitFreezes(GameTestHelper helper) {
         shade(helper);
@@ -1092,6 +1120,7 @@ public class WildspellMobsTests {
             helper.assertTrue(pig.getTicksFrozen() > 0 && pig.hasEffect(MobEffects.MOVEMENT_SLOWDOWN), "hit did not freeze and slow");
         });
     }
+    //?}
 
     @GameTest(template = ARENA)
     public static void creepersAreRareInFrostedCaves(GameTestHelper helper) {
@@ -1266,7 +1295,7 @@ public class WildspellMobsTests {
         BlockPos to = helper.absolutePos(new BlockPos(10, 6, 10));
         String fill = "fillbiome " + from.getX() + " " + from.getY() + " " + from.getZ() + " " + to.getX() + " " + to.getY() + " " + to.getZ() + " " + FROSTED_CAVES.location();
         helper.onEachTick(() -> {
-            if (!helper.getLevel().getBiome(helper.absolutePos(new BlockPos(4, 1, 4))).is(ZombieFreezing.FREEZES_ZOMBIES)) {
+            if (!helper.getLevel().getBiome(helper.absolutePos(new BlockPos(4, 1, 4))).is(ColdEffects.COLD_CAVES)) {
                 helper.getLevel().getServer().getCommands().performPrefixedCommand(helper.getLevel().getServer().createCommandSourceStack().withSuppressedOutput(), fill);
             }
         });

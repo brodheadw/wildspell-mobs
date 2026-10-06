@@ -1,5 +1,12 @@
 {
   "values": [
-    {"id": "yungscavebiomes:frosted_caves", "required": false}
+    {
+      "id": "yungscavebiomes:frosted_caves",
+      "required": false
+    },
+    {
+      "id": "minecraft:ice_caves",
+      "required": false
+    }
   ]
 }

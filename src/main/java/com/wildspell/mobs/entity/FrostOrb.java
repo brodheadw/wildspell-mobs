@@ -74,7 +74,7 @@ public class FrostOrb extends AbstractHurtingProjectile {
         level.sendParticles(ColdEffects.ICE_CHIPS, this.getX(), this.getY(), this.getZ(), 50, 0.6, 0.6, 0.6, 0.2);
         level.sendParticles(ParticleTypes.SNOWFLAKE, this.getX(), this.getY(), this.getZ(), 40, 0.8, 0.8, 0.8, 0.1);
         level.playSound(null, this.getX(), this.getY(), this.getZ(), SoundEvents.GLASS_BREAK, SoundSource.HOSTILE, 1.5F, 0.6F);
-        level.playSound(null, this.getX(), this.getY(), this.getZ(), WildspellMobs.FROZEN_ZOMBIE_SHATTER.get(), SoundSource.HOSTILE, 1.5F, 0.9F);
+        level.playSound(null, this.getX(), this.getY(), this.getZ(), WildspellMobs.ICE_SHATTER.get(), SoundSource.HOSTILE, 1.5F, 0.9F);
         for (LivingEntity victim : level.getEntitiesOfClass(LivingEntity.class, new AABB(this.position(), this.position()).inflate(BURST_RADIUS),
                 e -> e != owner && !(owner instanceof IceLich && IceLich.isMinion(e)))) {
             if (victim.hurt(this.damageSources().indirectMagic(this, owner), DAMAGE)) {
