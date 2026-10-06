@@ -15,6 +15,7 @@ import java.util.UUID;
 import javax.annotation.Nullable;
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.HolderLookup;
+import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
@@ -33,6 +34,8 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.GameRules;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.saveddata.SavedData;
+import net.minecraft.world.phys.Vec3;
+import net.neoforged.neoforge.event.entity.living.LivingDeathEvent;
 import net.neoforged.neoforge.event.entity.player.PlayerEvent;
 import net.neoforged.neoforge.event.tick.ServerTickEvent;
 
@@ -102,7 +105,7 @@ public class Heavens extends SavedData {
         return wardensSlain(player) >= SpawnBalance.APOLLO_WARDENS.get();
     }
 
-    public static void wardenFell(ServerLevel level, net.minecraft.world.phys.Vec3 at) {
+    public static void wardenFell(ServerLevel level, Vec3 at) {
         int needed = SpawnBalance.APOLLO_WARDENS.get();
         for (ServerPlayer player : level.players()) {
             if (player.isSpectator() || player.position().distanceTo(at) > WARDEN_WITNESS) {
@@ -117,9 +120,9 @@ public class Heavens extends SavedData {
         }
     }
 
-    public static void onDeath(net.neoforged.neoforge.event.entity.living.LivingDeathEvent event) {
+    public static void onDeath(LivingDeathEvent event) {
         if (event.getEntity().level() instanceof ServerLevel level
-                && SUN_SPIRIT.equals(net.minecraft.core.registries.BuiltInRegistries.ENTITY_TYPE.getKey(event.getEntity().getType()))) {
+                && SUN_SPIRIT.equals(BuiltInRegistries.ENTITY_TYPE.getKey(event.getEntity().getType()))) {
             wardenFell(level, event.getEntity().position());
         }
     }
@@ -236,7 +239,7 @@ public class Heavens extends SavedData {
         }
         Diana diana = ending.diana(server);
         if (diana != null) {
-            diana.depart(released);
+            diana.depart();
         }
     }
 

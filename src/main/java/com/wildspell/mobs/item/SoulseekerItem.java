@@ -39,12 +39,11 @@ public class SoulseekerItem extends Item {
     private static void aim(ServerLevel level, ItemStack stack) {
         GlobalPos target = target(level, stack);
         LodestoneTracker current = stack.get(DataComponents.LODESTONE_TRACKER);
-        Optional<GlobalPos> now = current == null ? Optional.empty() : current.target();
         if (target == null) {
             if (current != null) {
                 stack.remove(DataComponents.LODESTONE_TRACKER);
             }
-        } else if (!now.equals(Optional.of(target))) {
+        } else if (current == null || !current.target().equals(Optional.of(target))) {
             stack.set(DataComponents.LODESTONE_TRACKER, new LodestoneTracker(Optional.of(target), false));
         }
     }

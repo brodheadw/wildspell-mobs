@@ -207,7 +207,7 @@ public class Stemwalker extends Monster implements GeoEntity {
     @Override
     public boolean hurt(DamageSource source, float amount) {
         if (!this.level().isClientSide && this.shielded() && !source.is(DamageTypeTags.BYPASSES_INVULNERABILITY)) {
-            if (this.level() instanceof ServerLevel level && this.heart != null && this.invulnerableTime <= 10) {
+            if (this.level() instanceof ServerLevel level && this.invulnerableTime <= 10) {
                 this.invulnerableTime = 20;
                 this.triggerAnim("action", "shrug");
                 this.playSound(SoundEvents.FUNGUS_BREAK, 1.2F, 0.5F);

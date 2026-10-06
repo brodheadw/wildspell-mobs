@@ -24,7 +24,6 @@ import net.minecraft.resources.ResourceKey;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
-import net.minecraft.world.Difficulty;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
@@ -186,8 +185,7 @@ public class LichSouls extends SavedData {
             if (this.lichId == null) {
                 return true;
             }
-            boolean bodyAway = assumeBodyAway || (this.findLich(level) == null && !level.isLoaded(this.anchor));
-            return bodyAway;
+            return assumeBodyAway || this.findLich(level) == null && !level.isLoaded(this.anchor);
         }
 
         private void changed() {
@@ -260,7 +258,7 @@ public class LichSouls extends SavedData {
 
         @Nullable
         public IceLich raise(ServerLevel level, Vec3 at, @Nullable Player prey) {
-            IceLich lich = level.getDifficulty() == Difficulty.PEACEFUL || this.burned ? null : IceLich.summon(level, at, this.id);
+            IceLich lich = this.burned ? null : IceLich.summon(level, at, this.id);
             if (lich != null) {
                 if (prey != null) {
                     lich.hunt(prey);
@@ -367,7 +365,6 @@ public class LichSouls extends SavedData {
             if (this.soulTicks > 0 && --this.soulTicks == 0) {
                 this.changed();
             }
-
             if (this.reformTicks > 0 && --this.reformTicks == 0) {
                 this.reform(level);
             }

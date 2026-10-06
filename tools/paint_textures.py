@@ -57,25 +57,25 @@ def paint_teeth(img, x0, y0, count, lower=False, middle_tooth=False):
             img.putpixel((x + dx, tip), tip_px[dx])
 
 
+def ice_fill(img, palette, x0, y0, w, h, shade):
+    for x in range(x0, x0 + w):
+        for y in range(y0, y0 + h):
+            img.putpixel((x, y), jitter(rng.choice(palette), shade, 6))
+
+
+def ice_cube(img, palette, u, v, w, h, d, shade=0):
+    ice_fill(img, palette, u + d, v, w, d, shade + 8)
+    ice_fill(img, palette, u + d + w, v, w, d, shade - 30)
+    ice_fill(img, palette, u, v + d, 2 * (d + w), h, shade)
+
+
 for index, variant in enumerate(SKULL_VARIANTS):
     rng = random.Random(100 + index)
-    palette = variant["ice"]
-
-    def ice_fill(img, x0, y0, w, h, shade=0):
-        for x in range(x0, x0 + w):
-            for y in range(y0, y0 + h):
-                img.putpixel((x, y), jitter(rng.choice(palette), shade, 6))
-
-    def ice_cube(img, u, v, w, h, d, shade=0):
-        ice_fill(img, u + d, v, w, d, shade + 8)
-        ice_fill(img, u + d + w, v, w, d, shade - 30)
-        ice_fill(img, u, v + d, 2 * (d + w), h, shade)
-
     skin = Image.new("RGBA", (64, 32), (0, 0, 0, 0))
     eyes = Image.new("RGBA", (64, 32), (0, 0, 0, 0))
-    ice_cube(skin, 0, 0, 9, 8, 8)
-    ice_cube(skin, 0, 16, 8, 2, 7, -10)
-    ice_cube(skin, 40, 0, 1, 3, 1, 12)
+    ice_cube(skin, variant["ice"], 0, 0, 9, 8, 8)
+    ice_cube(skin, variant["ice"], 0, 16, 8, 2, 7, -10)
+    ice_cube(skin, variant["ice"], 40, 0, 1, 3, 1, 12)
     for (x, y) in variant["cracks"]:
         skin.putpixel((x, y), (120, 175, 210, 255))
     for (x, y) in [(9, 10), (10, 10), (9, 11), (10, 11), (14, 10), (15, 10), (14, 11), (15, 11), (11, 13), (13, 13)]:
@@ -128,7 +128,7 @@ def paint_box(u, v, w, h, d, material):
 
 paint_box(0, 0, 8, 8, 8, lambda face, x, y: SKIN)
 paint_box(16, 16, 8, 12, 4, lambda face, x, y: SKIN if face == "front" and y < 2 and 3 <= x <= 4 else SHIRT)
-paint_box(40, 16, 4, 12, 4, lambda face, x, y: SHIRT if face == "top" or (face not in ("bottom",) and y < 4) else SKIN)
+paint_box(40, 16, 4, 12, 4, lambda face, x, y: SHIRT if face == "top" or (face != "bottom" and y < 4) else SKIN)
 paint_box(0, 16, 4, 12, 4, lambda face, x, y: SHOES if face == "bottom" or (face != "top" and y >= 10) else TROUSERS)
 
 for x in range(8, 16):
@@ -281,27 +281,24 @@ def compass_base():
 def compass_needle(frame, theta):
     dx, dy = math.sin(theta), -math.cos(theta)
     nx, ny = -dy, dx
-    for i in range(0, 40):
+    for i in range(40):
         t = i / 39.0 * 3.4
-        for w in (0.0,):
-            x, y = 7.5 - dx * t + nx * w, 7.5 - dy * t + ny * w
-            px, py = int(math.floor(x)), int(math.floor(y))
-            if 0 <= px < 16 and 0 <= py < 16 and math.hypot(px - 7.5, py - 7.5) < 4.6:
-                frame.putpixel((px, py), (BONE[0] if i % 7 else BONE[1]) + (255,))
-    for i in range(0, 60):
+        px, py = math.floor(7.5 - dx * t), math.floor(7.5 - dy * t)
+        if 0 <= px < 16 and 0 <= py < 16 and math.hypot(px - 7.5, py - 7.5) < 4.6:
+            frame.putpixel((px, py), (BONE[0] if i % 7 else BONE[1]) + (255,))
+    for i in range(60):
         t = i / 59.0 * 4.6
-        widths = (-0.5, 0.5) if t < 3.2 else (0.0,)
-        for w in widths:
-            x, y = 7.5 + dx * t + nx * w, 7.5 + dy * t + ny * w
-            px, py = int(math.floor(x)), int(math.floor(y))
+        for w in (-0.5, 0.5) if t < 3.2 else (0.0,):
+            px, py = math.floor(7.5 + dx * t + nx * w), math.floor(7.5 + dy * t + ny * w)
             if 0 <= px < 16 and 0 <= py < 16 and math.hypot(px - 7.5, py - 7.5) < 4.7:
                 frame.putpixel((px, py), (TIP[1] if t > 3.0 else TIP[0] if t > 1.2 else GLOW[2]) + (255,))
     for px, py, c in ((7, 7, GLOW[1]), (8, 7, GLOW[0]), (7, 8, GLOW[0]), (8, 8, GLOW[2])):
         frame.putpixel((px, py), c + (255,))
 
 
+base = compass_base()
 for k in range(32):
-    frame = compass_base()
+    frame = base.copy()
     compass_needle(frame, (k - 16) / 32.0 * 2.0 * math.pi)
     frame.save(f"{OUT}/item/soulseeker_{k:02d}.png")
 print("rime compass painted")

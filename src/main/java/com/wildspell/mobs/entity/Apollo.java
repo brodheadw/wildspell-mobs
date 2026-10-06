@@ -181,10 +181,6 @@ public class Apollo extends Monster implements GeoEntity {
         return this.getHealth() < this.getMaxHealth() / 2.0F;
     }
 
-    public boolean isWary() {
-        return this.wary;
-    }
-
     public boolean hasConceded() {
         int action = this.getAction();
         return action == ACTION_CONCEDE || action == ACTION_WARNED;
@@ -202,22 +198,10 @@ public class Apollo extends Monster implements GeoEntity {
         return this.getMaxHealth() * (this.wary ? WARY_CONCEDE_AT : CONCEDE_AT);
     }
 
-    public Set<UUID> participants() {
-        return this.participants;
-    }
-
     public void join(Player player) {
         if (this.participants.add(player.getUUID()) && player instanceof ServerPlayer server) {
             this.bossEvent.addPlayer(server);
         }
-    }
-
-    public Vec3 focus() {
-        return this.focus;
-    }
-
-    public boolean isFocusing() {
-        return this.focusTicks > 0;
     }
 
     @Override
@@ -345,9 +329,7 @@ public class Apollo extends Monster implements GeoEntity {
             this.startAction(ACTION_GLARE, enraged ? GLARE_WINDUP - 8 : GLARE_WINDUP);
             this.glareCooldown = enraged ? 200 : 280;
             this.playSound(SoundEvents.BEACON_POWER_SELECT, 3.0F, 0.6F);
-            for (Player player : this.present()) {
-                player.displayClientMessage(Component.translatable("message.wildspellmobs.apollo_glare").withStyle(ChatFormatting.YELLOW), true);
-            }
+            this.tell(Component.translatable("message.wildspellmobs.apollo_glare").withStyle(ChatFormatting.YELLOW), true);
         } else if (this.focusCooldown <= 0 && this.focusTicks <= 0) {
             this.startAction(ACTION_FOCUS, 30);
             this.focus = this.palm();
@@ -362,13 +344,12 @@ public class Apollo extends Monster implements GeoEntity {
 
     private void tickAction(ServerLevel level, Player target) {
         int action = this.getAction();
-        int elapsed;
         --this.actionTicks;
         if (action == ACTION_THROW) {
-            elapsed = THROW_TICKS - this.actionTicks;
+            int sinceWindup = THROW_TICKS - this.actionTicks - 8;
             int volley = this.isEnraged() ? 3 : 2;
-            if (elapsed >= 8 && (elapsed - 8) % 4 == 0 && (elapsed - 8) / 4 < volley && this.rays() > 0) {
-                this.throwRay(level, target, (elapsed - 8) / 4 - (volley - 1) / 2.0);
+            if (sinceWindup >= 0 && sinceWindup % 4 == 0 && sinceWindup / 4 < volley && this.rays() > 0) {
+                this.throwRay(level, target, sinceWindup / 4 - (volley - 1) / 2.0);
             }
         } else if (action == ACTION_GLARE) {
             this.tickGlare(level);
@@ -415,12 +396,10 @@ public class Apollo extends Monster implements GeoEntity {
         }
         level.sendParticles(ParticleTypes.END_ROD, this.focus.x, this.focus.y, this.focus.z, 2, 0.05, 0.05, 0.05, 0.0);
         level.sendParticles(ParticleTypes.SMALL_FLAME, this.focus.x, this.focus.y, this.focus.z, 2, 0.08, 0.08, 0.08, 0.01);
-        if (this.focusTicks % 10 == 0) {
-            level.playSound(null, this.focus.x, this.focus.y, this.focus.z, SoundEvents.FIRE_AMBIENT, SoundSource.HOSTILE, 1.5F, 1.4F);
-        }
         if (this.focusTicks % 10 != 0) {
             return;
         }
+        level.playSound(null, this.focus.x, this.focus.y, this.focus.z, SoundEvents.FIRE_AMBIENT, SoundSource.HOSTILE, 1.5F, 1.4F);
         for (Player player : this.present()) {
             if (focusTouches(this.focus, player)) {
                 if (player.hurt(this.damageSources().indirectMagic(this, this), 3.0F)) {
@@ -527,12 +506,12 @@ public class Apollo extends Monster implements GeoEntity {
         if (nearest != null) {
             this.getLookControl().setLookAt(nearest, 10.0F, 10.0F);
         }
+        List<Player> present = this.present();
         if (this.isWarned() && this.actionTicks % 10 == 0) {
-            for (Player player : this.present()) {
+            for (Player player : present) {
                 eclipseSign(level, player);
             }
         }
-        List<Player> present = this.present();
         this.openHandTicks = openHanded(present) ? this.openHandTicks + 1 : 0;
         if (this.openHandTicks >= SPARE_HOLD) {
             this.spare(present);
@@ -595,7 +574,7 @@ public class Apollo extends Monster implements GeoEntity {
     }
 
     public void withdraw() {
-        if (this.getAction() == ACTION_LEAVE) {
+        if (this.isLeaving()) {
             return;
         }
         this.startAction(ACTION_LEAVE, LEAVE_TICKS);
@@ -702,14 +681,10 @@ public class Apollo extends Monster implements GeoEntity {
         }
     }
 
-    public boolean isSlain() {
-        return this.slain;
-    }
-
     private void clientEffects() {
         int action = this.getAction();
         Vec3 crown = this.position().add(0.0, this.getBbHeight() * 0.85, 0.0);
-        if (this.random.nextInt(action == ACTION_CONCEDE || action == ACTION_WARNED ? 6 : 2) == 0) {
+        if (this.random.nextInt(this.hasConceded() ? 6 : 2) == 0) {
             double a = this.random.nextDouble() * Math.PI * 2.0;
             this.level().addParticle(ParticleTypes.END_ROD, crown.x + Math.cos(a) * 1.4, crown.y + Math.sin(a) * 1.4, crown.z,
                     Math.cos(a) * 0.02, Math.sin(a) * 0.02, 0.0);
@@ -832,11 +807,7 @@ public class Apollo extends Monster implements GeoEntity {
 
         @Override
         protected void face(@Nullable Vec3 heading) {
-            LivingEntity target = this.mob.getTarget();
-            if (target != null) {
-                this.mob.setYRot(-((float) Mth.atan2(target.getX() - this.mob.getX(), target.getZ() - this.mob.getZ())) * Mth.RAD_TO_DEG);
-                this.mob.yBodyRot = this.mob.getYRot();
-            }
+            this.faceTarget();
         }
     }
 }

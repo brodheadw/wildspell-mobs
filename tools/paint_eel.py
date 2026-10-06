@@ -84,10 +84,8 @@ for u, v, w, h, d in ((16, 0, 3, 3, 5), (32, 0, 2, 3, 5), (46, 0, 2, 3, 5), (16,
     paint_organ(glow, u, v, w, h, d)
 paint_organ(glow, 0, 0, 3, 3, 5)
 
-paint_fin(skin, glow, 16, 15, 2, 5)
-paint_fin(skin, glow, 26, 15, 2, 5)
-paint_fin(skin, glow, 36, 15, 2, 5)
-paint_fin(skin, glow, 54, 15, 2, 5)
+for u in (16, 26, 36, 54):
+    paint_fin(skin, glow, u, 15, 2, 5)
 paint_fin(skin, glow, 46, 15, 4, 4)
 
 skin.save(f"{OUT}/electric_eel.png")

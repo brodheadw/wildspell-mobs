@@ -29,7 +29,7 @@ def write(path, size):
             + tag(9, "blocks", compound_list([]))
             + tag(9, "entities", compound_list([]))
             + b"\x00")
-    with gzip.open(path, "wb") as f:
+    with gzip.GzipFile(path, "wb", mtime=0) as f:
         f.write(b"\x0a" + name("") + root)
 
 

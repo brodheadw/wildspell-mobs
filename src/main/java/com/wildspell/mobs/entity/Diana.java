@@ -24,7 +24,6 @@ import net.minecraft.world.BossEvent;
 import net.minecraft.world.Difficulty;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.EntityType;
-import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.MobSpawnType;
 import net.minecraft.world.entity.ai.attributes.AttributeSupplier;
 import net.minecraft.world.entity.ai.attributes.Attributes;
@@ -77,7 +76,6 @@ public class Diana extends Monster implements GeoEntity {
     private int slashCooldown;
     private int unseenTicks;
     private int repickTicks;
-    private boolean departingReleased;
     @Nullable
     private Vec3 lastSeen;
     private boolean restored;
@@ -390,10 +388,6 @@ public class Diana extends Monster implements GeoEntity {
         }
     }
 
-    public int drawn() {
-        return this.drawn;
-    }
-
     private void loose(ServerLevel level, Player target) {
         Vec3 from = this.bowHand();
         Vec3 dir = target.position().add(0.0, target.getBbHeight() * 0.6, 0.0).subtract(from).normalize();
@@ -438,29 +432,23 @@ public class Diana extends Monster implements GeoEntity {
         this.setTarget(null);
         this.bossEvent.removeAllPlayers();
         this.playSound(SoundEvents.AMETHYST_BLOCK_RESONATE, 3.0F, 0.5F);
-        Heavens heavens = Heavens.get(level);
-        Heavens.Hunt hunt = heavens.hunt();
-        if (hunt != null && hunt.isDiana(this)) {
+        Heavens.Hunt hunt = this.hunt();
+        if (hunt != null) {
             for (UUID id : hunt.quarry()) {
                 if (level.getServer().getPlayerList().getPlayer(id) instanceof ServerPlayer player) {
                     player.displayClientMessage(Component.translatable(this.isGrieving() ? "message.wildspellmobs.diana_yields_grieving"
                             : "message.wildspellmobs.diana_yields").withStyle(this.isGrieving() ? ChatFormatting.DARK_RED : ChatFormatting.AQUA), false);
                 }
             }
-            heavens.endHunt(level.getServer(), true, null);
+            Heavens.get(level).endHunt(level.getServer(), true, null);
         }
     }
 
-    public void depart(boolean released) {
-        this.departingReleased = released;
+    public void depart() {
         this.bossEvent.removeAllPlayers();
-        if (this.getAction() != ACTION_YIELD && this.getAction() != ACTION_DEPART) {
+        if (!this.hasYielded()) {
             this.startAction(ACTION_DEPART, DEPART_TICKS);
         }
-    }
-
-    public boolean departingReleased() {
-        return this.departingReleased;
     }
 
     private void tickDepart(ServerLevel level) {
@@ -479,7 +467,7 @@ public class Diana extends Monster implements GeoEntity {
             return false;
         }
         boolean hurt = super.hurt(source, amount);
-        if (hurt && source.getEntity() instanceof Player player && this.level() instanceof ServerLevel) {
+        if (hurt && source.getEntity() instanceof Player player) {
             Heavens.Hunt hunt = this.hunt();
             if (hunt != null) {
                 hunt.setHealth(this.getHealth());
@@ -513,11 +501,9 @@ public class Diana extends Monster implements GeoEntity {
     public void remove(RemovalReason reason) {
         super.remove(reason);
         this.bossEvent.removeAllPlayers();
-        if (this.level() instanceof ServerLevel level) {
-            Heavens.Hunt hunt = Heavens.get(level).hunt();
-            if (hunt != null) {
-                hunt.release(this);
-            }
+        Heavens.Hunt hunt = this.hunt();
+        if (hunt != null) {
+            hunt.release(this);
         }
     }
 
@@ -588,11 +574,7 @@ public class Diana extends Monster implements GeoEntity {
 
         @Override
         protected void face(@Nullable Vec3 heading) {
-            LivingEntity target = this.mob.getTarget();
-            if (target != null) {
-                this.mob.setYRot(-((float) Mth.atan2(target.getX() - this.mob.getX(), target.getZ() - this.mob.getZ())) * Mth.RAD_TO_DEG);
-                this.mob.yBodyRot = this.mob.getYRot();
-            }
+            this.faceTarget();
         }
     }
 }

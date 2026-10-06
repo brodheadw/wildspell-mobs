@@ -56,8 +56,7 @@ public final class Cleansing {
     }
 
     public static void cleanse(ServerLevel level, BlockPos altar, Direction facing) {
-        Vec3 center = Vec3.atCenterOf(altar);
-        purge(level, center);
+        purge(level, Vec3.atCenterOf(altar));
         thawFrost(level, altar);
         warmCrypt(level, altar, facing);
         leaveHoard(level, altar, facing);

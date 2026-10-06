@@ -56,7 +56,7 @@ public class LuminousMothTests {
     // Own batch: light from one test's moth mustn't reach into another's sealed cave.
     @GameTest(template = ARENA, timeoutTicks = 200, batch = "mothTrail")
     public static void mothsLightGoesWithIt(GameTestHelper helper) {
-        sealCave(helper);
+        WildspellMobsTests.sealCave(helper);
         BlockPos spot = new BlockPos(4, 2, 4);
         LuminousMoth moth = helper.spawn(WildspellMobs.LUMINOUS_MOTH.get(), 4.5F, 2.2F, 4.5F);
         moth.setNoAi(true);
@@ -103,7 +103,7 @@ public class LuminousMothTests {
     @GameTest(template = ARENA, timeoutTicks = 200, batch = "mothFlee")
     public static void aMothInFlightFleesAPlayer(GameTestHelper helper) {
         LuminousMoth moth = helper.spawn(WildspellMobs.LUMINOUS_MOTH.get(), 4.5F, 4.0F, 4.5F);
-        Player player = addMockPlayer(helper, new Vec3(2.0, 1.0, 4.5));
+        Player player = WildspellMobsTests.addMockPlayer(helper, new Vec3(2.0, 1.0, 4.5));
         double start = moth.distanceTo(player);
         helper.runAfterDelay(40, () -> {
             double now = moth.distanceTo(player);
@@ -115,7 +115,7 @@ public class LuminousMothTests {
     @GameTest(template = ARENA, timeoutTicks = 200, batch = "mothLureStay")
     public static void aMothStaysNearAPlayerWithASporeBlossom(GameTestHelper helper) {
         LuminousMoth moth = helper.spawn(WildspellMobs.LUMINOUS_MOTH.get(), 4.5F, 3.0F, 4.5F);
-        Player player = addMockPlayer(helper, new Vec3(2.0, 1.0, 4.5));
+        Player player = WildspellMobsTests.addMockPlayer(helper, new Vec3(2.0, 1.0, 4.5));
         player.setItemInHand(InteractionHand.MAIN_HAND, new ItemStack(Items.SPORE_BLOSSOM));
         helper.runAfterDelay(60, () -> {
             helper.assertTrue(moth.distanceTo(player) < 4.0, "fled a player holding a lure: " + moth.distanceTo(player));
@@ -171,7 +171,7 @@ public class LuminousMothTests {
 
     @GameTest(template = ARENA, timeoutTicks = 400, batch = "mothLure")
     public static void mothFollowsASporeBlossom(GameTestHelper helper) {
-        Player player = addMockPlayer(helper, new Vec3(1.5, 1.0, 1.5));
+        Player player = WildspellMobsTests.addMockPlayer(helper, new Vec3(1.5, 1.0, 1.5));
         player.setItemInHand(InteractionHand.MAIN_HAND, new ItemStack(Items.SPORE_BLOSSOM));
         LuminousMoth moth = helper.spawn(WildspellMobs.LUMINOUS_MOTH.get(), 7.5F, 3.0F, 7.5F);
         helper.onEachTick(() -> {
@@ -183,7 +183,7 @@ public class LuminousMothTests {
 
     @GameTest(template = ARENA, timeoutTicks = 400, batch = "mothLantern")
     public static void bottledMothReleasedInTheDarkLightsIt(GameTestHelper helper) {
-        sealCave(helper);
+        WildspellMobsTests.sealCave(helper);
         BlockPos floor = new BlockPos(4, 0, 4);
         BlockPos home = floor.above();
         LuminousMoth wild = helper.spawn(WildspellMobs.LUMINOUS_MOTH.get(), 4.5F, 2.0F, 4.5F);
@@ -235,7 +235,7 @@ public class LuminousMothTests {
             }
         }
         LuminousMoth moth = helper.spawn(WildspellMobs.LUMINOUS_MOTH.get(), 4.5F, 2.5F, 4.5F);
-        Player player = addMockPlayer(helper, new Vec3(0.5, 1.1, 0.5));
+        Player player = WildspellMobsTests.addMockPlayer(helper, new Vec3(0.5, 1.1, 0.5));
         player.setShiftKeyDown(true);
         int[] walked = {-1};
         helper.runAtTickTime(1590, () -> helper.fail("moth never settled; at " + helper.relativeVec(moth.position()) + " alive=" + moth.isAlive()
@@ -277,28 +277,8 @@ public class LuminousMothTests {
         helper.getLevel().getBlockState(pos).randomTick(helper.getLevel(), pos, helper.getLevel().random);
     }
 
-    private static void sealCave(GameTestHelper helper) {
-        for (int x = 2; x <= 6; ++x) {
-            for (int y = 0; y <= 4; ++y) {
-                for (int z = 2; z <= 6; ++z) {
-                    boolean shell = x == 2 || x == 6 || y == 0 || y == 4 || z == 2 || z == 6;
-                    helper.setBlock(x, y, z, shell ? Blocks.STONE : Blocks.AIR);
-                }
-            }
-        }
-    }
-
     private static void succeedAndLeave(GameTestHelper helper, Player player) {
         player.discard();
         helper.succeed();
-    }
-
-    private static Player addMockPlayer(GameTestHelper helper, Vec3 at) {
-        Player player = helper.makeMockPlayer(GameType.SURVIVAL);
-        Vec3 pos = helper.absoluteVec(at);
-        player.moveTo(pos.x, pos.y, pos.z, 0.0F, 0.0F);
-        player.setInvulnerable(true);
-        helper.getLevel().addFreshEntity(player);
-        return player;
     }
 }
