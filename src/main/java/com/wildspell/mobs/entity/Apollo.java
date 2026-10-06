@@ -43,6 +43,7 @@ import net.minecraft.world.entity.monster.Monster;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import software.bernie.geckolib.animatable.GeoEntity;
 import software.bernie.geckolib.animatable.instance.AnimatableInstanceCache;
@@ -202,6 +203,12 @@ public class Apollo extends Monster implements GeoEntity {
         if (this.participants.add(player.getUUID()) && player instanceof ServerPlayer server) {
             this.bossEvent.addPlayer(server);
         }
+    }
+
+    // His team runs five blocks ahead of his hitbox; keep it drawn while he is at the edge of the screen.
+    @Override
+    public AABB getBoundingBoxForCulling() {
+        return this.getBoundingBox().inflate(5.0, 1.0, 5.0);
     }
 
     @Override

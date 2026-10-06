@@ -59,8 +59,8 @@ A snapping flytrap of the jungle floor and the Lush Caves. It never moves, but i
 - Fire is its bane: it catches alight at a touch and burns twice as badly. A sword does the job too: kill any one of its heads and the whole plant comes down. If it has hold of a friend, use shears on it to cut them free.
 - Break it and you get a **Flytrap Sprout** to plant your own, and from a grown plant, **Trap Jaws**.
 
-## Apollo
-The Aether's Sun Spirits are the sun's wardens, and the sun ignores anyone who hasn't brought down four of them. After that, fly higher above the Aether than anything was built to reach, at noon, and stare into the sun. Hold it. Something steps out of the glare: a gilded statue of a god, smiling the old archaic smile, light leaking through the cracks in his gold, a crown of rays burning behind his head.
+## The Sun
+The Aether's Sun Spirits are the sun's wardens, and the sun ignores anyone who hasn't brought down four of them. After that, fly higher above the Aether than anything was built to reach, at noon, and stare into the sun. Hold it. Something comes out of the glare: a chariot drawn by four gilded horses, and standing in it a gilded statue of a god, smiling the old archaic smile, light leaking through the cracks in his gold, a crown of rays burning behind his head.
 - **The fight:** there's nothing up there to stand on and nowhere to hide. He keeps himself between you and the sun, so you're always squinting into it. He plucks rays from his crown and hurls them (watch his crown empty and regrow), sends a burning-glass point of focused sunlight crawling after you, and when his corona swells, **look away**: whoever is facing him when it flares is burned and blinded.
 - **The choice:** beaten, he lowers his rays and offers to buy his life. Put your weapon away and he pays you and leaves (he'll remember, and be warier if you meet again). Strike him and the sky warns you. Strike him again and he dies, and **the sun goes out in your world forever**. It's always night after that.
 - Bring friends: anyone flying up there joins the fight. If everyone leaves or falls, he goes back into the sun and the fight starts over next time.
@@ -89,7 +89,7 @@ Creepers and other monsters are thinned out underground, including a local cap s
 ## Requirements
 - NeoForge 1.21.1
 - **GeckoLib** (the Ice Lich's, the Flytrap's, the Stemwalker's and the gods' models and animations)
-- **The Aether** (optional): where the gods are met. Apollo answers only after four Sun Spirits have fallen, and Diana needs the Aether's nights, which come once its Sun Spirit has fallen.
+- **The Aether** (optional): where the gods are met. the Sun answers only after four Sun Spirits have fallen, and Diana needs the Aether's nights, which come once its Sun Spirit has fallen.
 - **YUNG's Cave Biomes** (optional, but it's where the cold-cave mobs spawn and where the lich's crypts generate). Without it you still get the Luminous Moth, the spawn eggs and the cave spawn balancing.
 - **Creeper Overhaul** (optional): Snowy Creepers in the Frosted Caves.
 
