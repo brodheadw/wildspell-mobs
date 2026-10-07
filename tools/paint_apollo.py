@@ -3,7 +3,7 @@ import math
 from PIL import Image
 
 import make_apollo_model as model
-from geckolib_model import perimeter_x, texels, wrap_angle
+from geckolib_model import perimeter_x, texel_point, texels, wrap_angle
 from painting import mix, ramp
 
 OUT = "src/main/resources/assets/wildspellmobs/textures/entity"
@@ -291,6 +291,126 @@ def m_ray_long(face, x, y, fw, fh, cube):
 
 def m_ray_short(face, x, y, fw, fh, cube):
     return ray_px(face, x, y, fw, fh, True)
+
+
+
+
+# The chariot: gilded like him, the breastwork a madder panel in a meander frame, the wheels four-spoked.
+def m_car_floor(face, x, y, fw, fh, cube):
+    if face == "top":
+        return ramp(GOLD, 0.44 + (0.06 if (x + y) % 2 == 0 else 0.0)), 0
+    return metal(cube, face, x, y, fw, fh, -0.1), 0
+
+
+def m_car_rail(face, x, y, fw, fh, cube):
+    if face in ("front", "back"):
+        if y == 0 or x in (0, fw - 1):
+            return ramp(GOLD, 0.84 if face == "front" else 0.6), 0
+        if y == fh - 1:
+            return ramp(GOLD, 0.5), 0
+        if y in (1, 2, 3, 4, 5):
+            on = MEANDER[y - 1][x % 6]
+            return (ramp(GOLD, 0.72 if face == "front" else 0.56) if on else MADDER[1]), 0
+        return pleat(x, y - 6, -0.08 if face == "back" else 0.0), 0
+    return metal(cube, face, x, y, fw, fh, 0.1 if face == "top" else 0.0), 0
+
+
+def m_car_side(face, x, y, fw, fh, cube):
+    if face in ("left", "right"):
+        if y == 0 or x == fw - 1:
+            return ramp(GOLD, 0.8), 0
+        if y == fh - 1:
+            return ramp(GOLD, 0.48), 0
+        return (ramp(GOLD, 0.66) if (x + y) % 2 == 0 else MADDER[2]), 0
+    return metal(cube, face, x, y, fw, fh), 0
+
+
+def m_car_side_low(face, x, y, fw, fh, cube):
+    if face in ("left", "right"):
+        return ramp(GOLD, 0.78 if y == 0 else 0.56), 0
+    return metal(cube, face, x, y, fw, fh), 0
+
+
+def m_axle(face, x, y, fw, fh, cube):
+    return metal(cube, face, x, y, fw, fh, -0.14), 0
+
+
+def m_pole(face, x, y, fw, fh, cube):
+    return metal(cube, face, x, y, fw, fh, -0.06 + (0.1 if face == "top" else 0.0)), 0
+
+
+def m_yoke(face, x, y, fw, fh, cube):
+    return metal(cube, face, x, y, fw, fh, 0.02), 0
+
+
+def m_wheel(face, x, y, fw, fh, cube):
+    if face not in ("left", "right"):
+        return ramp(GOLD, 0.5), 0
+    cx = x + 0.5 - fw / 2
+    cy = y + 0.5 - fh / 2
+    r = math.hypot(cx, cy)
+    if r >= fw / 2:
+        return None, 0
+    if r >= fw / 2 - 1.6:
+        return ramp(GOLD, 0.74 if cy < 0 else 0.5), 0
+    if r < 1.6:
+        return mix(EMBER, LIGHT, 0.5), 220
+    if abs(cx) < 0.75 or abs(cy) < 0.75:
+        return ramp(GOLD, 0.62 if abs(cy) < 0.75 else 0.56), 0
+    return None, 0
+
+
+# The team: four gilded horses with the same light in their seams, manes and tails of light, ember eyes.
+HORSE_CRACKS = {(6, 2), (7, 3), (7, 4), (8, 5), (15, 3), (16, 4), (16, 5)}
+
+
+def m_horse_body(face, x, y, fw, fh, cube):
+    if face in ("left", "right") and (x, y) in HORSE_CRACKS:
+        return LIGHT, 220
+    if face == "top":
+        return ramp(GOLD, 0.74 - 0.03 * abs(x - fw / 2 + 0.5)), 0
+    return metal(cube, face, x, y, fw, fh, 0.02 if y < 2 else -0.02), 0
+
+
+def m_horse_neck(face, x, y, fw, fh, cube):
+    if face in ("left", "right") and (x, y) in {(2, 4), (3, 5), (3, 9)}:
+        return LIGHT, 220
+    return metal(cube, face, x, y, fw, fh, 0.03), 0
+
+
+def m_horse_mane(face, x, y, fw, fh, cube):
+    if face in ("top", "bottom"):
+        return GOLD[5], 0
+    return (LIGHT if y % 2 == 0 else mix(GOLD[5], EMBER, 0.4)), 200 + (0 if y % 2 else 55)
+
+
+def m_horse_head(face, x, y, fw, fh, cube):
+    if face in ("left", "right"):
+        z0 = cube["origin"][2]
+        depth = texel_point(cube, face, x, y)[2] - z0
+        if y == 1 and fw - 4 <= depth < fw - 2:
+            return mix(EMBER, LIGHT, 0.8), 255
+        if y >= fh - 2 and depth < 5:
+            return ramp(GOLD, 0.42), 0
+    if face == "front":
+        return ramp(GOLD, 0.52 if y >= fh - 2 else 0.66), 0
+    return metal(cube, face, x, y, fw, fh, 0.04), 0
+
+
+def m_horse_ear(face, x, y, fw, fh, cube):
+    return metal(cube, face, x, y, fw, fh, 0.05), 0
+
+
+def m_horse_leg(face, x, y, fw, fh, cube):
+    if y == fh - 1:
+        return ramp(GOLD, 0.34), 0
+    return metal(cube, face, x, y, fw, fh, -0.03), 0
+
+
+def m_horse_tail(face, x, y, fw, fh, cube):
+    if face in ("front", "back"):
+        return GOLD[5], 0
+    return (LIGHT if x % 2 == 0 else mix(GOLD[5], EMBER, 0.5)), 190 + (60 if x % 2 == 0 else 0)
 
 
 MATERIALS = {name[2:]: fn for name, fn in globals().items() if name.startswith("m_")}

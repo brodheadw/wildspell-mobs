@@ -119,7 +119,8 @@ The player-facing description is [publish/DESCRIPTION.md](publish/DESCRIPTION.md
   `flytrap_patch_jungle` and `flytrap_patch_lush_caves`). Wildspell Magic places the block by id at
   any `age` at the edge of runaway growth (placing the grown stage builds its stem) and withers it to
   air on a reversal; `#wildspellmobs:hostile_growth` holds both blocks and the head.
-- **Apollo** (the sun; Apollo and Helios as one, the name is the one lang key `entity.wildspellmobs.apollo`): a
+- **The Sun** (`apollo` in code and ids: Apollo and Helios as one figure; the name is the one lang key
+  `entity.wildspellmobs.apollo`): a
   boss nothing spawns. The sun only answers a player who has helped slay `apolloWardens` (4) Sun Spirits, the
   Aether's gold-dungeon boss and the sun's wardens: every player within 48 blocks of a Sun Spirit when it dies
   is credited (`wildspellmobs:wardens_slain` in the persisted player data) and told the count. Each second the
@@ -130,7 +131,10 @@ The player-facing description is [publish/DESCRIPTION.md](publish/DESCRIPTION.md
   own clock drives) for `godGazeSeconds` (3) checks running; a rising tone plays while the gaze holds. Then he
   descends out of the glare beside them (GeckoLib model: a gilded archaic kouros with the archaic smile, light leaking
   from cracks in the gold, beaded hair, a madder kilt with a meander border, and behind his head a radiate crown of
-  twelve alternating straight and wavy rays). One at a time per server; any player aloft within 96 blocks joins and
+  twelve alternating straight and wavy rays, standing in a Greek chariot: a meander-framed madder breastwork, two
+  four-spoked wheels, and a pole to a team of four gilded horses, shoulder-high to him and frozen in the archaic flying
+  gallop, with manes and tails of light; the whole chariot bobs, lurches and rears with him, nothing walks or rolls on
+  anything). One at a time per server; any player aloft within 96 blocks joins and
   gets his boss bar; once nobody is left aloft near him (dead, fallen below the line, gone, logged out) for 5 seconds he
   withdraws into the sun and the fight resets (he also withdraws if his chunk was saved mid-fight). He keeps himself
   between his target and the sun, so to look at him is to look at the sun. Attacks: he plucks rays from his crown and
@@ -221,7 +225,8 @@ The player-facing description is [publish/DESCRIPTION.md](publish/DESCRIPTION.md
   - `make_flytrap_model.py`, `paint_flytrap.py` (needs Pillow): the Flytrap head's GeckoLib model and
     animations and the plant's block models and blockstates; the head, leaf and stalk textures and the
     Flytrap Sprout and Trap Jaw items.
-  - `make_apollo_model.py`, `paint_apollo.py` (needs Pillow): Apollo's GeckoLib model and animations, his texture and
+  - `make_apollo_model.py`, `paint_apollo.py` (needs Pillow): the Sun's GeckoLib model and animations (him, his chariot
+    and team), his texture and
     glowmask (GeckoLib's glow layer takes each texel's colour from the base texture and its opacity from the mask, so
     the corona's haze is a translucent glow over nothing), and the solar ray.
   - `make_diana_model.py`, `paint_diana.py` (needs Pillow): Diana's GeckoLib model and animations, her ten textures

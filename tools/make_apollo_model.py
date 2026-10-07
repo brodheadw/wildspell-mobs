@@ -5,9 +5,9 @@ from geckolib_model import Model, anim, animations, c, loop, write
 ASSETS = "src/main/resources/assets/wildspellmobs"
 GEO_OUT = f"{ASSETS}/geo/entity/apollo.geo.json"
 ANIM_OUT = f"{ASSETS}/animations/entity/apollo.animation.json"
-TEX = 128
+TEX = 256
 
-MODEL = Model("geometry.apollo", TEX, 6, 6, [0, 2.5, 0])
+MODEL = Model("geometry.apollo", TEX, 11, 6, [0, 2.0, -1.5])
 BONES = MODEL.bones
 bone = MODEL.bone
 
@@ -19,7 +19,8 @@ RAY_LONG = 19
 RAY_SHORT = 13
 
 bone("root", None, (0, 0, 0))
-bone("body", "root", (0, 24, 0))
+bone("ride", "root", (0, 0, 0))
+bone("body", "ride", (0, 24, 0))
 bone("hips", "body", (0, 24, 0), cubes=[
     c((-5.5, 21, -3), (11, 6, 6), "kilt"),
     c((-6, 19, -3.5), (12, 3, 7), "kilt_hem"),
@@ -81,6 +82,63 @@ for i in range(RAYS):
     ])
 
 
+# The chariot. He stands in a Greek car: a floor, a breastwork across the front, an axle at the back with two
+# four-spoked wheels, and a pole running forward between the inner pair of his team to a yoke at their withers. The
+# four horses are gilded statues like him, shoulder-high to him, frozen in the archaic flying gallop of a vase
+# painting, manes and tails of light; they do not run, the chariot simply goes.
+WHEEL = 18
+AXLE_Y = -2.75
+AXLE_Z = 2.25
+RAIL = 13
+HORSES = (-15, -5, 5, 15)
+WITHERS = (26, -52)
+TEAM_PIVOT = (0, 17, -45)
+POLE_FROM = (-1.75, -6)
+POLE_LENGTH = math.hypot(WITHERS[0] - POLE_FROM[0], WITHERS[1] - POLE_FROM[1])
+POLE_PITCH = math.degrees(math.atan2(WITHERS[0] - POLE_FROM[0], POLE_FROM[1] - WITHERS[1]))
+
+bone("chariot", "ride", (0, 0, 0))
+bone("car", "chariot", (0, 0, 0), cubes=[
+    c((-8, -1, -6), (16, 1, 12), "car_floor"),
+    c((-8, 0, -7), (16, RAIL, 1), "car_rail"),
+    c((-8, 0, -6), (1, RAIL - 2, 6), "car_side"),
+    c((7, 0, -6), (1, RAIL - 2, 6), "car_side"),
+    c((-8, 0, 0), (1, 5, 5), "car_side_low"),
+    c((7, 0, 0), (1, 5, 5), "car_side_low"),
+    c((-12.5, AXLE_Y - 1, AXLE_Z - 1), (25, 2, 2), "axle"),
+])
+for side, sx in (("right", -1), ("left", 1)):
+    x = 12.5 * sx
+    bone(f"{side}_wheel", "car", (x, AXLE_Y, AXLE_Z), cubes=[
+        c((x - 0.5, AXLE_Y - WHEEL / 2, AXLE_Z - WHEEL / 2), (1, WHEEL, WHEEL), "wheel"),
+    ])
+bone("pole", "car", (0, POLE_FROM[0], POLE_FROM[1]), [-POLE_PITCH, 0, 0], [
+    c((-1, POLE_FROM[0] - 1, POLE_FROM[1] - round(POLE_LENGTH)), (2, 2, round(POLE_LENGTH)), "pole"),
+])
+bone("team", "chariot", TEAM_PIVOT, cubes=[c((-17, WITHERS[0], WITHERS[1] - 1), (34, 2, 2), "yoke")])
+for i, hx in enumerate(HORSES):
+    bone(f"horse_{i}", "team", (hx, 17, -45), cubes=[c((hx - 4, 16, -56), (8, 10, 22), "horse_body")])
+    bone(f"horse_{i}_tail", f"horse_{i}", (hx, 24, -34), [25, 0, 0], [c((hx - 0.5, 23, -34), (1, 2, 10), "horse_tail")])
+    neck_pitch = 40
+    bone(f"horse_{i}_neck", f"horse_{i}", (hx, 22, -54), [neck_pitch, 0, 0], [
+        c((hx - 2.5, 22, -57), (5, 14, 6), "horse_neck"),
+        c((hx - 0.5, 23, -51), (1, 15, 2), "horse_mane"),
+    ])
+    top_y = 22 + 14 * math.cos(math.radians(neck_pitch))
+    top_z = -54 - 14 * math.sin(math.radians(neck_pitch))
+    bone(f"horse_{i}_head", f"horse_{i}", (hx, top_y, top_z), [25, 0, 0], [
+        c((hx - 2.5, top_y - 2.5, top_z - 12), (5, 6, 13), "horse_head"),
+        c((hx - 2.5, top_y + 3, top_z - 2), (1, 3, 1), "horse_ear"),
+        c((hx + 1.5, top_y + 3, top_z - 2), (1, 3, 1), "horse_ear"),
+    ])
+    for leg, lz, pitch in (("fore", -53, -50), ("hind", -37, 40)):
+        for side, sx in (("right", -1), ("left", 1)):
+            lx = hx + 2.5 * sx
+            bone(f"horse_{i}_{leg}_{side}", f"horse_{i}", (lx, 17, lz), [pitch, 0, 0], [
+                c((lx - 1, 1, lz - 1), (2, 16, 2), "horse_leg"),
+            ])
+
+
 MODEL.pack()
 
 
@@ -99,11 +157,31 @@ def spin(length, turns):
     return {"rotation": {0: [0, 0, 0], length / 2: [0, 0, -180 * turns], length: [0, 0, -360 * turns]}}
 
 
+def roll(length, turns):
+    return {"rotation": {0: [0, 0, 0], length / 2: [-180 * turns, 0, 0], length: [-360 * turns, 0, 0]}}
+
+
+def team_idle(length):
+    out = {}
+    for i in range(len(HORSES)):
+        shift = length * (i * 3 % 4) / 4
+        frames = {}
+        for k in range(4):
+            t = round((shift + length * k / 4) % length, 3)
+            frames[t] = [0, round(0.7 * math.sin(math.pi * k / 2), 2), 0]
+        frames[length] = frames.get(0, [0, 0, 0])
+        out[f"horse_{i}"] = {"position": frames}
+        out[f"horse_{i}_head"] = {"rotation": loop(length, [(0, [0, 0, 0]), (length / 2, [-4 if i % 2 else 3, 2 * (i - 1.5), 0])])}
+    return out
+
+
 def idle():
     L = 6.0
     bones = {
-        "body": {"position": loop(L, [(0, [0, 0, 0]), (1.5, [0, 0.8, 0]), (3, [0, 1.4, 0]), (4.5, [0, 0.8, 0])])},
+        "ride": {"position": loop(L, [(0, [0, 0, 0]), (1.5, [0, 0.8, 0]), (3, [0, 1.4, 0]), (4.5, [0, 0.8, 0])])},
         "disc": spin(L, 0.25),
+        "right_wheel": roll(L, 1.5),
+        "left_wheel": roll(L, 1.5),
         "head": {"rotation": loop(L, [(0, [0, 0, 0]), (3, [2, 0, 0])])},
         "right_arm": {"rotation": loop(L, [(0, [0, 0, 0]), (3, [-1.5, 0, 0])])},
         "left_arm": {"rotation": loop(L, [(0, [0, 0, 0]), (3, [1.5, 0, 0])])},
@@ -116,6 +194,7 @@ def idle():
             frames[round(t, 3)] = [round(-6 * math.sin(2 * math.pi * k / 6 + phase), 2), 0, 0]
         frames[L] = frames[0]
         bones[f"ray_{i}_blade"] = {"rotation": frames}
+    bones.update(team_idle(L))
     return anim(L, True, bones)
 
 
@@ -148,7 +227,8 @@ def focus():
 def glare():
     L = 1.8
     out = {
-        "body": {"position": {0: [0, 0, 0], 1.2: [0, 1.5, 1.5], 1.5: [0, 0.5, -1], 1.8: [0, 0, 0]}},
+        "ride": {"position": {0: [0, 0, 0], 1.2: [0, 1.5, 1.5], 1.5: [0, 0.5, -1], 1.8: [0, 0, 0]}},
+        "team": {"rotation": {0: [0, 0, 0], 1.0: [-14, 0, 0], 1.2: [-18, 0, 0], 1.5: [4, 0, 0], 1.8: [0, 0, 0]}},
         "torso": {"rotation": {0: [0, 0, 0], 1.2: [-16, 0, 0], 1.35: [8, 0, 0], 1.8: [0, 0, 0]}},
         "head": {"rotation": {0: [0, 0, 0], 1.2: [-22, 0, 0], 1.35: [6, 0, 0], 1.8: [0, 0, 0]}},
         "right_arm": {"rotation": {0: [0, 0, 0], 1.0: [-20, 0, 95], 1.2: [-24, 0, 110], 1.35: [-40, 0, 80], 1.8: [0, 0, 0]}},
@@ -162,7 +242,8 @@ def glare():
 def concede():
     L = 4.0
     out = {
-        "body": {"position": loop(L, [(0, [0, -4, 0]), (2, [0, -4.6, 0])])},
+        "ride": {"position": loop(L, [(0, [0, -4, 0]), (2, [0, -4.6, 0])])},
+        "team": {"rotation": loop(L, [(0, [6, 0, 0]), (2, [7, 0, 0])])},
         "torso": {"rotation": loop(L, [(0, [14, 0, 0]), (2, [15, 0, 0])])},
         "head": {"rotation": loop(L, [(0, [24, 0, 0]), (2, [26, 0, 0])])},
         "right_arm": {"rotation": loop(L, [(0, [-28, 0, 34]), (2, [-30, 0, 36])])},
@@ -182,7 +263,7 @@ def concede():
 def warned():
     L = 1.2
     out = {
-        "body": {"position": loop(L, [(0, [0, -3, 0]), (0.3, [0.3, -3.2, 0]), (0.6, [-0.3, -2.8, 0]), (0.9, [0.2, -3.1, 0])])},
+        "ride": {"position": loop(L, [(0, [0, -3, 0]), (0.3, [0.3, -3.2, 0]), (0.6, [-0.3, -2.8, 0]), (0.9, [0.2, -3.1, 0])])},
         "torso": {"rotation": loop(L, [(0, [-6, 0, 0]), (0.6, [-8, 0, 1])])},
         "head": {"rotation": loop(L, [(0, [-14, 0, 0]), (0.6, [-16, 3, 0])])},
         "right_arm": {"rotation": loop(L, [(0, [-110, 20, -20]), (0.3, [-112, 22, -22]), (0.6, [-108, 18, -19])])},
