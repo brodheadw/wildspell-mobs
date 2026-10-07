@@ -3,3 +3,5 @@ run/
 .gradle/
 build/
 publish/*.jar
+versions/**/build/
+versions/**/.gradle/

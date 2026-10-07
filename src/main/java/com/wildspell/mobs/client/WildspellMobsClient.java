@@ -37,7 +37,9 @@ public class WildspellMobsClient {
     @SubscribeEvent
     static void registerLayers(EntityRenderersEvent.RegisterLayerDefinitions event) {
         event.registerLayerDefinition(RimeSkullModel.LAYER, RimeSkullModel::createBodyLayer);
+//? if <26.4 {
         event.registerLayerDefinition(FrozenZombieModel.CRUST_LAYER, FrozenZombieModel::createCrustLayer);
+//?}
         event.registerLayerDefinition(LuminousMothModel.LAYER, LuminousMothModel::createBodyLayer);
         event.registerLayerDefinition(ElectricEelModel.LAYER, ElectricEelModel::createBodyLayer);
         event.registerLayerDefinition(PegasusModel.LAYER, PegasusModel::createBodyLayer);
@@ -47,7 +49,9 @@ public class WildspellMobsClient {
     static void registerRenderers(EntityRenderersEvent.RegisterRenderers event) {
         event.registerEntityRenderer(WildspellMobs.RIME_SKULL.get(), RimeSkullRenderer::new);
         event.registerEntityRenderer(WildspellMobs.FROST_SHARD.get(), ThrownItemRenderer::new);
+//? if <26.4 {
         event.registerEntityRenderer(WildspellMobs.FROZEN_ZOMBIE.get(), FrozenZombieRenderer::new);
+//?}
         event.registerEntityRenderer(WildspellMobs.ICE_LICH.get(), IceLichRenderer::new);
         event.registerEntityRenderer(WildspellMobs.LICH_WISP.get(),
                 context -> new GlowSpriteRenderer<>(context, WildspellMobs.id("textures/entity/lich_wisp.png"), 0.6F));

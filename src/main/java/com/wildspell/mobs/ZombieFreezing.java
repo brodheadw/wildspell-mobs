@@ -1,3 +1,4 @@
+//? if <26.4 {
 package com.wildspell.mobs;
 
 import com.wildspell.mobs.crypt.LichSouls;
@@ -15,7 +16,6 @@ import net.neoforged.neoforge.event.EventHooks;
 import net.neoforged.neoforge.event.tick.EntityTickEvent;
 
 public final class ZombieFreezing {
-    public static final TagKey<Biome> FREEZES_ZOMBIES = TagKey.create(Registries.BIOME, WildspellMobs.id("freezes_zombies"));
     static final int SHIVER_AT = 60;
     static final int CONVERT_AT = 140;
     static final int CHECK_INTERVAL = 10;
@@ -41,7 +41,7 @@ public final class ZombieFreezing {
             }
             return;
         }
-        if (!level.getBiome(zombie.blockPosition()).is(FREEZES_ZOMBIES) || LichSouls.isCleansedZone(level, zombie.blockPosition())) {
+        if (!level.getBiome(zombie.blockPosition()).is(ColdEffects.COLD_CAVES) || LichSouls.isCleansedZone(level, zombie.blockPosition())) {
             if (chill > 0) {
                 chill -= CHECK_INTERVAL;
                 if (chill <= 0) {
@@ -67,10 +67,11 @@ public final class ZombieFreezing {
             if (frozen != null) {
                 frozen.pickVariant();
                 frozen.getPersistentData().remove(CHILL);
-                frozen.playSound(WildspellMobs.FROZEN_ZOMBIE_SHATTER.get(), 0.8F, 1.2F);
+                frozen.playSound(WildspellMobs.ICE_SHATTER.get(), 0.8F, 1.2F);
                 level.sendParticles(ColdEffects.ICE_CHIPS, frozen.getX(), frozen.getY(0.5), frozen.getZ(), 30, 0.3, 0.7, 0.3, 0.15);
                 EventHooks.onLivingConvert(zombie, frozen);
             }
         }
     }
 }
+//?}
