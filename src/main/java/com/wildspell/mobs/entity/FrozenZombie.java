@@ -1,3 +1,4 @@
+//? if <26.4 {
 package com.wildspell.mobs.entity;
 
 import com.wildspell.mobs.WildspellMobs;
@@ -237,7 +238,7 @@ public class FrozenZombie extends Zombie implements RangedAttackMob {
         if (this.iceBlock == null || this.heldAt == null || !this.level().getBlockState(this.iceBlock).is(BlockTags.ICE)) {
             this.setVariant(NORMAL);
             this.entityData.set(DATA_SEIZED, false);
-            this.playSound(WildspellMobs.FROZEN_ZOMBIE_SHATTER.get(), 0.8F, 1.3F);
+            this.playSound(WildspellMobs.ICE_SHATTER.get(), 0.8F, 1.3F);
             ((ServerLevel) this.level()).sendParticles(ColdEffects.ICE_CHIPS, this.getX(), this.getY(0.2), this.getZ(), 20, 0.3, 0.3, 0.3, 0.12);
             return;
         }
@@ -308,7 +309,7 @@ public class FrozenZombie extends Zombie implements RangedAttackMob {
         zombie.setRemainingFireTicks(fire);
         level.sendParticles(ColdEffects.ICE_CHIPS, zombie.getX(), zombie.getY(0.5), zombie.getZ(), 25, 0.3, 0.6, 0.3, 0.12);
         level.sendParticles(ParticleTypes.SPLASH, zombie.getX(), zombie.getY(0.5), zombie.getZ(), 30, 0.3, 0.6, 0.3, 0.1);
-        zombie.playSound(WildspellMobs.FROZEN_ZOMBIE_SHATTER.get(), 0.8F, 1.3F);
+        zombie.playSound(WildspellMobs.ICE_SHATTER.get(), 0.8F, 1.3F);
         EventHooks.onLivingConvert(this, zombie);
         return true;
     }
@@ -351,7 +352,7 @@ public class FrozenZombie extends Zombie implements RangedAttackMob {
 
     @Override
     protected SoundEvent getDeathSound() {
-        return WildspellMobs.FROZEN_ZOMBIE_SHATTER.get();
+        return WildspellMobs.ICE_SHATTER.get();
     }
 
     @Override
@@ -419,3 +420,4 @@ public class FrozenZombie extends Zombie implements RangedAttackMob {
         }
     }
 }
+//?}

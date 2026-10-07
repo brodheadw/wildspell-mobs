@@ -2,7 +2,9 @@ package com.wildspell.mobs.crypt;
 
 import com.wildspell.mobs.WildspellMobs;
 import com.wildspell.mobs.entity.ColdEffects;
+//? if <26.4
 import com.wildspell.mobs.entity.FrozenZombie;
+import com.wildspell.mobs.entity.IceLich;
 import com.wildspell.mobs.entity.RimeSkull;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -41,9 +43,17 @@ public final class Cleansing {
     private Cleansing() {
     }
 
+    private static boolean frozenDead(Mob mob) {
+//? if <26.4 {
+        return mob instanceof FrozenZombie;
+//?} else {
+/*        return false;*/
+//?}
+    }
+
     public static void purge(ServerLevel level, Vec3 at) {
         for (Mob mob : level.getEntitiesOfClass(Mob.class, new AABB(at, at).inflate(PURGE_RADIUS),
-                m -> (m instanceof FrozenZombie || m instanceof RimeSkull) && m.isAlive())) {
+                m -> (m.getTags().contains(IceLich.MINION_TAG) || m instanceof RimeSkull || frozenDead(m)) && m.isAlive())) {
             ColdEffects.shatter(level, mob, 1.1F);
         }
         for (int i = 0; i < 48; ++i) {

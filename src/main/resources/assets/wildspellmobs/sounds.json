@@ -8,8 +8,8 @@
       "wildspellmobs:frozen_zombie/crunch4"
     ]
   },
-  "entity.frozen_zombie.shatter": {
-    "subtitle": "subtitles.wildspellmobs.entity.frozen_zombie.shatter",
+  "ice.shatter": {
+    "subtitle": "subtitles.wildspellmobs.ice.shatter",
     "sounds": [
       "wildspellmobs:frozen_zombie/shatter1",
       "wildspellmobs:frozen_zombie/shatter2"
