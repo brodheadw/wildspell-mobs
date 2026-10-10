@@ -11,7 +11,7 @@ public final class MobsConfig {
 
     public static final ModConfigSpec.DoubleValue UNDERGROUND_MONSTER_CHANCE = BUILDER
             .comment("Chance (0-1) that any other natural hostile spawn is allowed underground in the overworld.",
-                    "Rime Skulls are exempt. 1.0 = vanilla.")
+                    "Rime Skulls and scorpions are exempt. 1.0 = vanilla.")
             .defineInRange("undergroundMonsterChance", 0.75, 0.0, 1.0);
 
     public static final ModConfigSpec.IntValue UNDERGROUND_LOCAL_CAP = BUILDER

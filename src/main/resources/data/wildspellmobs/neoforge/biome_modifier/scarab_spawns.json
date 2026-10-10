@@ -1,0 +1,5 @@
+{
+  "type": "neoforge:add_spawns",
+  "biomes": "#wildspellmobs:scarab_spawns",
+  "spawners": {"type": "wildspellmobs:scarab", "weight": 3, "minCount": 1, "maxCount": 1}
+}

@@ -4,6 +4,7 @@ import java.util.EnumSet;
 import java.util.List;
 import javax.annotation.Nullable;
 import com.wildspell.mobs.WildspellMobs;
+import com.wildspell.mobs.item.CreatureBottleItem;
 import com.wildspell.mobs.moth.LuminousMoss;
 import com.wildspell.mobs.moth.MothGlowBlock;
 import net.minecraft.core.BlockPos;
@@ -37,7 +38,6 @@ import net.minecraft.world.entity.animal.Bucketable;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.item.ItemUtils;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.LevelAccessor;
@@ -349,18 +349,12 @@ public class LuminousMoth extends PathfinderMob {
 
     @Override
     protected InteractionResult mobInteract(Player player, InteractionHand hand) {
-        ItemStack held = player.getItemInHand(hand);
-        if (!held.is(Items.GLASS_BOTTLE) || !this.isAlive()) {
+        if (!player.getItemInHand(hand).is(Items.GLASS_BOTTLE) || !this.isAlive()) {
             return super.mobInteract(player, hand);
         }
-        this.playSound(SoundEvents.BOTTLE_FILL, 1.0F, 1.4F);
         ItemStack bottled = new ItemStack(WildspellMobs.LUMINOUS_MOTH_BOTTLE.get());
         Bucketable.saveDefaultDataToBucketTag(this, bottled);
-        player.setItemInHand(hand, ItemUtils.createFilledResult(held, player, bottled, false));
-        if (!this.level().isClientSide) {
-            this.discard();
-        }
-        return InteractionResult.sidedSuccess(this.level().isClientSide);
+        return CreatureBottleItem.catchIn(this, player, hand, bottled);
     }
 
     @Override
