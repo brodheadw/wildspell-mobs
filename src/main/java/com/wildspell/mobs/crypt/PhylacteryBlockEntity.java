@@ -1,6 +1,6 @@
 package com.wildspell.mobs.crypt;
 
-import com.wildspell.mobs.SpawnBalance;
+import com.wildspell.mobs.MobsConfig;
 import com.wildspell.mobs.WildspellMobs;
 import com.wildspell.mobs.entity.ColdEffects;
 import com.wildspell.mobs.entity.IceLich;
@@ -44,7 +44,7 @@ public class PhylacteryBlockEntity extends BlockEntity {
     public static final double NEAR = 64.0;
 
     public static double ambushRange() {
-        return SpawnBalance.LICH_AMBUSH_RANGE.get();
+        return MobsConfig.LICH_AMBUSH_RANGE.get();
     }
 
     public static double leash() {
@@ -323,7 +323,7 @@ public class PhylacteryBlockEntity extends BlockEntity {
                 prey.computeIfAbsent(nearest, k -> new ArrayList<>()).add(player);
             }
         }
-        double chance = SpawnBalance.LICH_AMBUSH_CHANCE.get();
+        double chance = MobsConfig.LICH_AMBUSH_CHANCE.get();
         for (Map.Entry<LichSouls.Soul, List<Player>> entry : prey.entrySet()) {
             LichSouls.Soul soul = entry.getKey();
             if (soul.ambushCooldown() > 0) {

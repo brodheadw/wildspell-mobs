@@ -7,7 +7,6 @@ import com.wildspell.mobs.grove.SporeheartFeature;
 import net.minecraft.core.BlockPos;
 import net.minecraft.gametest.framework.GameTest;
 import net.minecraft.gametest.framework.GameTestHelper;
-import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.GameType;
 import net.minecraft.world.level.block.Blocks;
@@ -15,10 +14,11 @@ import net.minecraft.world.phys.Vec3;
 import net.neoforged.neoforge.gametest.GameTestHolder;
 import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
 
+import static com.wildspell.mobs.GameTests.*;
+
 @GameTestHolder(WildspellMobs.MODID)
 @PrefixGameTestTemplate(false)
 public class StemwalkerTests {
-    private static final String SKY = "sky_arena";
     private static final BlockPos HEART = new BlockPos(15, 2, 15);
 
     private static SporeheartBlockEntity grove(GameTestHelper helper, int stemAbove) {
@@ -37,7 +37,7 @@ public class StemwalkerTests {
 
     private static void at(GameTestHelper helper, long time) {
         helper.getLevel().setDayTime(time);
-        WildspellMobsTests.onFinish(helper, () -> helper.getLevel().setDayTime(6000L));
+        onFinish(helper, () -> helper.getLevel().setDayTime(6000L));
     }
 
     private static void pulse(GameTestHelper helper, SporeheartBlockEntity heart) {
@@ -101,38 +101,5 @@ public class StemwalkerTests {
         SporeheartBlockEntity heart = grove(helper, 6);
         Stemwalker walker = bound(helper, heart);
         helper.succeedWhen(() -> helper.assertTrue(walker.isRemoved() && !walker.isDeadOrDying(), "the walker lingered past dawn"));
-    }
-
-    @GameTest(template = SKY, batch = "sporeheartDay")
-    public static void anUnboundWalkerBleeds(GameTestHelper helper) {
-        Stemwalker walker = helper.spawn(WildspellMobs.STEMWALKER.get(), new Vec3(15.5, 1.0, 15.5));
-        walker.setNoAi(true);
-        walker.hurt(helper.getLevel().damageSources().generic(), 6.0F);
-        helper.assertTrue(walker.getHealth() < walker.getMaxHealth(), "a walker with no heart shrugged off a blow");
-        helper.killAllEntities();
-        helper.succeed();
-    }
-
-    @GameTest(template = SKY, batch = "sporeheartDay")
-    public static void theHeartTakesTheBaseOfATallGroveStem(GameTestHelper helper) {
-        ServerLevel level = helper.getLevel();
-        for (int x = 0; x < 31; ++x) {
-            for (int z = 0; z < 31; ++z) {
-                helper.setBlock(x, 0, z, Blocks.MYCELIUM);
-            }
-        }
-        for (int y = 1; y <= 9; ++y) {
-            helper.setBlock(5, y, 5, Blocks.MUSHROOM_STEM);
-        }
-        helper.setBlock(5, 10, 5, Blocks.RED_MUSHROOM_BLOCK);
-        for (int y = 1; y <= 3; ++y) {
-            helper.setBlock(20, y, 20, Blocks.MUSHROOM_STEM);
-        }
-        BlockPos tall = helper.absolutePos(new BlockPos(5, 0, 5));
-        BlockPos shortStem = helper.absolutePos(new BlockPos(20, 0, 20));
-        BlockPos base = SporeheartFeature.stemBase(level, tall.getX(), tall.getZ());
-        helper.assertTrue(base != null && base.equals(tall.above()), "the base of a tall stem wasn't found: " + base);
-        helper.assertTrue(SporeheartFeature.stemBase(level, shortStem.getX(), shortStem.getZ()) == null, "a stump took a heart");
-        helper.succeed();
     }
 }

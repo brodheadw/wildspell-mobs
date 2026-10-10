@@ -7,11 +7,8 @@ import com.wildspell.mobs.entity.FrozenZombie;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.server.level.ServerLevel;
-import net.minecraft.tags.TagKey;
-import net.minecraft.core.registries.Registries;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.monster.Zombie;
-import net.minecraft.world.level.biome.Biome;
 import net.neoforged.neoforge.event.EventHooks;
 import net.neoforged.neoforge.event.tick.EntityTickEvent;
 

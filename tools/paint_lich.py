@@ -1,18 +1,11 @@
 import math
 import random
 
-from PIL import Image
-
 import make_lich_model as model
-import painting
-from geckolib_model import texels
+from painting import jitter, paint_model
 
 OUT = "src/main/resources/assets/wildspellmobs/textures"
 rng = random.Random(11)
-
-
-def jitter(color, shade=0, spread=5):
-    return painting.jitter(rng, color, shade, spread)
 
 
 BONE = [(216, 228, 236), (204, 218, 230), (224, 234, 242)]
@@ -40,8 +33,6 @@ FLESH_DEEP = (84, 58, 78)
 
 FACE_SHADE = {"top": 14, "bottom": -26, "front": 0, "right": -8, "left": -8, "back": -14}
 
-lich = Image.new("RGBA", (128, 128), (0, 0, 0, 0))
-lich_glow = Image.new("RGBA", (128, 128), (0, 0, 0, 0))
 
 
 def robe_px(face, x, y, fw, fh, fold_offset=0, frost=0.08):
@@ -51,26 +42,26 @@ def robe_px(face, x, y, fw, fh, fold_offset=0, frost=0.08):
         shade += {0: -9, 1: 0, 2: 6, 3: 2}[k]
         shade += int(6 - 10 * y / max(1, fh))
     if face != "bottom" and y >= fh - 3 and rng.random() < frost * (y / max(1, fh - 1)) ** 2:
-        return jitter(rng.choice(RIME), shade - 30, 6)
-    return jitter(rng.choice(ROBE), shade, 4)
+        return jitter(rng, rng.choice(RIME), shade - 30, 6)
+    return jitter(rng, rng.choice(ROBE), shade, 4)
 
 
 def bone_px(face, x, y, fw, fh, shade=0):
     s = FACE_SHADE[face] + shade
     if face in ("front", "back", "left", "right") and fh > 2:
         s += int(4 - 12 * y / (fh - 1))
-    return jitter(rng.choice(BONE), s, 5)
+    return jitter(rng, rng.choice(BONE), s, 5)
 
 
 def ice_px(face, x, y, fw, fh, palette, shade=0):
     s = FACE_SHADE[face] + shade
     if face in ("front", "back", "left", "right"):
         if x == 0 and fw > 1:
-            return jitter(palette[2], s + 26 - 6 * y, 4)
+            return jitter(rng, palette[2], s + 26 - 6 * y, 4)
         if x == fw - 1 and fw > 1:
-            return jitter(palette[1], s - 22, 4)
+            return jitter(rng, palette[1], s - 22, 4)
         s += int(10 - 18 * y / max(1, fh - 1))
-    px = jitter(rng.choice(palette), s, 5)
+    px = jitter(rng, rng.choice(palette), s, 5)
     if face in ("front", "left") and x == 0 and y == 0:
         px = (236, 250, 255, 255)
     return px
@@ -78,9 +69,9 @@ def ice_px(face, x, y, fw, fh, palette, shade=0):
 
 def m_skirt(face, x, y, fw, fh, cube):
     if face == "front" and x in (fw // 2 - 1, fw // 2):
-        return jitter(rng.choice(RIME), -10 - 3 * y, 6), False
+        return jitter(rng, rng.choice(RIME), -10 - 3 * y, 6), False
     if face == "front" and x in (fw // 2 - 2, fw // 2 + 1):
-        return jitter(ROBE_DEEP, 0, 3), False
+        return jitter(rng, ROBE_DEEP, 0, 3), False
     return robe_px(face, x, y, fw, fh, 1, 0.25), False
 
 
@@ -90,16 +81,16 @@ def m_skirt_low(face, x, y, fw, fh, cube):
 
 def m_strip(face, x, y, fw, fh, cube):
     if face == "top":
-        return jitter(ROBE_DEEP, 0, 3), False
+        return jitter(rng, ROBE_DEEP, 0, 3), False
     if face == "bottom":
-        return jitter(rng.choice(RIME), -40, 6), False
+        return jitter(rng, rng.choice(RIME), -40, 6), False
     col_seed = (cube["uv"][0] * 7 + x * 13 + {"front": 0, "back": 3, "left": 5, "right": 9}[face]) % 5
     if y == fh - 1 and col_seed in (0, 3):
         return None, False
     if y >= fh - 2 - col_seed % 2:
-        return jitter(rng.choice(RIME), FACE_SHADE[face] - 8, 6), False
+        return jitter(rng, rng.choice(RIME), FACE_SHADE[face] - 8, 6), False
     if y >= fh - 4 and rng.random() < 0.35:
-        return jitter(rng.choice(RIME), FACE_SHADE[face] - 36, 6), False
+        return jitter(rng, rng.choice(RIME), FACE_SHADE[face] - 36, 6), False
     return robe_px(face, x, y, fw, fh, col_seed, 0), False
 
 
@@ -109,22 +100,22 @@ def m_ribs(face, x, y, fw, fh, cube):
         rib_row = y in (1, 3, 5, 7) if edge > 0 else y in (2, 4, 6, 8)
         sternum = x in (fw // 2 - 1, fw // 2) and y < 7
         if sternum:
-            return jitter(rng.choice(BONE), -44 + (10 if x == fw // 2 - 1 else 0), 4), False
+            return jitter(rng, rng.choice(BONE), -44 + (10 if x == fw // 2 - 1 else 0), 4), False
         if rib_row:
-            return jitter(rng.choice(BONE), (-18 if edge == 1 else -40 if edge == 0 else -26) - 3 * y, 4), False
+            return jitter(rng, rng.choice(BONE), (-18 if edge == 1 else -40 if edge == 0 else -26) - 3 * y, 4), False
         d = math.hypot((x - (fw - 1) / 2) / 1.4, y - 3.2)
         if d < 3.4:
             return (SOUL[2] if d < 1.3 else SOUL[1] if d < 2.4 else SOUL[0]) + (255,), True
-        return jitter(CAVITY, 0, 3), False
+        return jitter(rng, CAVITY, 0, 3), False
     if face in ("left", "right"):
         if y % 2 == 0 and y < fh - 1:
-            return jitter(rng.choice(BONE), -20, 5), False
-        return jitter(CAVITY, 0, 3), False
+            return jitter(rng, rng.choice(BONE), -20, 5), False
+        return jitter(rng, CAVITY, 0, 3), False
     if face == "back":
         if x in (fw // 2 - 1, fw // 2):
-            return jitter(rng.choice(BONE), -24, 4), False
-        return jitter(CAVITY, 0, 3), False
-    return jitter(CAVITY, 0, 3), False
+            return jitter(rng, rng.choice(BONE), -24, 4), False
+        return jitter(rng, CAVITY, 0, 3), False
+    return jitter(rng, CAVITY, 0, 3), False
 
 
 def m_robe_chest(face, x, y, fw, fh, cube):
@@ -135,11 +126,11 @@ def m_robe_chest(face, x, y, fw, fh, cube):
         if off < half:
             return None, False
         if off < half + 1.0:
-            return jitter(TRIM, 10 - 4 * y, 6), False
+            return jitter(rng, TRIM, 10 - 4 * y, 6), False
         if off < half + 2.0:
-            return jitter(TRIM, -70, 5), False
+            return jitter(rng, TRIM, -70, 5), False
     if face == "top":
-        return jitter(rng.choice(ROBE), 4, 4), False
+        return jitter(rng, rng.choice(ROBE), 4, 4), False
     return robe_px(face, x, y, fw, fh, 0, 0.12), False
 
 
@@ -147,33 +138,33 @@ def flesh_px(face, x, y, fw, fh, seg, phase=0):
     s = FACE_SHADE[face]
     if face == "top":
         if rng.random() < 0.55:
-            return jitter(rng.choice(RIME), -12, 8)
-        return jitter(rng.choice(FLESH), s, 6)
+            return jitter(rng, rng.choice(RIME), -12, 8)
+        return jitter(rng, rng.choice(FLESH), s, 6)
     if face == "bottom":
-        return jitter(FLESH_DEEP if (x + y) % 2 else FLESH_FOLD, -8, 4)
+        return jitter(rng, FLESH_DEEP if (x + y) % 2 else FLESH_FOLD, -8, 4)
     k = (y + phase) % seg
     if k == seg - 1:
         if fw > 2 and 0 < x < fw - 1:
-            return jitter(FLESH_FOLD, 8, 4)
-        return jitter(FLESH_DEEP if x == fw - 1 else FLESH_FOLD, 0, 4)
+            return jitter(rng, FLESH_FOLD, 8, 4)
+        return jitter(rng, FLESH_DEEP if x == fw - 1 else FLESH_FOLD, 0, 4)
     if k == 0:
         s += 10
     if fw > 1 and x == fw - 1:
         s -= 16
     if rng.random() < 0.12:
-        return jitter(rng.choice(RIME), s - 24, 6)
-    return jitter(rng.choice(FLESH), s - 3 * (k if seg > 2 else 0), 5)
+        return jitter(rng, rng.choice(RIME), s - 24, 6)
+    return jitter(rng, rng.choice(FLESH), s - 3 * (k if seg > 2 else 0), 5)
 
 
 def m_gut(face, x, y, fw, fh, cube):
     if face in ("front", "back", "left", "right") and y == 0 and rng.random() < 0.6:
-        return jitter(rng.choice(RIME), FACE_SHADE[face] - 6, 6), False
+        return jitter(rng, rng.choice(RIME), FACE_SHADE[face] - 6, 6), False
     return flesh_px(face, x, y, fw, fh, 2, cube["uv"][0] % 2), False
 
 
 def m_gut_strand(face, x, y, fw, fh, cube):
     if face in ("front", "back", "left", "right") and y >= fh - 2:
-        return jitter(rng.choice(RIME), FACE_SHADE[face] - 10 * (fh - 1 - y), 6), False
+        return jitter(rng, rng.choice(RIME), FACE_SHADE[face] - 10 * (fh - 1 - y), 6), False
     return flesh_px(face, x, y, fw, fh, 3, cube["uv"][1] % 3), False
 
 
@@ -183,10 +174,10 @@ def m_icicle(face, x, y, fw, fh, cube):
 
 def m_belt(face, x, y, fw, fh, cube):
     if face == "front" and x in (fw // 2 - 1, fw // 2):
-        return jitter((230, 248, 255), -6 * y, 4), False
+        return jitter(rng, (230, 248, 255), -6 * y, 4), False
     if face in ("top", "bottom"):
-        return jitter(ROBE_DEEP, 0, 3), False
-    return jitter(TRIM, -8 - 18 * y + (6 if x % 3 == 0 else 0), 6), False
+        return jitter(rng, ROBE_DEEP, 0, 3), False
+    return jitter(rng, TRIM, -8 - 18 * y + (6 if x % 3 == 0 else 0), 6), False
 
 
 def m_mantle(face, x, y, fw, fh, cube):
@@ -197,19 +188,19 @@ def m_mantle(face, x, y, fw, fh, cube):
         if off < half:
             return None, False
         if off < half + 1.2:
-            return jitter(rng.choice(RIME), -6, 6), False
+            return jitter(rng, rng.choice(RIME), -6, 6), False
     if face == "top":
         if rng.random() < 0.45 + 0.08 * (fh - y):
-            return jitter(rng.choice(RIME), 4, 8), False
-        return jitter(rng.choice(ROBE), 10, 4), False
+            return jitter(rng, rng.choice(RIME), 4, 8), False
+        return jitter(rng, rng.choice(ROBE), 10, 4), False
     if face == "bottom":
-        return jitter(ROBE_DEEP, 0, 3), False
+        return jitter(rng, ROBE_DEEP, 0, 3), False
     if y == fh - 1:
         if (x * 5 + cube["uv"][0]) % 3 == 0:
             return None, False
-        return jitter(rng.choice(RIME), FACE_SHADE[face] - 10, 6), False
+        return jitter(rng, rng.choice(RIME), FACE_SHADE[face] - 10, 6), False
     if y == 0:
-        return jitter(rng.choice(RIME), FACE_SHADE[face], 6), False
+        return jitter(rng, rng.choice(RIME), FACE_SHADE[face], 6), False
     return robe_px(face, x, y, fw, fh, 3, 0.3), False
 
 
@@ -219,27 +210,27 @@ def m_collar(face, x, y, fw, fh, cube):
         if y < jag:
             return None, False
     if face == "front":
-        return jitter(rng.choice(ROBE), -10 + 6 * (y < 2), 4), False
+        return jitter(rng, rng.choice(ROBE), -10 + 6 * (y < 2), 4), False
     if y <= 2:
         return ice_px("front", x % 2, y, 2, 3, SPIKE_SHADES[2], FACE_SHADE[face]), False
-    return jitter(rng.choice(SPIKE_SHADES[1]), FACE_SHADE[face] - 8 * (y - 2), 5), False
+    return jitter(rng, rng.choice(SPIKE_SHADES[1]), FACE_SHADE[face] - 8 * (y - 2), 5), False
 
 
 def m_pauldron(face, x, y, fw, fh, cube):
     s = FACE_SHADE[face]
     if face == "top":
         if rng.random() < 0.55:
-            return jitter(rng.choice(RIME), 4, 8), False
-        return jitter(rng.choice(PLATE), 14, 5), False
+            return jitter(rng, rng.choice(RIME), 4, 8), False
+        return jitter(rng, rng.choice(PLATE), 14, 5), False
     if face == "bottom":
-        return jitter(ROBE_DEEP, 0, 3), False
+        return jitter(rng, ROBE_DEEP, 0, 3), False
     if y == 0:
-        return jitter(rng.choice(RIME), s, 6), False
+        return jitter(rng, rng.choice(RIME), s, 6), False
     if y == fh - 1:
-        return jitter(TRIM, s - 20, 5), False
+        return jitter(rng, TRIM, s - 20, 5), False
     if (x + y) % 5 == 0:
-        return jitter(rng.choice(PLATE), s + 16, 4), False
-    return jitter(rng.choice(PLATE), s - 4 * y, 4), False
+        return jitter(rng, rng.choice(PLATE), s + 16, 4), False
+    return jitter(rng, rng.choice(PLATE), s - 4 * y, 4), False
 
 
 def m_bone(face, x, y, fw, fh, cube):
@@ -247,7 +238,7 @@ def m_bone(face, x, y, fw, fh, cube):
 
 
 SKULL_FRONT = {
-    (1, 1): "brow", (2, 1): "brow", (4, 1): "brow", (5, 1): "brow",
+    (1, 1): "brow", (2, 1): "brow", (4, 1): "brow",
     (1, 2): "eye_mid", (2, 2): "eye_bright", (1, 3): "socket", (2, 3): "eye_dim",
     (4, 2): "eye_bright", (5, 2): "eye_mid", (4, 3): "eye_dim", (5, 3): "socket",
     (3, 4): "socket", (0, 4): "hollow", (6, 4): "hollow", (0, 5): "hollow", (6, 5): "hollow",
@@ -260,26 +251,26 @@ def m_skull(face, x, y, fw, fh, cube):
     if face == "front":
         key = SKULL_FRONT.get((x, y))
         if key == "brow":
-            return jitter(rng.choice(BONE), -34, 4), False
+            return jitter(rng, rng.choice(BONE), -34, 4), False
         if key == "socket":
             return SOCKET + (255,), False
         if key and key.startswith("eye"):
             c = {"eye_mid": EYES[0], "eye_bright": EYES[1], "eye_dim": EYES[2]}[key]
             return c + (255,), True
         if key == "hollow":
-            return jitter(BONE_SHADOW, -6, 4), False
+            return jitter(rng, BONE_SHADOW, -6, 4), False
         if key == "tooth":
-            return jitter((236, 244, 250), 0, 3), False
+            return jitter(rng, (236, 244, 250), 0, 3), False
         if key == "gap":
-            return jitter((64, 82, 104), 0, 3), False
+            return jitter(rng, (64, 82, 104), 0, 3), False
         if key == "crack":
             return (96, 132, 170, 255), False
         return bone_px(face, x, y, fw, fh, 6 if y == 0 else 0), False
     if face in ("left", "right"):
         if y in (4, 5) and x in ((0, 1) if face == "left" else (fw - 2, fw - 1)):
-            return jitter(BONE_SHADOW, -10, 4), False
+            return jitter(rng, BONE_SHADOW, -10, 4), False
         if y in (2, 3) and 2 <= x <= 4:
-            return jitter(rng.choice(BONE), -16, 4), False
+            return jitter(rng, rng.choice(BONE), -16, 4), False
     if face == "top" and (x, y) in ((4, 6), (4, 5), (3, 4), (3, 3)):
         return (96, 132, 170, 255), False
     return bone_px(face, x, y, fw, fh), False
@@ -289,8 +280,8 @@ def m_jaw(face, x, y, fw, fh, cube):
     if face == "front":
         if y == 0:
             if x == 3:
-                return jitter((40, 54, 80), 0, 3), False
-            return (jitter((236, 244, 250), 0, 3) if x % 2 == 0 else jitter((64, 82, 104), 0, 3)), False
+                return jitter(rng, (40, 54, 80), 0, 3), False
+            return (jitter(rng, (236, 244, 250), 0, 3) if x % 2 == 0 else jitter(rng, (64, 82, 104), 0, 3)), False
         if x == 2:
             return (96, 132, 170, 255), False
         return bone_px(face, x, y, fw, fh, -10), False
@@ -301,13 +292,13 @@ def m_jaw(face, x, y, fw, fh, cube):
 
 def m_crown_band(face, x, y, fw, fh, cube):
     if face == "top":
-        return jitter(SPIKE_SHADES[0][0], 10, 6), False
+        return jitter(rng, SPIKE_SHADES[0][0], 10, 6), False
     if face == "bottom":
-        return jitter(SPIKE_SHADES[3][1], -30, 5), False
+        return jitter(rng, SPIKE_SHADES[3][1], -30, 5), False
     if face == "front" and x in (3, 4):
         return ((230, 252, 255) if y == 0 else (120, 220, 252)) + (255,), y == 0
     c = SPIKE_SHADES[0 if y == 0 else 3]
-    return jitter(rng.choice(c), FACE_SHADE[face] + (14 if y == 0 else -4) + (6 if x % 3 == 0 else 0), 6), False
+    return jitter(rng, rng.choice(c), FACE_SHADE[face] + (14 if y == 0 else -4) + (6 if x % 3 == 0 else 0), 6), False
 
 
 _spike_index = {}
@@ -327,50 +318,50 @@ def m_spike_tip(face, x, y, fw, fh, cube):
 
 def m_sleeve(face, x, y, fw, fh, cube):
     if face == "bottom":
-        return jitter(ROBE_DEEP, -4, 3), False
+        return jitter(rng, ROBE_DEEP, -4, 3), False
     return robe_px(face, x, y, fw, fh, 1, 0.2), False
 
 
 def m_cuff(face, x, y, fw, fh, cube):
     if face == "bottom":
-        return jitter((8, 10, 22), 0, 2), False
+        return jitter(rng, (8, 10, 22), 0, 2), False
     if face == "top":
-        return jitter(rng.choice(ROBE), 0, 4), False
+        return jitter(rng, rng.choice(ROBE), 0, 4), False
     if y == fh - 1 and (x * 3 + (1 if face in ("left", "back") else 0)) % 4 == 1:
         return None, False
     if y >= fh - 2:
-        return jitter(rng.choice(RIME), FACE_SHADE[face] - 6, 6), False
+        return jitter(rng, rng.choice(RIME), FACE_SHADE[face] - 6, 6), False
     return robe_px(face, x, y, fw, fh, 2, 0.5), False
 
 
 def m_hand(face, x, y, fw, fh, cube):
     if face in ("front", "back") and x == 1:
-        return jitter(BONE_SHADOW, 0, 4), False
+        return jitter(rng, BONE_SHADOW, 0, 4), False
     return bone_px(face, x, y, fw, fh, -8), False
 
 
 def m_claw(face, x, y, fw, fh, cube):
     if y == fh - 1:
-        return jitter((150, 200, 235), -10, 5), False
+        return jitter(rng, (150, 200, 235), -10, 5), False
     if y % 2 == 1 and face != "top":
-        return jitter(BONE_SHADOW, 8, 4), False
+        return jitter(rng, BONE_SHADOW, 8, 4), False
     return bone_px(face, x, y, fw, fh, -4), False
 
 
 def m_shaft(face, x, y, fw, fh, cube):
     if face in ("top", "bottom"):
-        return jitter(SHAFT[1], 0, 3), False
+        return jitter(rng, SHAFT[1], 0, 3), False
     if face in ("front", "right"):
         c = SHAFT[0] if (y // 3) % 4 else SHAFT[2]
     else:
         c = SHAFT[1]
     if rng.random() < 0.06:
-        return jitter(FROST_BAND, -20, 6), False
-    return jitter(c, 0, 5), False
+        return jitter(rng, FROST_BAND, -20, 6), False
+    return jitter(rng, c, 0, 5), False
 
 
 def m_staff_band(face, x, y, fw, fh, cube):
-    return jitter(FROST_BAND, FACE_SHADE[face], 6), False
+    return jitter(rng, FROST_BAND, FACE_SHADE[face], 6), False
 
 
 def m_staff_cap(face, x, y, fw, fh, cube):
@@ -379,7 +370,7 @@ def m_staff_cap(face, x, y, fw, fh, cube):
 
 def m_staff_prong(face, x, y, fw, fh, cube):
     if y == 0:
-        return jitter((200, 236, 252), 0, 4), False
+        return jitter(rng, (200, 236, 252), 0, 4), False
     return bone_px(face, x, y, fw, fh, -26), False
 
 
@@ -404,13 +395,12 @@ def m_crystal_tip(face, x, y, fw, fh, cube):
 MATERIALS = {name[2:]: fn for name, fn in globals().items() if name.startswith("m_")}
 
 
-for cube, face, x, y, fw, fh, at in texels(model.BONES):
+
+
+def texel(cube, face, x, y, fw, fh):
     px, glows = MATERIALS[cube["material"]](face, x, y, fw, fh, cube)
-    if px is None:
-        continue
-    lich.putpixel(at, px)
-    if glows:
-        lich_glow.putpixel(at, px)
-lich.save(f"{OUT}/entity/ice_lich.png")
-lich_glow.save(f"{OUT}/entity/ice_lich_glowmask.png")
+    return px, px if glows and px is not None else None
+
+
+paint_model(model.BONES, 128, texel, f"{OUT}/entity/ice_lich.png", f"{OUT}/entity/ice_lich_glowmask.png")
 print("ice lich textures written")

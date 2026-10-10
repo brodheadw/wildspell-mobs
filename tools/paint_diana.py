@@ -3,8 +3,8 @@ import math
 from PIL import Image
 
 import make_diana_model as model
-from geckolib_model import texel_point, texels, wrap_angle
-from painting import hash01, mix, ramp
+from geckolib_model import texel_point, wrap_angle
+from painting import alpha_glow, hash01, mix, paint_model, ramp
 
 OUT = "src/main/resources/assets/wildspellmobs/textures/entity"
 PHASES = 5
@@ -165,17 +165,8 @@ MATERIALS = {name[2:]: fn for name, fn in globals().items() if name.startswith("
 
 
 def paint(prefix, m, phase):
-    skin = Image.new("RGBA", (model.TEX, model.TEX), (0, 0, 0, 0))
-    mask = Image.new("RGBA", (model.TEX, model.TEX), (0, 0, 0, 0))
-    for cube, face, x, y, fw, fh, at in texels(model.BONES):
-        px, glow = MATERIALS[cube["material"]](m, phase, face, x, y, fw, fh, cube)
-        if px is None:
-            continue
-        skin.putpixel(at, tuple(px) + (255,))
-        if glow:
-            mask.putpixel(at, (255, 255, 255, glow))
-    skin.save(f"{OUT}/{prefix}_{phase}.png")
-    mask.save(f"{OUT}/{prefix}_{phase}_glowmask.png")
+    paint_model(model.BONES, model.TEX, lambda cube, face, x, y, fw, fh: alpha_glow(*MATERIALS[cube["material"]](m, phase, face, x, y, fw, fh, cube)),
+                f"{OUT}/{prefix}_{phase}.png", f"{OUT}/{prefix}_{phase}_glowmask.png")
 
 
 def paint_arrow():

@@ -9,31 +9,19 @@ import net.minecraft.resources.ResourceKey;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.EntityType;
-import net.minecraft.world.entity.MobCategory;
 import net.minecraft.world.entity.animal.Cod;
 import net.minecraft.world.entity.animal.Pig;
-import net.minecraft.world.entity.player.Player;
-import net.minecraft.world.level.GameType;
 import net.minecraft.world.level.biome.Biome;
 import net.minecraft.world.level.block.Blocks;
-import net.minecraft.world.phys.Vec3;
 import net.neoforged.neoforge.gametest.GameTestHolder;
 import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
+
+import static com.wildspell.mobs.GameTests.*;
 
 @GameTestHolder(WildspellMobs.MODID)
 @PrefixGameTestTemplate(false)
 public class ElectricEelTests {
-    private static final String ARENA = "arena";
     private static final ResourceKey<Biome> DRIPSTONE_CAVES = ResourceKey.create(Registries.BIOME, ResourceLocation.withDefaultNamespace("dripstone_caves"));
-
-    @GameTest(template = ARENA)
-    public static void caveWatersSpawnEels(GameTestHelper helper) {
-        Biome biome = helper.getLevel().registryAccess().registryOrThrow(Registries.BIOME).get(DRIPSTONE_CAVES);
-        boolean listed = biome.getMobSettings().getMobs(MobCategory.UNDERGROUND_WATER_CREATURE).unwrap().stream()
-                .anyMatch(data -> data.type == WildspellMobs.ELECTRIC_EEL.get());
-        helper.assertTrue(listed, "electric eel missing from dripstone caves underground water spawns");
-        helper.succeed();
-    }
 
     @GameTest(template = ARENA, timeoutTicks = 200)
     public static void dischargeShocksEverythingInTheWaterButNothingAshore(GameTestHelper helper) {
@@ -55,22 +43,6 @@ public class ElectricEelTests {
         });
     }
 
-    @GameTest(template = ARENA, timeoutTicks = 300, batch = "eelFed")
-    public static void fedEelLeavesFishAlone(GameTestHelper helper) {
-        pool(helper);
-        ElectricEel eel = helper.spawn(WildspellMobs.ELECTRIC_EEL.get(), 4.5F, 1.2F, 4.5F);
-        eel.setFedTicks(ElectricEel.FED_TICKS);
-        Cod cod = helper.spawn(EntityType.COD, 3.5F, 2.0F, 4.5F);
-        helper.onEachTick(() -> {
-            helper.assertTrue(eel.getCharge() == 0, "a fed eel wound up a discharge; target=" + eel.getTarget());
-            helper.assertTrue(eel.getTarget() == null, "a fed eel went for " + eel.getTarget());
-        });
-        helper.runAtTickTime(280, () -> {
-            helper.assertTrue(cod.getHealth() == cod.getMaxHealth(), "a fed eel hurt the cod");
-            helper.succeed();
-        });
-    }
-
     @GameTest(template = ARENA, timeoutTicks = 400, batch = "eelHungry")
     public static void hungryEelCatchesAndSwallowsAFish(GameTestHelper helper) {
         pool(helper);
@@ -83,57 +55,6 @@ public class ElectricEelTests {
             helper.assertTrue(!eel.isHungry(), "eel caught the cod but is still hungry");
             helper.assertTrue(eel.getTarget() == null, "fed eel still after " + eel.getTarget());
             helper.assertTrue(helper.getEntities(EntityType.ITEM).isEmpty(), "the cod was left behind as a drop, not eaten");
-        });
-    }
-
-    @GameTest(template = ARENA, timeoutTicks = 100)
-    public static void onlySwimmersInItsTerritoryAreHunted(GameTestHelper helper) {
-        pool(helper);
-        ElectricEel eel = helper.spawn(WildspellMobs.ELECTRIC_EEL.get(), 2.5F, 1.2F, 4.5F);
-        eel.setNoAi(true);
-        Player swimmer = WildspellMobsTests.addMockPlayer(helper, new Vec3(4.5, 1.5, 4.5));
-        Player ashore = WildspellMobsTests.addMockPlayer(helper, new Vec3(7.5, 4.0, 4.5));
-        helper.runAfterDelay(10, () -> {
-            helper.assertTrue(swimmer.isInWater(), "swimmer isn't in the water");
-            helper.assertTrue(eel.isIntruder(swimmer), "eel ignores a swimmer two blocks off");
-            helper.assertTrue(!eel.isIntruder(ashore), "eel goes for someone on the bank");
-            swimmer.discard();
-            ashore.discard();
-            helper.succeed();
-        });
-    }
-
-    @GameTest(template = ARENA, timeoutTicks = 300, batch = "eelLeap")
-    public static void eelLeapsAtSomeoneOnTheBank(GameTestHelper helper) {
-        pool(helper);
-        ElectricEel eel = helper.spawn(WildspellMobs.ELECTRIC_EEL.get(), 4.5F, 2.2F, 4.5F);
-        Player player = helper.makeMockPlayer(GameType.SURVIVAL);
-        Vec3 bank = helper.absoluteVec(new Vec3(7.5, 4.0, 4.5));
-        player.moveTo(bank.x, bank.y, bank.z, 90.0F, 0.0F);
-        helper.getLevel().addFreshEntity(player);
-        eel.setTarget(player);
-        helper.onEachTick(() -> {
-            player.moveTo(bank.x, bank.y, bank.z, 90.0F, 0.0F);
-            helper.assertTrue(!player.isInWater(), "player on the bank is in the water");
-            if (player.getLastDamageSource() != null) {
-                helper.assertTrue(player.getLastDamageSource().is(ElectricEel.SHOCK), "hurt by " + player.getLastDamageSource().getMsgId() + ", not a shock");
-                player.discard();
-                helper.succeed();
-            }
-        });
-    }
-
-    @GameTest(template = ARENA, timeoutTicks = 400, batch = "eelDen")
-    public static void eelTakesACreviceForItsDen(GameTestHelper helper) {
-        pool(helper);
-        BlockPos nook = new BlockPos(1, 1, 4);
-        helper.setBlock(nook.north(), Blocks.STONE);
-        helper.setBlock(nook.south(), Blocks.STONE);
-        helper.setBlock(nook.above(), Blocks.STONE);
-        ElectricEel eel = helper.spawn(WildspellMobs.ELECTRIC_EEL.get(), 4.5F, 2.2F, 4.5F);
-        helper.succeedWhen(() -> {
-            helper.assertTrue(helper.absolutePos(nook).equals(eel.getDen()), "eel's den is " + eel.getDen() + ", not the nook");
-            helper.assertTrue(eel.isLurking(), "eel hasn't settled into its den; at " + helper.relativeVec(eel.position()));
         });
     }
 

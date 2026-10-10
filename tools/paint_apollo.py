@@ -3,8 +3,8 @@ import math
 from PIL import Image
 
 import make_apollo_model as model
-from geckolib_model import perimeter_x, texel_point, texels, wrap_angle
-from painting import mix, ramp
+from geckolib_model import perimeter_x, texel_point, wrap_angle
+from painting import alpha_glow, mix, paint_model, ramp
 
 OUT = "src/main/resources/assets/wildspellmobs/textures/entity"
 
@@ -15,10 +15,6 @@ LIGHT = (255, 246, 214)
 EMBER = (255, 206, 120)
 CORONA = (255, 196, 104)
 KEY = 0.55
-
-skin = Image.new("RGBA", (model.TEX, model.TEX), (0, 0, 0, 0))
-mask = Image.new("RGBA", (model.TEX, model.TEX), (0, 0, 0, 0))
-
 
 def lit(theta, yn, face, gain=0.0):
     if face == "top":
@@ -295,7 +291,6 @@ def m_ray_short(face, x, y, fw, fh, cube):
 
 
 
-# The chariot: gilded like him, the breastwork a madder panel in a meander frame, the wheels four-spoked.
 def m_car_floor(face, x, y, fw, fh, cube):
     if face == "top":
         return ramp(GOLD, 0.44 + (0.06 if (x + y) % 2 == 0 else 0.0)), 0
@@ -360,7 +355,6 @@ def m_wheel(face, x, y, fw, fh, cube):
     return None, 0
 
 
-# The team: four gilded horses with the same light in their seams, manes and tails of light, ember eyes.
 HORSE_CRACKS = {(6, 2), (7, 3), (7, 4), (8, 5), (15, 3), (16, 4), (16, 5)}
 
 
@@ -417,15 +411,8 @@ MATERIALS = {name[2:]: fn for name, fn in globals().items() if name.startswith("
 
 
 def paint_body():
-    for cube, face, x, y, fw, fh, at in texels(model.BONES):
-        px, glow = MATERIALS[cube["material"]](face, x, y, fw, fh, cube)
-        if px is None:
-            continue
-        skin.putpixel(at, tuple(px) + (0 if glow < 0 else 255,))
-        if glow:
-            mask.putpixel(at, (255, 255, 255, abs(glow)))
-    skin.save(f"{OUT}/apollo.png")
-    mask.save(f"{OUT}/apollo_glowmask.png")
+    paint_model(model.BONES, model.TEX, lambda cube, face, x, y, fw, fh: alpha_glow(*MATERIALS[cube["material"]](face, x, y, fw, fh, cube)),
+                f"{OUT}/apollo.png", f"{OUT}/apollo_glowmask.png")
 
 
 def paint_ray():

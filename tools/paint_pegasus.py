@@ -5,7 +5,7 @@ import zipfile
 
 from PIL import Image
 
-import painting
+from painting import jitter
 
 OUT = "src/main/resources/assets/wildspellmobs/textures/entity/pegasus_{}.png"
 CLIENT = os.path.expanduser("~/.gradle/caches/neoformruntime/artifacts/minecraft_1.21.1_client.jar")
@@ -73,9 +73,6 @@ with zipfile.ZipFile(CLIENT) as jar:
 def paint(name, c):
     rng = random.Random(7)
 
-    def jitter(color, spread=5):
-        return painting.jitter(rng, color, spread=spread)
-
     img = Image.new("RGBA", (128, 128), (0, 0, 0, 0))
     img.paste(HORSE, (0, 0))
     px = img.load()
@@ -94,7 +91,7 @@ def paint(name, c):
         for x in range(x0, x0 + w):
             for y in range(y0, y0 + h):
                 if px[x, y][3] and (rows is None or rows(y)):
-                    px[x, y] = jitter(rng.choice(palette))
+                    px[x, y] = jitter(rng, rng.choice(palette))
 
     for x, y in eyes:
         px[x, y] = c["pupil"] + (255,)
@@ -109,7 +106,7 @@ def paint(name, c):
             band = bands[(y - y0) * len(bands) // h]
             for x in range(x0, x0 + w):
                 if px[x, y][3]:
-                    px[x, y] = jitter(band, 4)
+                    px[x, y] = jitter(rng, band, spread=4)
 
     hair(56, 36, 8, 18)
     hair(42, 36, 14, 18)
@@ -136,7 +133,7 @@ def paint(name, c):
                     base = c["shaft"] if not colours else tuple(min(255, x + 20) for x in base)
                 elif col == 2:
                     base = tuple(max(0, x - 22) for x in base) if sum(base) > 300 else tuple(min(255, x + 14) for x in base)
-                px[u + col, v + r] = jitter(base, 2)
+                px[u + col, v + r] = jitter(rng, base, spread=2)
 
     def coverts(u, v, width, depth, scallop):
         colours = dusk_run(rng, width // scallop + 1) if c.get("dusk") else None
@@ -152,7 +149,7 @@ def paint(name, c):
                     colour = tuple(max(0, v - 40) for v in body) if outline else body
                 else:
                     colour = c["edge"] if outline else rng.choice(c["feather"])
-                px[u + x, v + r] = jitter(colour, 2)
+                px[u + x, v + r] = jitter(rng, colour, spread=2)
 
     for u, width in zip((64, 76, 90), (10, 12, 8)):
         for v, depth, scallop in ((0, 4, 2), (6, 6, 3), (14, 9, 3)):

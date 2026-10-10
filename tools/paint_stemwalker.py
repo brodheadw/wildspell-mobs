@@ -1,8 +1,5 @@
-from PIL import Image
-
 import make_stemwalker_model as model
-from geckolib_model import texels
-from painting import hash01 as h, mix, ramp
+from painting import hash01 as h, mix, paint_model, ramp
 
 OUT = "src/main/resources/assets/wildspellmobs/textures/entity"
 
@@ -122,20 +119,18 @@ MATERIALS = {
 }
 
 
+def texel(cube, face, x, y, fw, fh):
+    material = cube["material"]
+    cube_side[0] = cube["origin"][0] + cube["size"][0] / 2
+    salt = sum(map(ord, material)) + int(cube["origin"][0] * 7 + cube["origin"][1] * 13 + cube["origin"][2] * 17)
+    color = MATERIALS[material](face, x, y, fw, fh, salt)
+    if (material, x, y) in PORES and face == "front":
+        return PORE + (255,), PORE + (255,)
+    return tuple(color) + (255,), None
+
+
 def main():
-    image = Image.new("RGBA", (model.TEX, model.TEX), (0, 0, 0, 0))
-    glow = Image.new("RGBA", (model.TEX, model.TEX), (0, 0, 0, 0))
-    for cube, face, x, y, fw, fh, (u, v) in texels(model.BONES):
-        material = cube["material"]
-        cube_side[0] = cube["origin"][0] + cube["size"][0] / 2
-        salt = sum(map(ord, material)) + int(cube["origin"][0] * 7 + cube["origin"][1] * 13 + cube["origin"][2] * 17)
-        color = MATERIALS[material](face, x, y, fw, fh, salt)
-        if (material, x, y) in PORES and face == "front":
-            color = PORE
-            glow.putpixel((u, v), PORE + (255,))
-        image.putpixel((u, v), tuple(color) + (255,))
-    image.save(f"{OUT}/stemwalker.png")
-    glow.save(f"{OUT}/stemwalker_glowmask.png")
+    paint_model(model.BONES, model.TEX, texel, f"{OUT}/stemwalker.png", f"{OUT}/stemwalker_glowmask.png")
 
 
 if __name__ == "__main__":

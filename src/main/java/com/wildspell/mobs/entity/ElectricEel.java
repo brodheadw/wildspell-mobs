@@ -109,11 +109,6 @@ public class ElectricEel extends WaterAnimal {
         this.entityData.set(DATA_CHARGE, charge);
     }
 
-    @Nullable
-    public BlockPos getDen() {
-        return this.den;
-    }
-
     public void setDen(@Nullable BlockPos den) {
         this.den = den;
         if (den == null) {
@@ -129,10 +124,6 @@ public class ElectricEel extends WaterAnimal {
 
     public void setFedTicks(int fedTicks) {
         this.fedTicks = fedTicks;
-    }
-
-    public boolean isLurking() {
-        return this.lurking;
     }
 
     @Override

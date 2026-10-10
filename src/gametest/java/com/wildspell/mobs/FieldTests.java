@@ -9,13 +9,14 @@ import net.minecraft.world.level.block.Block;
 import net.neoforged.fml.ModList;
 import net.neoforged.neoforge.gametest.GameTestHolder;
 import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
+
+import static com.wildspell.mobs.GameTests.*;
 import net.neoforged.neoforge.registries.RegistryManager;
 import net.neoforged.neoforge.registries.datamaps.DataMapType;
 
 @GameTestHolder(WildspellMobs.MODID)
 @PrefixGameTestTemplate(false)
 public class FieldTests {
-    private static final String ARENA = "arena";
 
     @GameTest(template = ARENA, timeoutTicks = 20)
     public static void cryptBlocksFeedTheField(GameTestHelper helper) {
