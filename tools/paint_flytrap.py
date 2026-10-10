@@ -23,6 +23,7 @@ TRIGGER = (232, 112, 128)
 TOOTH = [(232, 240, 186), (224, 236, 172), (240, 246, 200)]
 TOOTH_BASE = (198, 222, 120)
 STALK = [(104, 166, 60), (96, 156, 54), (112, 174, 66)]
+STALK_TOP = 7
 LEAF = [(84, 152, 46), (78, 144, 42), (90, 160, 50)]
 MIDRIB = (150, 196, 84)
 
@@ -98,7 +99,8 @@ def m_stalk(face, x, y, fw, fh, cube):
     s = FACE_SHADE[face]
     if face in ("front", "back", "left", "right"):
         s += 8 if x % 2 == 0 else -4
-        s += int(-10 * y / max(1, fh - 1))
+        top = cube["origin"][1] + cube["size"][1]
+        s += int(-10 * (STALK_TOP - top + y) / (STALK_TOP - 1))
     return jitter(rng, rng.choice(STALK), s, 5)
 
 
