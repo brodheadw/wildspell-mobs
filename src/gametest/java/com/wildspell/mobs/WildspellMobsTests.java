@@ -235,6 +235,8 @@ public class WildspellMobsTests {
             helper.assertTrue(Math.abs(creeperPass - MobsConfig.UNDERGROUND_CREEPER_CHANCE.get()) < 0.05, "creeper pass rate " + creeperPass);
             helper.assertTrue(Math.abs(zombiePass - MobsConfig.UNDERGROUND_MONSTER_CHANCE.get()) < 0.05, "zombie pass rate " + zombiePass);
             helper.assertTrue(skullPass == 1.0, "rime skull pass rate " + skullPass);
+            double scorpionPass = passRate(helper, WildspellMobs.SCORPION.get(), spot);
+            helper.assertTrue(scorpionPass == 1.0, "scorpion pass rate " + scorpionPass);
             helper.succeed();
         });
     }

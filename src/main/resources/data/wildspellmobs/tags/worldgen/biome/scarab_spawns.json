@@ -1,0 +1,6 @@
+{
+  "values": [
+    {"id": "yungscavebiomes:lost_caves", "required": false},
+    "minecraft:desert"
+  ]
+}

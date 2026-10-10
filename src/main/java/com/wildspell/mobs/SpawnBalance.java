@@ -1,6 +1,7 @@
 package com.wildspell.mobs;
 
 import com.wildspell.mobs.entity.RimeSkull;
+import com.wildspell.mobs.entity.Scorpion;
 import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.SectionPos;
@@ -34,7 +35,7 @@ public final class SpawnBalance {
             return;
         }
         boolean creeper = mob instanceof Creeper;
-        if (!(mob instanceof RimeSkull)) {
+        if (!(mob instanceof RimeSkull) && !(mob instanceof Scorpion)) {
             double chance = creeper ? MobsConfig.UNDERGROUND_CREEPER_CHANCE.get() : MobsConfig.UNDERGROUND_MONSTER_CHANCE.get();
             if (mob.getRandom().nextDouble() >= chance) {
                 event.setResult(MobSpawnEvent.PositionCheck.Result.FAIL);

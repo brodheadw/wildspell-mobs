@@ -1,0 +1,6 @@
+{
+  "values": [
+    "#minecraft:sand",
+    {"id": "yungscavebiomes:ancient_sand", "required": false}
+  ]
+}

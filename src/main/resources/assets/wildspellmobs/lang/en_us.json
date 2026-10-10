@@ -94,5 +94,11 @@
   "entity.wildspellmobs.stemwalker": "Stemwalker",
   "item.wildspellmobs.stemwalker_spawn_egg": "Stemwalker Spawn Egg",
   "block.wildspellmobs.sporeheart": "Sporeheart",
-  "subtitles.wildspellmobs.ice.shatter": "Ice shatters"
+  "subtitles.wildspellmobs.ice.shatter": "Ice shatters",
+  "entity.wildspellmobs.scorpion": "Scorpion",
+  "item.wildspellmobs.scorpion_spawn_egg": "Scorpion Spawn Egg",
+  "item.wildspellmobs.scorpion_stinger": "Scorpion Stinger",
+  "entity.wildspellmobs.scarab": "Scarab",
+  "item.wildspellmobs.scarab_spawn_egg": "Scarab Spawn Egg",
+  "item.wildspellmobs.bottled_scarab": "Bottled Scarab"
 }
