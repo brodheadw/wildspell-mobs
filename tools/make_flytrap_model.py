@@ -11,10 +11,13 @@ bone = MODEL.bone
 
 
 bone("root", None, (0, 0, 0))
-bone("neck", "root", (0, 0, 0), [-6, 0, 0], [c((-1, 0, -1), (2, 7, 2), "stalk")])
+LEAN = 12
+BEND = 14
+bone("neck", "root", (0, 0, 0), [LEAN, 0, 0], [c((-1, 0, -1), (2, 4, 2), "stalk")])
 bone("neck_leaf", "neck", (1, 2, 0), [0, -25, -30], [c((1, 2, -1.5), (5, 0, 3), "leaf")])
-bone("neck_leaf_2", "neck", (-1, 4, 0), [0, 30, 35], [c((-5, 4, -1), (4, 0, 2), "leaf")])
-bone("head", "neck", (0, 7, 0))
+bone("neck_bend", "neck", (0, 4, 0), [BEND, 0, 0], [c((-1, 3, -1), (2, 4, 2), "stalk", -0.02)])
+bone("neck_leaf_2", "neck_bend", (-1, 4, 0), [0, 30, 35], [c((-5, 4, -1), (4, 0, 2), "leaf")])
+bone("head", "neck_bend", (0, 7, 0))
 
 HINGE = (0, 9, 1)
 STEPS = ((3, -9, 1), (5, -8, 0), (6, -6, -2))
@@ -44,7 +47,7 @@ def lobe(sign, fringe):
     return cubes
 
 
-bone("pod", "head", (0, 7, 0), [8, 0, 0], [c((-2.5, 7.5, 0), (5, 3, 2), "hinge"), c((-1.5, 6.5, 0.5), (3, 1, 2), "hinge")])
+bone("pod", "head", (0, 7, 0), [-6, 0, 0], [c((-2.5, 7.5, 0), (5, 3, 2), "hinge"), c((-1.5, 6.5, 0.5), (3, 1, 2), "hinge")])
 bone("upper_jaw", "pod", HINGE, [-34, 0, 0], lobe(1, "upper_cilia"))
 bone("lower_jaw", "pod", HINGE, [30, 0, 0], lobe(-1, "lower_cilia"))
 
@@ -53,15 +56,24 @@ MODEL.pack()
 
 CLOSED_UPPER = [34, 0, 0]
 CLOSED_LOWER = [-30, 0, 0]
-STRIKE_NECK = [40, 0, 0]
+STRIKE_NECK = [14, 0, 0]
+STRIKE_BEND = [-4, 0, 0]
 STRIKE_REACH = [0, 0, -2]
-STRIKE_POD = [-24, 0, 0]
+STRIKE_POD = [-16, 0, 0]
+
+
+def rest():
+    still = {0: [0, 0, 0], 1: [0, 0, 0]}
+    bones = {name: {"rotation": still} for name in idle()["bones"]}
+    bones["neck"]["position"] = still
+    return anim(1.0, True, bones)
 
 
 def idle():
     L = 3.0
     return anim(L, True, {
         "neck": {"rotation": {0: [0, 0, 3], 0.75: [3, 0, 0], 1.5: [0, 0, -3], 2.25: [-3, 0, 0], 3: [0, 0, 3]}},
+        "neck_bend": {"rotation": {0: [0, 0, 0], 0.75: [3, 0, 0], 2.25: [-2, 0, 0], 3: [0, 0, 0]}},
         "pod": {"rotation": {0: [-2, 0, -2], 0.75: [0, 0, -3], 1.5: [2, 0, 2], 2.25: [0, 0, 3], 3: [-2, 0, -2]}},
         "upper_jaw": {"rotation": {0: [0, 0, 0], 1.2: [-6, 0, 0], 1.8: [-6, 0, 0], 3: [0, 0, 0]}},
         "lower_jaw": {"rotation": {0: [0, 0, 0], 1.2: [4, 0, 0], 1.8: [4, 0, 0], 3: [0, 0, 0]}},
@@ -73,9 +85,10 @@ def idle():
 def lunge():
     L = 0.4
     return anim(L, False, {
-        "neck": {"rotation": {0: [0, 0, 0], 0.2: [-24, 0, 0], 0.32: [48, 0, 0], L: STRIKE_NECK},
+        "neck": {"rotation": {0: [0, 0, 0], 0.2: [-26, 0, 0], 0.32: [22, 0, 0], L: STRIKE_NECK},
                  "position": {0: [0, 0, 0], 0.2: [0, 0, 1], 0.32: [0, 0, -2.5], L: STRIKE_REACH}},
-        "pod": {"rotation": {0: [0, 0, 0], 0.2: [-6, 0, 0], 0.32: [-28, 0, 0], L: STRIKE_POD}},
+        "neck_bend": {"rotation": {0: [0, 0, 0], 0.2: [-14, 0, 0], 0.32: [4, 0, 0], L: STRIKE_BEND}},
+        "pod": {"rotation": {0: [0, 0, 0], 0.2: [-2, 0, 0], 0.32: [-20, 0, 0], L: STRIKE_POD}},
         "upper_jaw": {"rotation": {0: [0, 0, 0], 0.2: [-22, 0, 0], 0.32: [-18, 0, 0], L: CLOSED_UPPER}},
         "lower_jaw": {"rotation": {0: [0, 0, 0], 0.2: [14, 0, 0], 0.32: [10, 0, 0], L: CLOSED_LOWER}},
         "neck_leaf": {"rotation": {0: [0, 0, 0], 0.2: [0, 0, 10], L: [0, 0, -10]}},
@@ -86,8 +99,9 @@ def hold():
     L = 0.6
     shake = {0: -9, 0.15: 9, 0.3: -9, 0.45: 9, 0.6: -9}
     return anim(L, True, {
-        "neck": {"rotation": {0: STRIKE_NECK, 0.3: [34, 0, 0], L: STRIKE_NECK},
+        "neck": {"rotation": {0: STRIKE_NECK, 0.3: [8, 0, 0], L: STRIKE_NECK},
                  "position": {0: STRIKE_REACH, L: STRIKE_REACH}},
+        "neck_bend": {"rotation": {0: STRIKE_BEND, L: STRIKE_BEND}},
         "pod": {"rotation": {t: [STRIKE_POD[0], y, y * 0.4] for t, y in shake.items()}},
         "upper_jaw": {"rotation": {0: CLOSED_UPPER, L: CLOSED_UPPER}},
         "lower_jaw": {"rotation": {0: CLOSED_LOWER, L: CLOSED_LOWER}},
@@ -97,7 +111,8 @@ def hold():
 def wither():
     L = 1.0
     return anim(L, False, {
-        "neck": {"rotation": {0: [0, 0, 0], 0.4: [10, 0, 18], L: [22, 0, 48]}},
+        "neck": {"rotation": {0: [0, 0, 0], 0.4: [-4, 0, 16], L: [-6, 0, 40]}},
+        "neck_bend": {"rotation": {0: [0, 0, 0], 0.4: [6, 0, 6], L: [12, 0, 12]}},
         "pod": {"rotation": {0: [0, 0, 0], 0.5: [16, 0, 8], L: [30, 0, 14]}},
         "upper_jaw": {"rotation": {0: [0, 0, 0], 0.3: [-8, 0, 0], L: [14, 0, 0]}},
         "lower_jaw": {"rotation": {0: [0, 0, 0], 0.3: [6, 0, 0], L: [-4, 0, 0]}},
@@ -164,7 +179,7 @@ BLOCKSTATES = {
 
 if __name__ == "__main__":
     write(GEO_OUT, MODEL.geometry())
-    write(ANIM_OUT, animations("flytrap_head", {"idle": idle(), "lunge": lunge(), "hold": hold(), "wither": wither()}))
+    write(ANIM_OUT, animations("flytrap_head", {"rest": rest(), "idle": idle(), "lunge": lunge(), "hold": hold(), "wither": wither()}))
     for name, model in BLOCK_MODELS.items():
         write(f"{ASSETS}/models/block/{name}.json", model)
     for name, state in BLOCKSTATES.items():
