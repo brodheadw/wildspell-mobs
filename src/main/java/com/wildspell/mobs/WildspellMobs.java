@@ -39,6 +39,7 @@ import com.wildspell.mobs.moth.LuminousMoss;
 import com.wildspell.mobs.moth.MothBottleItem;
 import com.wildspell.mobs.moth.MothGlowBlock;
 import java.util.UUID;
+import java.util.function.Supplier;
 import net.minecraft.core.UUIDUtil;
 import net.minecraft.core.component.DataComponentType;
 import net.minecraft.core.component.DataComponents;
@@ -47,7 +48,9 @@ import net.minecraft.core.particles.SimpleParticleType;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.sounds.SoundEvent;
+import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.MobCategory;
 import net.minecraft.world.entity.SpawnPlacementTypes;
 import net.minecraft.world.entity.monster.Monster;
@@ -96,13 +99,14 @@ public class WildspellMobs {
     public static final DeferredRegister<StructurePieceType> STRUCTURE_PIECES = DeferredRegister.create(Registries.STRUCTURE_PIECE, MODID);
     public static final DeferredRegister<RecipeSerializer<?>> RECIPE_SERIALIZERS = DeferredRegister.create(Registries.RECIPE_SERIALIZER, MODID);
     public static final DeferredRegister.DataComponents DATA_COMPONENTS = DeferredRegister.createDataComponents(Registries.DATA_COMPONENT_TYPE, MODID);
-
-    public static final DeferredHolder<DataComponentType<?>, DataComponentType<UUID>> SOUL = DATA_COMPONENTS.registerComponentType("soul",
-            builder -> builder.persistent(UUIDUtil.CODEC).networkSynchronized(UUIDUtil.STREAM_CODEC));
     public static final DeferredRegister<SoundEvent> SOUND_EVENTS = DeferredRegister.create(Registries.SOUND_EVENT, MODID);
     public static final DeferredRegister<ParticleType<?>> PARTICLE_TYPES = DeferredRegister.create(Registries.PARTICLE_TYPE, MODID);
     public static final DeferredRegister<MapCodec<? extends BiomeModifier>> BIOME_MODIFIER_SERIALIZERS =
             DeferredRegister.create(NeoForgeRegistries.Keys.BIOME_MODIFIER_SERIALIZERS, MODID);
+    public static final DeferredRegister<Feature<?>> FEATURES = DeferredRegister.create(Registries.FEATURE, MODID);
+
+    public static final DeferredHolder<DataComponentType<?>, DataComponentType<UUID>> SOUL = DATA_COMPONENTS.registerComponentType("soul",
+            builder -> builder.persistent(UUIDUtil.CODEC).networkSynchronized(UUIDUtil.STREAM_CODEC));
 
     public static final DeferredHolder<MapCodec<? extends BiomeModifier>, MapCodec<ReweighSpawnsBiomeModifier>> REWEIGH_SPAWNS =
             BIOME_MODIFIER_SERIALIZERS.register("reweigh_spawns", () -> ReweighSpawnsBiomeModifier.CODEC);
@@ -115,58 +119,44 @@ public class WildspellMobs {
     public static final DeferredHolder<ParticleType<?>, SimpleParticleType> FROST_MOTE = PARTICLE_TYPES.register("frost_mote",
             () -> new SimpleParticleType(false));
 
-    public static final DeferredHolder<EntityType<?>, EntityType<RimeSkull>> RIME_SKULL = ENTITY_TYPES.register("rime_skull",
-            () -> EntityType.Builder.of(RimeSkull::new, MobCategory.MONSTER)
-                    .sized(0.625F, 0.625F)
-                    .clientTrackingRange(8)
-                    .build("rime_skull"));
+    public static final DeferredHolder<EntityType<?>, EntityType<RimeSkull>> RIME_SKULL = entity("rime_skull", EntityType.Builder.of(RimeSkull::new, MobCategory.MONSTER)
+            .sized(0.625F, 0.625F)
+            .clientTrackingRange(8));
 
-    public static final DeferredHolder<EntityType<?>, EntityType<FrostShard>> FROST_SHARD = ENTITY_TYPES.register("frost_shard",
-            () -> EntityType.Builder.<FrostShard>of(FrostShard::new, MobCategory.MISC)
-                    .sized(0.25F, 0.25F)
-                    .clientTrackingRange(4)
-                    .updateInterval(10)
-                    .build("frost_shard"));
+    public static final DeferredHolder<EntityType<?>, EntityType<FrostShard>> FROST_SHARD = entity("frost_shard", EntityType.Builder.<FrostShard>of(FrostShard::new, MobCategory.MISC)
+            .sized(0.25F, 0.25F)
+            .clientTrackingRange(4)
+            .updateInterval(10));
 
 //? if <26.4 {
-    public static final DeferredHolder<EntityType<?>, EntityType<FrozenZombie>> FROZEN_ZOMBIE = ENTITY_TYPES.register("frozen_zombie",
-            () -> EntityType.Builder.of(FrozenZombie::new, MobCategory.MONSTER)
-                    .sized(0.6F, 1.95F)
-                    .eyeHeight(1.74F)
-                    .passengerAttachments(2.0125F)
-                    .ridingOffset(-0.7F)
-                    .clientTrackingRange(8)
-                    .build("frozen_zombie"));
+    public static final DeferredHolder<EntityType<?>, EntityType<FrozenZombie>> FROZEN_ZOMBIE = entity("frozen_zombie", EntityType.Builder.of(FrozenZombie::new, MobCategory.MONSTER)
+            .sized(0.6F, 1.95F)
+            .eyeHeight(1.74F)
+            .passengerAttachments(2.0125F)
+            .ridingOffset(-0.7F)
+            .clientTrackingRange(8));
 //?}
 
-    public static final DeferredHolder<EntityType<?>, EntityType<IceLich>> ICE_LICH = ENTITY_TYPES.register("ice_lich",
-            () -> EntityType.Builder.of(IceLich::new, MobCategory.MONSTER)
-                    .sized(0.8F, 2.6F)
-                    .eyeHeight(2.25F)
-                    .clientTrackingRange(10)
-                    .build("ice_lich"));
+    public static final DeferredHolder<EntityType<?>, EntityType<IceLich>> ICE_LICH = entity("ice_lich", EntityType.Builder.of(IceLich::new, MobCategory.MONSTER)
+            .sized(0.8F, 2.6F)
+            .eyeHeight(2.25F)
+            .clientTrackingRange(10));
 
-    public static final DeferredHolder<EntityType<?>, EntityType<FrostOrb>> FROST_ORB = ENTITY_TYPES.register("frost_orb",
-            () -> EntityType.Builder.<FrostOrb>of(FrostOrb::new, MobCategory.MISC)
-                    .sized(0.6F, 0.6F)
-                    .clientTrackingRange(6)
-                    .updateInterval(2)
-                    .build("frost_orb"));
+    public static final DeferredHolder<EntityType<?>, EntityType<FrostOrb>> FROST_ORB = entity("frost_orb", EntityType.Builder.<FrostOrb>of(FrostOrb::new, MobCategory.MISC)
+            .sized(0.6F, 0.6F)
+            .clientTrackingRange(6)
+            .updateInterval(2));
 
-    public static final DeferredHolder<EntityType<?>, EntityType<LichWisp>> LICH_WISP = ENTITY_TYPES.register("lich_wisp",
-            () -> EntityType.Builder.<LichWisp>of(LichWisp::new, MobCategory.MISC)
-                    .sized(0.5F, 0.5F)
-                    .clientTrackingRange(10)
-                    .updateInterval(2)
-                    .fireImmune()
-                    .build("lich_wisp"));
+    public static final DeferredHolder<EntityType<?>, EntityType<LichWisp>> LICH_WISP = entity("lich_wisp", EntityType.Builder.<LichWisp>of(LichWisp::new, MobCategory.MISC)
+            .sized(0.5F, 0.5F)
+            .clientTrackingRange(10)
+            .updateInterval(2)
+            .fireImmune());
 
-    public static final DeferredHolder<EntityType<?>, EntityType<LuminousMoth>> LUMINOUS_MOTH = ENTITY_TYPES.register("luminous_moth",
-            () -> EntityType.Builder.of(LuminousMoth::new, MobCategory.AMBIENT)
-                    .sized(0.6F, 0.5F)
-                    .eyeHeight(0.25F)
-                    .clientTrackingRange(8)
-                    .build("luminous_moth"));
+    public static final DeferredHolder<EntityType<?>, EntityType<LuminousMoth>> LUMINOUS_MOTH = entity("luminous_moth", EntityType.Builder.of(LuminousMoth::new, MobCategory.AMBIENT)
+            .sized(0.6F, 0.5F)
+            .eyeHeight(0.25F)
+            .clientTrackingRange(8));
 
     public static final DeferredHolder<Block, MothGlowBlock> MOTH_GLOW = BLOCKS.register("moth_glow",
             () -> new MothGlowBlock(BlockBehaviour.Properties.of()
@@ -190,27 +180,21 @@ public class WildspellMobs {
                     .randomTicks()
                     .dropsLike(Blocks.MOSS_CARPET)));
 
-    public static final DeferredHolder<EntityType<?>, EntityType<ElectricEel>> ELECTRIC_EEL = ENTITY_TYPES.register("electric_eel",
-            () -> EntityType.Builder.of(ElectricEel::new, MobCategory.UNDERGROUND_WATER_CREATURE)
-                    .sized(0.7F, 0.45F)
-                    .eyeHeight(0.25F)
-                    .clientTrackingRange(8)
-                    .build("electric_eel"));
+    public static final DeferredHolder<EntityType<?>, EntityType<ElectricEel>> ELECTRIC_EEL = entity("electric_eel", EntityType.Builder.of(ElectricEel::new, MobCategory.UNDERGROUND_WATER_CREATURE)
+            .sized(0.7F, 0.45F)
+            .eyeHeight(0.25F)
+            .clientTrackingRange(8));
 
-    public static final DeferredHolder<EntityType<?>, EntityType<Pegasus>> PEGASUS = ENTITY_TYPES.register("pegasus",
-            () -> EntityType.Builder.of(Pegasus::new, MobCategory.CREATURE)
-                    .sized(1.587F, 1.818F)
-                    .eyeHeight(1.727F)
-                    .passengerAttachments(1.64F)
-                    .clientTrackingRange(10)
-                    .build("pegasus"));
+    public static final DeferredHolder<EntityType<?>, EntityType<Pegasus>> PEGASUS = entity("pegasus", EntityType.Builder.of(Pegasus::new, MobCategory.CREATURE)
+            .sized(1.587F, 1.818F)
+            .eyeHeight(1.727F)
+            .passengerAttachments(1.64F)
+            .clientTrackingRange(10));
 
-    public static final DeferredHolder<EntityType<?>, EntityType<FlytrapHead>> FLYTRAP_HEAD = ENTITY_TYPES.register("flytrap_head",
-            () -> EntityType.Builder.of(FlytrapHead::new, MobCategory.MONSTER)
-                    .sized(0.6F, 0.85F)
-                    .eyeHeight(0.62F)
-                    .clientTrackingRange(8)
-                    .build("flytrap_head"));
+    public static final DeferredHolder<EntityType<?>, EntityType<FlytrapHead>> FLYTRAP_HEAD = entity("flytrap_head", EntityType.Builder.of(FlytrapHead::new, MobCategory.MONSTER)
+            .sized(0.6F, 0.85F)
+            .eyeHeight(0.62F)
+            .clientTrackingRange(8));
 
     public static final DeferredHolder<Block, FlytrapBlock> FLYTRAP = BLOCKS.register("flytrap",
             () -> new FlytrapBlock(BlockBehaviour.Properties.of()
@@ -232,9 +216,6 @@ public class WildspellMobs {
                     .ignitedByLava()
                     .pushReaction(PushReaction.DESTROY)));
 
-    public static final DeferredRegister<Feature<?>> FEATURES =
-            DeferredRegister.create(Registries.FEATURE, MODID);
-
     public static final DeferredHolder<Feature<?>, FlytrapPatchFeature> FLYTRAP_PATCH =
             FEATURES.register("flytrap_patch", FlytrapPatchFeature::new);
 
@@ -253,43 +234,33 @@ public class WildspellMobs {
     public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<SporeheartBlockEntity>> SPOREHEART_ENTITY =
             BLOCK_ENTITY_TYPES.register("sporeheart", () -> BlockEntityType.Builder.of(SporeheartBlockEntity::new, SPOREHEART.get()).build(null));
 
-    public static final DeferredHolder<EntityType<?>, EntityType<Apollo>> APOLLO = ENTITY_TYPES.register("apollo",
-            () -> EntityType.Builder.of(Apollo::new, MobCategory.MONSTER)
-                    .sized(1.0F, 3.4F)
-                    .eyeHeight(3.0F)
-                    .fireImmune()
-                    .clientTrackingRange(16)
-                    .build("apollo"));
+    public static final DeferredHolder<EntityType<?>, EntityType<Apollo>> APOLLO = entity("apollo", EntityType.Builder.of(Apollo::new, MobCategory.MONSTER)
+            .sized(1.0F, 3.4F)
+            .eyeHeight(3.0F)
+            .fireImmune()
+            .clientTrackingRange(16));
 
-    public static final DeferredHolder<EntityType<?>, EntityType<SolarRay>> SOLAR_RAY = ENTITY_TYPES.register("solar_ray",
-            () -> EntityType.Builder.<SolarRay>of(SolarRay::new, MobCategory.MISC)
-                    .sized(0.4F, 0.4F)
-                    .clientTrackingRange(8)
-                    .updateInterval(2)
-                    .fireImmune()
-                    .build("solar_ray"));
+    public static final DeferredHolder<EntityType<?>, EntityType<SolarRay>> SOLAR_RAY = entity("solar_ray", EntityType.Builder.<SolarRay>of(SolarRay::new, MobCategory.MISC)
+            .sized(0.4F, 0.4F)
+            .clientTrackingRange(8)
+            .updateInterval(2)
+            .fireImmune());
 
-    public static final DeferredHolder<EntityType<?>, EntityType<Stemwalker>> STEMWALKER = ENTITY_TYPES.register("stemwalker",
-            () -> EntityType.Builder.of(Stemwalker::new, MobCategory.MONSTER)
-                    .sized(0.7F, 2.9F)
-                    .eyeHeight(2.5F)
-                    .clientTrackingRange(10)
-                    .build("stemwalker"));
+    public static final DeferredHolder<EntityType<?>, EntityType<Stemwalker>> STEMWALKER = entity("stemwalker", EntityType.Builder.of(Stemwalker::new, MobCategory.MONSTER)
+            .sized(0.7F, 2.9F)
+            .eyeHeight(2.5F)
+            .clientTrackingRange(10));
 
-    public static final DeferredHolder<EntityType<?>, EntityType<Diana>> DIANA = ENTITY_TYPES.register("diana",
-            () -> EntityType.Builder.of(Diana::new, MobCategory.MONSTER)
-                    .sized(0.7F, 2.4F)
-                    .eyeHeight(2.1F)
-                    .clientTrackingRange(16)
-                    .build("diana"));
+    public static final DeferredHolder<EntityType<?>, EntityType<Diana>> DIANA = entity("diana", EntityType.Builder.of(Diana::new, MobCategory.MONSTER)
+            .sized(0.7F, 2.4F)
+            .eyeHeight(2.1F)
+            .clientTrackingRange(16));
 
-    public static final DeferredHolder<EntityType<?>, EntityType<MoonArrow>> MOON_ARROW = ENTITY_TYPES.register("moon_arrow",
-            () -> EntityType.Builder.<MoonArrow>of(MoonArrow::new, MobCategory.MISC)
-                    .sized(0.5F, 0.5F)
-                    .eyeHeight(0.13F)
-                    .clientTrackingRange(10)
-                    .updateInterval(20)
-                    .build("moon_arrow"));
+    public static final DeferredHolder<EntityType<?>, EntityType<MoonArrow>> MOON_ARROW = entity("moon_arrow", EntityType.Builder.<MoonArrow>of(MoonArrow::new, MobCategory.MISC)
+            .sized(0.5F, 0.5F)
+            .eyeHeight(0.13F)
+            .clientTrackingRange(10)
+            .updateInterval(20));
 
     public static final DeferredHolder<Block, PhylacteryBlock> FROZEN_PHYLACTERY_BLOCK = BLOCKS.register("frozen_phylactery",
             () -> new PhylacteryBlock(BlockBehaviour.Properties.of()
@@ -332,11 +303,9 @@ public class WildspellMobs {
     public static final DeferredItem<Item> ENCHANTED_ICE_CRYSTAL = ITEMS.registerSimpleItem("enchanted_ice_crystal",
             new Item.Properties().rarity(Rarity.UNCOMMON).component(DataComponents.ENCHANTMENT_GLINT_OVERRIDE, true));
 
-    public static final DeferredItem<DeferredSpawnEggItem> STEMWALKER_SPAWN_EGG = ITEMS.register("stemwalker_spawn_egg",
-            () -> new DeferredSpawnEggItem(STEMWALKER, 0xE8E2D4, 0x9E1F1F, new Item.Properties()));
+    public static final DeferredItem<DeferredSpawnEggItem> STEMWALKER_SPAWN_EGG = spawnEgg("stemwalker_spawn_egg", STEMWALKER, 0xE8E2D4, 0x9E1F1F);
 
-    public static final DeferredItem<DeferredSpawnEggItem> RIME_SKULL_SPAWN_EGG = ITEMS.register("rime_skull_spawn_egg",
-            () -> new DeferredSpawnEggItem(RIME_SKULL, 0xD6F1FF, 0x4FA8D8, new Item.Properties()));
+    public static final DeferredItem<DeferredSpawnEggItem> RIME_SKULL_SPAWN_EGG = spawnEgg("rime_skull_spawn_egg", RIME_SKULL, 0xD6F1FF, 0x4FA8D8);
 
     public static final DeferredItem<PhylacteryItem> FROZEN_PHYLACTERY = ITEMS.register("frozen_phylactery",
             () -> new PhylacteryItem(FROZEN_PHYLACTERY_BLOCK.get(), new Item.Properties().rarity(Rarity.EPIC).stacksTo(1)));
@@ -357,25 +326,20 @@ public class WildspellMobs {
     public static final DeferredItem<FrostboundStaffItem> FROSTBOUND_STAFF = ITEMS.register("frostbound_staff",
             () -> new FrostboundStaffItem(new Item.Properties().rarity(Rarity.EPIC).durability(250)));
 
-    public static final DeferredItem<DeferredSpawnEggItem> ICE_LICH_SPAWN_EGG = ITEMS.register("ice_lich_spawn_egg",
-            () -> new DeferredSpawnEggItem(ICE_LICH, 0xCFEFFF, 0x1E2B55, new Item.Properties()));
+    public static final DeferredItem<DeferredSpawnEggItem> ICE_LICH_SPAWN_EGG = spawnEgg("ice_lich_spawn_egg", ICE_LICH, 0xCFEFFF, 0x1E2B55);
 
 //? if <26.4 {
-    public static final DeferredItem<DeferredSpawnEggItem> FROZEN_ZOMBIE_SPAWN_EGG = ITEMS.register("frozen_zombie_spawn_egg",
-            () -> new DeferredSpawnEggItem(FROZEN_ZOMBIE, 0x9FD4E8, 0x3F6B4A, new Item.Properties()));
+    public static final DeferredItem<DeferredSpawnEggItem> FROZEN_ZOMBIE_SPAWN_EGG = spawnEgg("frozen_zombie_spawn_egg", FROZEN_ZOMBIE, 0x9FD4E8, 0x3F6B4A);
 //?}
 
     public static final DeferredItem<MothBottleItem> LUMINOUS_MOTH_BOTTLE = ITEMS.register("luminous_moth_bottle",
             () -> new MothBottleItem(new Item.Properties().stacksTo(1)));
 
-    public static final DeferredItem<DeferredSpawnEggItem> LUMINOUS_MOTH_SPAWN_EGG = ITEMS.register("luminous_moth_spawn_egg",
-            () -> new DeferredSpawnEggItem(LUMINOUS_MOTH, 0xD8EFC4, 0x7FE0C8, new Item.Properties()));
+    public static final DeferredItem<DeferredSpawnEggItem> LUMINOUS_MOTH_SPAWN_EGG = spawnEgg("luminous_moth_spawn_egg", LUMINOUS_MOTH, 0xD8EFC4, 0x7FE0C8);
 
-    public static final DeferredItem<DeferredSpawnEggItem> ELECTRIC_EEL_SPAWN_EGG = ITEMS.register("electric_eel_spawn_egg",
-            () -> new DeferredSpawnEggItem(ELECTRIC_EEL, 0x3A4034, 0xE8A23A, new Item.Properties()));
+    public static final DeferredItem<DeferredSpawnEggItem> ELECTRIC_EEL_SPAWN_EGG = spawnEgg("electric_eel_spawn_egg", ELECTRIC_EEL, 0x3A4034, 0xE8A23A);
 
-    public static final DeferredItem<DeferredSpawnEggItem> PEGASUS_SPAWN_EGG = ITEMS.register("pegasus_spawn_egg",
-            () -> new DeferredSpawnEggItem(PEGASUS, 0xF4F1E8, 0xE8C766, new Item.Properties()));
+    public static final DeferredItem<DeferredSpawnEggItem> PEGASUS_SPAWN_EGG = spawnEgg("pegasus_spawn_egg", PEGASUS, 0xF4F1E8, 0xE8C766);
 
     public static final DeferredItem<Item> TRAP_JAW = ITEMS.registerSimpleItem("trap_jaw");
 
@@ -398,7 +362,7 @@ public class WildspellMobs {
         modBus.addListener(WildspellMobs::registerAttributes);
         modBus.addListener(WildspellMobs::registerSpawnPlacements);
         modBus.addListener(WildspellMobs::addToCreativeTabs);
-        container.registerConfig(ModConfig.Type.COMMON, SpawnBalance.SPEC);
+        container.registerConfig(ModConfig.Type.COMMON, MobsConfig.SPEC);
         NeoForge.EVENT_BUS.addListener(SpawnBalance::onPositionCheck);
 //? if <26.4 {
         NeoForge.EVENT_BUS.addListener(ZombieFreezing::onEntityTick);
@@ -412,6 +376,14 @@ public class WildspellMobs {
 
     public static ResourceLocation id(String path) {
         return ResourceLocation.fromNamespaceAndPath(MODID, path);
+    }
+
+    private static <T extends Entity> DeferredHolder<EntityType<?>, EntityType<T>> entity(String name, EntityType.Builder<T> builder) {
+        return ENTITY_TYPES.register(name, () -> builder.build(name));
+    }
+
+    private static DeferredItem<DeferredSpawnEggItem> spawnEgg(String name, Supplier<? extends EntityType<? extends Mob>> type, int background, int highlight) {
+        return ITEMS.register(name, () -> new DeferredSpawnEggItem(type, background, highlight, new Item.Properties()));
     }
 
     private static DeferredHolder<SoundEvent, SoundEvent> sound(String path) {

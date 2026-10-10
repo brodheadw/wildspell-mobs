@@ -2,7 +2,7 @@ import random
 
 from PIL import Image
 
-import painting
+from painting import jitter
 
 OUT = "src/main/resources/assets/wildspellmobs/textures/entity"
 rng = random.Random(17)
@@ -20,29 +20,25 @@ GLOW = (196, 236, 255)
 GLOW_SOFT = (104, 176, 255)
 
 
-def jitter(color, spread=5):
-    return painting.jitter(rng, color, spread=spread)
-
-
 def side_color(row, rows, front):
     if row == 0:
-        return jitter(rng.choice(BACK))
+        return jitter(rng, rng.choice(BACK))
     if row == rows - 1:
-        return jitter(rng.choice(BELLY if front else BELLY_REAR))
-    return jitter(rng.choice(FLANK))
+        return jitter(rng, rng.choice(BELLY if front else BELLY_REAR))
+    return jitter(rng, rng.choice(FLANK))
 
 
 def paint_box(skin, u, v, w, h, d, front=False, pits=False):
     for x in range(w):
         for y in range(d):
-            skin.putpixel((u + d + x, v + y), jitter(rng.choice(BACK)))
-            skin.putpixel((u + d + w + x, v + y), jitter(rng.choice(BELLY if front else BELLY_REAR)))
+            skin.putpixel((u + d + x, v + y), jitter(rng, rng.choice(BACK)))
+            skin.putpixel((u + d + w + x, v + y), jitter(rng, rng.choice(BELLY if front else BELLY_REAR)))
     for side_u in (u, u + d + w):
         for x in range(d):
             for y in range(h):
                 skin.putpixel((side_u + x, v + d + y), side_color(y, h, front))
             if pits and x % 2 == 1:
-                skin.putpixel((side_u + x, v + d), jitter(PIT, 6))
+                skin.putpixel((side_u + x, v + d), jitter(rng, PIT, spread=6))
     for end_u in (u + d, u + 2 * d + w):
         for x in range(w):
             for y in range(h):
@@ -62,7 +58,7 @@ def paint_fin(skin, glow, u, v, h, d):
         for x in range(d):
             for y in range(h):
                 color = FIN_EDGE if y == h - 1 else rng.choice(FIN)
-                skin.putpixel((side_u + x, v + d + y), jitter(color, 4))
+                skin.putpixel((side_u + x, v + d + y), jitter(rng, color, spread=4))
             glow.putpixel((side_u + x, v + d), GLOW_SOFT + (255,))
 
 
@@ -74,7 +70,7 @@ paint_box(skin, 0, 8, 3, 2, 5, front=False, pits=True)
 paint_box(skin, 0, 15, 3, 1, 5, front=True)
 for x in range(3):
     for y in range(5):
-        skin.putpixel((5 + x, 15 + y), jitter(MOUTH, 8))
+        skin.putpixel((5 + x, 15 + y), jitter(rng, MOUTH, spread=8))
 for x in (3, 9):
     skin.putpixel((x, 13), EYE + (255,))
     glow.putpixel((x, 13), GLOW_SOFT + (255,))

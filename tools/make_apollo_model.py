@@ -82,10 +82,6 @@ for i in range(RAYS):
     ])
 
 
-# The chariot. He stands in a Greek car: a floor, a breastwork across the front, an axle at the back with two
-# four-spoked wheels, and a pole running forward between the inner pair of his team to a yoke at their withers. The
-# four horses are gilded statues like him, shoulder-high to him, frozen in the archaic flying gallop of a vase
-# painting, manes and tails of light; they do not run, the chariot simply goes.
 WHEEL = 18
 AXLE_Y = -2.75
 AXLE_Z = 2.25
