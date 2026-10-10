@@ -23,6 +23,8 @@ import com.wildspell.mobs.entity.LuminousMoth;
 import com.wildspell.mobs.entity.MoonArrow;
 import com.wildspell.mobs.entity.Pegasus;
 import com.wildspell.mobs.entity.RimeSkull;
+import com.wildspell.mobs.entity.Scarab;
+import com.wildspell.mobs.entity.Scorpion;
 import com.wildspell.mobs.entity.Stemwalker;
 import com.wildspell.mobs.entity.SolarRay;
 import com.wildspell.mobs.flytrap.FlytrapBlock;
@@ -33,6 +35,7 @@ import com.wildspell.mobs.grove.SporeheartBlock;
 import com.wildspell.mobs.grove.SporeheartBlockEntity;
 import com.wildspell.mobs.grove.SporeheartFeature;
 import com.wildspell.mobs.item.FrostboundStaffItem;
+import com.wildspell.mobs.item.ScarabBottleItem;
 import com.wildspell.mobs.item.SoulseekerItem;
 import com.wildspell.mobs.item.SoulseekerRecipe;
 import com.wildspell.mobs.moth.LuminousMoss;
@@ -346,6 +349,25 @@ public class WildspellMobs {
     public static final DeferredItem<ItemNameBlockItem> FLYTRAP_SPROUT = ITEMS.register("flytrap_sprout",
             () -> new ItemNameBlockItem(FLYTRAP.get(), new Item.Properties()));
 
+    public static final DeferredHolder<EntityType<?>, EntityType<Scorpion>> SCORPION = entity("scorpion", EntityType.Builder.of(Scorpion::new, MobCategory.MONSTER)
+            .sized(0.5F, 0.3F)
+            .eyeHeight(0.2F)
+            .clientTrackingRange(8));
+
+    public static final DeferredHolder<EntityType<?>, EntityType<Scarab>> SCARAB = entity("scarab", EntityType.Builder.of(Scarab::new, MobCategory.AMBIENT)
+            .sized(0.35F, 0.25F)
+            .eyeHeight(0.15F)
+            .clientTrackingRange(8));
+
+    public static final DeferredItem<Item> SCORPION_STINGER = ITEMS.registerSimpleItem("scorpion_stinger");
+
+    public static final DeferredItem<ScarabBottleItem> BOTTLED_SCARAB = ITEMS.register("bottled_scarab",
+            () -> new ScarabBottleItem(new Item.Properties().stacksTo(1).rarity(Rarity.UNCOMMON)));
+
+    public static final DeferredItem<DeferredSpawnEggItem> SCORPION_SPAWN_EGG = spawnEgg("scorpion_spawn_egg", SCORPION, 0xD6B77A, 0x5C3A1C);
+
+    public static final DeferredItem<DeferredSpawnEggItem> SCARAB_SPAWN_EGG = spawnEgg("scarab_spawn_egg", SCARAB, 0x1E3220, 0xB8A24A);
+
     public WildspellMobs(IEventBus modBus, ModContainer container) {
         ENTITY_TYPES.register(modBus);
         ITEMS.register(modBus);
@@ -403,6 +425,8 @@ public class WildspellMobs {
         event.put(APOLLO.get(), Apollo.createAttributes().build());
         event.put(DIANA.get(), Diana.createAttributes().build());
         event.put(STEMWALKER.get(), Stemwalker.createAttributes().build());
+        event.put(SCORPION.get(), Scorpion.createAttributes().build());
+        event.put(SCARAB.get(), Scarab.createAttributes().build());
     }
 
     private static void registerSpawnPlacements(RegisterSpawnPlacementsEvent event) {
@@ -418,6 +442,10 @@ public class WildspellMobs {
                 ElectricEel::checkEelSpawnRules, RegisterSpawnPlacementsEvent.Operation.REPLACE);
         event.register(PEGASUS.get(), SpawnPlacementTypes.ON_GROUND, Heightmap.Types.MOTION_BLOCKING_NO_LEAVES,
                 Pegasus::checkPegasusSpawnRules, RegisterSpawnPlacementsEvent.Operation.REPLACE);
+        event.register(SCORPION.get(), SpawnPlacementTypes.ON_GROUND, Heightmap.Types.MOTION_BLOCKING_NO_LEAVES,
+                Scorpion::checkScorpionSpawnRules, RegisterSpawnPlacementsEvent.Operation.REPLACE);
+        event.register(SCARAB.get(), SpawnPlacementTypes.ON_GROUND, Heightmap.Types.MOTION_BLOCKING_NO_LEAVES,
+                Scarab::checkScarabSpawnRules, RegisterSpawnPlacementsEvent.Operation.REPLACE);
     }
 
     private static void addToCreativeTabs(BuildCreativeModeTabContentsEvent event) {
@@ -432,11 +460,14 @@ public class WildspellMobs {
             event.accept(LUMINOUS_MOTH_SPAWN_EGG);
             event.accept(ELECTRIC_EEL_SPAWN_EGG);
             event.accept(PEGASUS_SPAWN_EGG);
+            event.accept(SCORPION_SPAWN_EGG);
+            event.accept(SCARAB_SPAWN_EGG);
         } else if (event.getTabKey() == CreativeModeTabs.INGREDIENTS) {
             event.accept(RIME_SHARD);
             event.accept(ENCHANTED_ICE_CRYSTAL);
             event.accept(CROWN_FRAGMENT);
             event.accept(TRAP_JAW);
+            event.accept(SCORPION_STINGER);
         } else if (event.getTabKey() == CreativeModeTabs.FUNCTIONAL_BLOCKS) {
             event.accept(FROZEN_PHYLACTERY);
             event.accept(FROZEN_SOUL_ITEM);
@@ -446,6 +477,7 @@ public class WildspellMobs {
         } else if (event.getTabKey() == CreativeModeTabs.TOOLS_AND_UTILITIES) {
             event.accept(SOULSEEKER);
             event.accept(LUMINOUS_MOTH_BOTTLE);
+            event.accept(BOTTLED_SCARAB);
         } else if (event.getTabKey() == CreativeModeTabs.COMBAT) {
             event.accept(FROSTBOUND_STAFF);
         }

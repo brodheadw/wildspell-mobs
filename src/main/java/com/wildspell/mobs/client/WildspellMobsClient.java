@@ -66,6 +66,8 @@ public class WildspellMobsClient {
         event.registerEntityRenderer(WildspellMobs.DIANA.get(), DianaRenderer::new);
         event.registerEntityRenderer(WildspellMobs.STEMWALKER.get(), StemwalkerRenderer::new);
         event.registerEntityRenderer(WildspellMobs.MOON_ARROW.get(), MoonArrowRenderer::new);
+        event.registerEntityRenderer(WildspellMobs.SCORPION.get(), ScorpionRenderer::new);
+        event.registerEntityRenderer(WildspellMobs.SCARAB.get(), ScarabRenderer::new);
     }
 
     @SubscribeEvent
