@@ -4,79 +4,94 @@ import random
 from PIL import Image
 
 import make_flytrap_model as model
-from painting import jitter, mix, paint_model
+from geckolib_model import texel_point
+from painting import hash01, jitter, mix, paint_model
 
 OUT = "src/main/resources/assets/wildspellmobs/textures"
 rng = random.Random(23)
 
 
 
-GREEN = [(84, 150, 52), (76, 140, 46), (92, 160, 58)]
-GREEN_DARK = [(52, 104, 34), (46, 96, 30), (58, 112, 38)]
-RIM = [(170, 196, 70), (160, 188, 62), (182, 204, 80)]
-RED = [(178, 36, 44), (164, 30, 40), (190, 46, 50)]
-RED_DEEP = (118, 18, 32)
-TRIGGER = (236, 206, 176)
-TOOTH = [(196, 214, 118), (184, 206, 104), (210, 224, 136)]
-STALK = [(110, 168, 70), (100, 158, 62), (120, 176, 78)]
-LEAF = [(62, 124, 40), (56, 116, 36), (70, 132, 46)]
-MIDRIB = (132, 178, 86)
+GREEN = [(118, 180, 50), (110, 172, 46), (126, 188, 56)]
+GREEN_LIGHT = (162, 206, 66)
+GREEN_DARK = [(66, 122, 38), (60, 114, 34), (72, 130, 42)]
+RIM = [(204, 228, 96), (196, 222, 88), (212, 234, 106)]
+RED = [(202, 38, 60), (190, 32, 54), (212, 48, 68)]
+RED_PINK = (236, 98, 116)
+RED_DEEP = (122, 14, 40)
+TRIGGER = (232, 112, 128)
+TOOTH = [(232, 240, 186), (224, 236, 172), (240, 246, 200)]
+TOOTH_BASE = (198, 222, 120)
+STALK = [(104, 166, 60), (96, 156, 54), (112, 174, 66)]
+LEAF = [(84, 152, 46), (78, 144, 42), (90, 160, 50)]
+MIDRIB = (150, 196, 84)
 
 FACE_SHADE = {"top": 12, "bottom": -22, "front": 0, "right": -8, "left": -8, "back": -14}
 
 
-
-def lobe_inside(x, y, fw, fh, face):
-    row = y if face == "top" else fh - 1 - y
-    edge = min(x, fw - 1 - x, row)
-    if edge == 0:
-        return jitter(rng, rng.choice(RIM), 0, 5)
-    if edge == 1:
-        return jitter(rng, mix(rng.choice(RIM), RED[0], 0.55), -6, 5)
-    if (x, row) in {(2, 3), (fw - 3, 3), (fw // 2, 6)}:
-        return jitter(rng, TRIGGER, 0, 4)
-    toward_hinge = row / (fh - 1)
-    return jitter(rng, mix(rng.choice(RED), RED_DEEP, 0.2 + 0.6 * toward_hinge), 0, 6)
+def steady(color, at, shade=0, spread=5):
+    k = hash01(int(round(at[0] * 4)) + 97, int(round(at[1] * 4 + at[2] * 52)) + 97, 23)
+    return tuple(max(0, min(255, v + shade + int((2 * k - 1) * spread))) for v in color) + (255,)
 
 
-def lobe_outside(face, y, blush=None):
-    px = rng.choice(GREEN)
-    if y == blush:
-        px = mix(px, RED[0], 0.35)
-    if rng.random() < 0.06:
+def rim_steps(x, z):
+    for d in (1, 2):
+        for dx, dz in ((d, 0), (-d, 0), (0, -d)):
+            if not model.on_lobe(x + dx, z + dz):
+                return d
+    return 3
+
+
+def m_lobe(face, x, y, fw, fh, cube):
+    at = texel_point(cube, face, x, y)
+    upper = cube["origin"][1] >= model.HINGE[1]
+    if face == ("bottom" if upper else "top"):
+        steps = rim_steps(at[0], at[2])
+        if steps == 1:
+            return steady(rng.choice(RIM), at, 0, 4)
+        if (math.floor(at[0]), math.floor(at[2])) in ({(-2, -6), (1, -4)} if upper else {(1, -6), (-2, -3)}):
+            return steady(TRIGGER, at, 0, 3)
+        depth = (at[2] + 9) / 10
+        base = mix(RED_PINK, rng.choice(RED), 0.35) if steps == 2 else rng.choice(RED)
+        return steady(mix(base, RED_DEEP, 0.1 + 0.6 * depth * depth), at, 0, 6)
+    if face == "back":
+        return steady(rng.choice(GREEN_DARK), at, FACE_SHADE[face], 4)
+    if face in ("top", "bottom"):
+        return steady(rng.choice(GREEN), at, FACE_SHADE[face] // 2, 5)
+    return steady(rng.choice(RIM), at, FACE_SHADE[face] // 2, 4)
+
+
+def m_dome(face, x, y, fw, fh, cube):
+    at = texel_point(cube, face, x, y)
+    crown = 1 - min(1.0, (at[0] / 5) ** 2 + ((at[2] + 4) / 6) ** 2)
+    px = mix(rng.choice(GREEN), GREEN_LIGHT, 0.7 * crown if face in ("top", "bottom") else 0)
+    if rng.random() < 0.05:
         px = rng.choice(GREEN_DARK)
-    return jitter(rng, px, FACE_SHADE[face], 5)
+    return steady(px, at, FACE_SHADE[face] // 2, 5)
 
 
-def jaw(face, x, y, fw, fh, inside, rim, blush):
-    if face == inside:
-        return lobe_inside(x, y, fw, fh, face)
-    if face == "front":
-        return jitter(rng, rng.choice(RIM), 6, 5) if y == rim else lobe_outside(face, y, blush)
-    if face in ("right", "left"):
-        front_col = fw - 1 if face == "right" else 0
-        if y == rim:
-            return jitter(rng, rng.choice(RIM), FACE_SHADE[face], 5)
-        if abs(x - front_col) <= 1:
-            return jitter(rng, mix(rng.choice(GREEN), RED[0], 0.3), FACE_SHADE[face], 5)
-        return lobe_outside(face, y, blush)
-    return lobe_outside(face, y)
+def cilia(face, x, y, fw, fh, cube, upper):
+    at = texel_point(cube, face, x, y)
+    along = at[0] if face in ("front", "back") else at[2]
+    if face in ("top", "bottom") or math.floor(along) % 2 != (0 if upper else 1):
+        return None
+    root = y == 0 if upper else y == fh - 1
+    return steady(TOOTH_BASE if root else rng.choice(TOOTH), at, 0, 4)
 
 
-def m_jaw_upper(face, x, y, fw, fh, cube):
-    return jaw(face, x, y, fw, fh, "bottom", fh - 1, fh - 2)
+def m_upper_cilia(face, x, y, fw, fh, cube):
+    return cilia(face, x, y, fw, fh, cube, True)
 
 
-def m_jaw_lower(face, x, y, fw, fh, cube):
-    return jaw(face, x, y, fw, fh, "top", 0, 1)
+def m_lower_cilia(face, x, y, fw, fh, cube):
+    return cilia(face, x, y, fw, fh, cube, False)
 
 
 def m_hinge(face, x, y, fw, fh, cube):
-    return jitter(rng, rng.choice(GREEN_DARK), FACE_SHADE[face], 5)
-
-
-def m_tooth(face, x, y, fw, fh, cube):
-    return jitter(rng, rng.choice(TOOTH), FACE_SHADE[face], 6)
+    at = texel_point(cube, face, x, y)
+    if face == "front":
+        return steady(mix(RED_DEEP, GREEN_DARK[0], 0.25), at, -10, 4)
+    return steady(mix(rng.choice(GREEN), GREEN_DARK[0], 0.4), at, FACE_SHADE[face] // 2, 5)
 
 
 def m_stalk(face, x, y, fw, fh, cube):
@@ -87,17 +102,23 @@ def m_stalk(face, x, y, fw, fh, cube):
     return jitter(rng, rng.choice(STALK), s, 5)
 
 
-def m_leaf_small(face, x, y, fw, fh, cube):
-    if face == "top":
-        return jitter(rng, rng.choice(LEAF), 10 - (10 if x in (0, fw - 1) else 0), 5)
-    if face == "bottom":
-        return jitter(rng, mix(rng.choice(LEAF), MIDRIB, 0.3), -8, 5)
-    return jitter(rng, rng.choice(GREEN_DARK), FACE_SHADE[face], 4)
+def m_leaf(face, x, y, fw, fh, cube):
+    if face not in ("top", "bottom"):
+        return None
+    at = texel_point(cube, face, x, y)
+    (ox, _, oz), (w, _, d) = cube["origin"], cube["size"]
+    u = abs(at[0] - (ox if ox >= 0 else ox + w)) / w
+    v = (at[2] - oz) / d - 0.5
+    if abs(v) > 0.5 * math.sin(math.pi * min(1.0, 0.15 + u)) ** 0.6 + 0.01:
+        return None
+    if abs(v) < 0.2:
+        return steady(MIDRIB, at, 0, 4)
+    return steady(rng.choice(LEAF), at, 0, 5)
 
 
 MATERIALS = {name[2:]: fn for name, fn in globals().items() if name.startswith("m_")}
 
-paint_model(model.BONES, 64, lambda cube, face, x, y, fw, fh: (MATERIALS[cube["material"]](face, x, y, fw, fh, cube), None),
+paint_model(model.BONES, model.TEX, lambda cube, face, x, y, fw, fh: (MATERIALS[cube["material"]](face, x, y, fw, fh, cube), None),
             f"{OUT}/entity/flytrap_head.png")
 print("flytrap head texture written")
 
