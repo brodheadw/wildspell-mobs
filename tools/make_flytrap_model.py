@@ -3,7 +3,7 @@ from geckolib_model import Model, anim, animations, c, write
 ASSETS = "src/main/resources/assets/wildspellmobs"
 GEO_OUT = f"{ASSETS}/geo/entity/flytrap_head.geo.json"
 ANIM_OUT = f"{ASSETS}/animations/entity/flytrap_head.animation.json"
-TEX = 64
+TEX = 128
 
 MODEL = Model("geometry.flytrap_head", TEX, 3, 3, [0, 1, 0])
 BONES = MODEL.bones
@@ -12,32 +12,47 @@ bone = MODEL.bone
 
 bone("root", None, (0, 0, 0))
 bone("neck", "root", (0, 0, 0), [-6, 0, 0], [c((-1, 0, -1), (2, 7, 2), "stalk")])
-bone("neck_leaf", "neck", (1, 3, 0), [0, -20, -35], [c((1, 2.5, -1), (4, 1, 2), "leaf_small")])
+bone("neck_leaf", "neck", (1, 2, 0), [0, -25, -30], [c((1, 2, -1.5), (5, 0, 3), "leaf")])
+bone("neck_leaf_2", "neck", (-1, 4, 0), [0, 30, 35], [c((-5, 4, -1), (4, 0, 2), "leaf")])
 bone("head", "neck", (0, 7, 0))
-bone("pod", "head", (0, 7, 0), [6, 0, 0], [c((-2.5, 6, -0.5), (5, 4, 3), "hinge")])
-bone("upper_jaw", "pod", (0, 9, 1.5), [-24, 0, 0], [c((-4, 9, -8), (8, 3, 10), "jaw_upper")])
-bone("lower_jaw", "pod", (0, 9, 1.5), [16, 0, 0], [c((-4, 6, -8), (8, 3, 10), "jaw_lower")])
 
-UPPER_FRONT = (-3.5, -1.5, 0.5, 2.5)
-LOWER_FRONT = (-2.5, -0.5, 1.5)
-UPPER_SIDE = (-6.5, -3.5, -0.5)
-LOWER_SIDE = (-5, -2)
-for k, x in enumerate(UPPER_FRONT):
-    bone(f"upper_tooth_front_{k}", "upper_jaw", (x + 0.5, 9, -8.5), cubes=[c((x, 7, -9), (1, 2, 1), "tooth")])
-for k, x in enumerate(LOWER_FRONT):
-    bone(f"lower_tooth_front_{k}", "lower_jaw", (x + 0.5, 9, -8.5), cubes=[c((x, 9, -9), (1, 2, 1), "tooth")])
-for side, sx in (("right", -5), ("left", 4)):
-    for k, z in enumerate(UPPER_SIDE):
-        bone(f"upper_tooth_{side}_{k}", "upper_jaw", (sx + 0.5, 9, z + 0.5), cubes=[c((sx, 7, z), (1, 2, 1), "tooth")])
-    for k, z in enumerate(LOWER_SIDE):
-        bone(f"lower_tooth_{side}_{k}", "lower_jaw", (sx + 0.5, 9, z + 0.5), cubes=[c((sx, 9, z), (1, 2, 1), "tooth")])
+HINGE = (0, 9, 1)
+STEPS = ((3, -9, 1), (5, -8, 0), (6, -6, -2))
+CILIA = 0.12
 
+
+def on_lobe(x, z):
+    return any(abs(x) < hw and front < z < back for hw, front, back in STEPS)
+
+
+def lobe(sign, fringe):
+    """One trap lobe, closed: a plate rounded in steps with a low dome on it, cilia standing on the rim."""
+    lip_y = 9 if sign > 0 else 8
+    out = lip_y + sign
+    y0 = lip_y - 2 if sign > 0 else lip_y + 1
+    off = CILIA if sign > 0 else 2 * CILIA
+    cubes = [c((-2, out + sign, -5), (4, 1, 3), "dome"), c((-4, out, -7), (8, 1, 6), "dome")]
+    inner = 0
+    for k, (hw, front, back) in enumerate(STEPS):
+        reach = STEPS[k + 1][1] if k + 1 < len(STEPS) else back - 1
+        for x0, x1 in ((-hw, -inner), (inner, hw)) if inner else ((-hw, hw),):
+            cubes.append(c((x0, lip_y, front), (x1 - x0, 1, back - front), "lobe"))
+            cubes.append(c((x0, y0, front - off), (x1 - x0, 2, 0), fringe))
+        for x in (-hw - off, hw + off):
+            cubes.append(c((x, y0, front), (0, 2, reach - front), fringe))
+        inner = hw
+    return cubes
+
+
+bone("pod", "head", (0, 7, 0), [8, 0, 0], [c((-2.5, 7.5, 0), (5, 3, 2), "hinge"), c((-1.5, 6.5, 0.5), (3, 1, 2), "hinge")])
+bone("upper_jaw", "pod", HINGE, [-34, 0, 0], lobe(1, "upper_cilia"))
+bone("lower_jaw", "pod", HINGE, [30, 0, 0], lobe(-1, "lower_cilia"))
 
 MODEL.pack()
 
 
-CLOSED_UPPER = [24, 0, 0]
-CLOSED_LOWER = [-16, 0, 0]
+CLOSED_UPPER = [34, 0, 0]
+CLOSED_LOWER = [-30, 0, 0]
 STRIKE_NECK = [40, 0, 0]
 STRIKE_REACH = [0, 0, -2]
 STRIKE_POD = [-24, 0, 0]
@@ -51,6 +66,7 @@ def idle():
         "upper_jaw": {"rotation": {0: [0, 0, 0], 1.2: [-6, 0, 0], 1.8: [-6, 0, 0], 3: [0, 0, 0]}},
         "lower_jaw": {"rotation": {0: [0, 0, 0], 1.2: [4, 0, 0], 1.8: [4, 0, 0], 3: [0, 0, 0]}},
         "neck_leaf": {"rotation": {0: [0, 0, 0], 1.5: [0, 0, 6], 3: [0, 0, 0]}},
+        "neck_leaf_2": {"rotation": {0: [0, 0, 0], 1.5: [0, 0, -5], 3: [0, 0, 0]}},
     })
 
 
