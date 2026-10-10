@@ -3,15 +3,10 @@ import random
 
 from PIL import Image
 
-import painting
-from painting import mix
+from painting import jitter, mix
 
 OUT = "src/main/resources/assets/wildspellmobs/textures"
 rng = random.Random(7)
-
-
-def jitter(color, shade=0, spread=5):
-    return painting.jitter(rng, color, shade, spread)
 
 
 SKULL_VARIANTS = [
@@ -60,7 +55,7 @@ def paint_teeth(img, x0, y0, count, lower=False, middle_tooth=False):
 def ice_fill(img, palette, x0, y0, w, h, shade):
     for x in range(x0, x0 + w):
         for y in range(y0, y0 + h):
-            img.putpixel((x, y), jitter(rng.choice(palette), shade, 6))
+            img.putpixel((x, y), jitter(rng, rng.choice(palette), shade, 6))
 
 
 def ice_cube(img, palette, u, v, w, h, d, shade=0):
@@ -123,7 +118,7 @@ def paint_box(u, v, w, h, d, material):
             for y in range(fh):
                 palette = material(face, x, y)
                 gradient = -int(10 * y / max(1, fh - 1)) if face not in ("top", "bottom") else 0
-                zombie.putpixel((x0 + x, y0 + y), jitter(rng.choice(palette), shade + gradient, 5))
+                zombie.putpixel((x0 + x, y0 + y), jitter(rng, rng.choice(palette), shade + gradient, 5))
 
 
 paint_box(0, 0, 8, 8, 8, lambda face, x, y: SKIN)
@@ -132,15 +127,15 @@ paint_box(40, 16, 4, 12, 4, lambda face, x, y: SHIRT if face == "top" or (face !
 paint_box(0, 16, 4, 12, 4, lambda face, x, y: SHOES if face == "bottom" or (face != "top" and y >= 10) else TROUSERS)
 
 for x in range(8, 16):
-    zombie.putpixel((x, 11), jitter(SKIN[3], -10, 3))
+    zombie.putpixel((x, 11), jitter(rng, SKIN[3], -10, 3))
 for p in [(9, 12), (10, 12)]:
     zombie.putpixel(p, (24, 30, 30, 255))
 for p in [(11, 13), (12, 13)]:
-    zombie.putpixel(p, jitter(SKIN[3], -20, 3))
+    zombie.putpixel(p, jitter(rng, SKIN[3], -20, 3))
 for x in range(10, 14):
     zombie.putpixel((x, 14), (52, 64, 58, 255))
 for (x, y) in [(2, 10), (3, 11), (20, 12), (27, 13), (44, 26), (45, 27), (50, 24), (9, 3), (12, 5)]:
-    zombie.putpixel((x, y), jitter((70, 92, 80), spread=4))
+    zombie.putpixel((x, y), jitter(rng, (70, 92, 80), spread=4))
 
 for x in range(64):
     for y in range(64):
@@ -156,7 +151,7 @@ whole.save(f"{OUT}/entity/frozen_zombie_whole.png")
 TORN_ROWS = {6: (14, 15), 7: (13, 15), 8: (13, 17), 9: (12, 17), 10: (13, 16), 11: (13, 17), 12: (12, 15), 13: (14, 14)}
 torn = {(x, y) for y, (x0, x1) in TORN_ROWS.items() for x in range(x0, x1 + 1)} - {(16, 10), (15, 12)}
 for (x, y) in torn:
-    zombie.putpixel((x, y), jitter(rng.choice(BONE_WHITE), spread=4))
+    zombie.putpixel((x, y), jitter(rng, rng.choice(BONE_WHITE), spread=4))
 SOCKET_PIXELS = [(13, 11), (14, 11), (13, 12), (14, 12)]
 for p in SOCKET_PIXELS:
     zombie.putpixel(p, (24, 30, 44, 255))
@@ -165,7 +160,7 @@ for (x, y) in [(15, 9), (16, 10)]:
 rim = {(x + dx, y + dy) for (x, y) in torn for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1))} - torn
 for (x, y) in rim:
     if (8 <= x < 24 and 8 <= y < 16) or (8 <= x < 16 and 0 <= y < 8):
-        zombie.putpixel((x, y), jitter(rng.choice([(104, 58, 60), (104, 58, 60), (78, 44, 48), (122, 74, 70)]), spread=6))
+        zombie.putpixel((x, y), jitter(rng, rng.choice([(104, 58, 60), (104, 58, 60), (78, 44, 48), (122, 74, 70)]), spread=6))
 eyes = Image.new("RGBA", (64, 64), (0, 0, 0, 0))
 for (x, y), c in {(13, 11): (120, 240, 255), (14, 11): (200, 255, 255), (13, 12): (70, 200, 255), (14, 12): (120, 240, 255)}.items():
     eyes.putpixel((x, y), c + (255,))
@@ -181,7 +176,7 @@ def blob(cx, cy, radius, bounds):
     for x in range(int(cx - radius) - 1, int(cx + radius) + 2):
         for y in range(int(cy - radius) - 1, int(cy + radius) + 2):
             if x0 <= x < x1 and y0 <= y < y1 and math.hypot(x - cx, y - cy) <= radius + rng.uniform(-0.6, 0.4):
-                crust.putpixel((x, y), jitter(rng.choice(ICE), spread=8))
+                crust.putpixel((x, y), jitter(rng, rng.choice(ICE), spread=8))
 
 
 PATCHES = [
@@ -204,7 +199,7 @@ for y in range(2, 14):
     half = min(y - 2, 13 - y) // 2 + 1
     for x in range(8 - half, 8 + half):
         edge = x in (8 - half, 8 + half - 1) or y in (2, 13)
-        shard.putpixel((x, y), outline if edge else jitter(rng.choice(ICE), -10 if x >= 8 else 10))
+        shard.putpixel((x, y), outline if edge else jitter(rng, rng.choice(ICE), -10 if x >= 8 else 10))
 for (x, y) in [(7, 5), (7, 6), (6, 8)]:
     shard.putpixel((x, y), (255, 255, 255, 255))
 shard.save(f"{OUT}/item/rime_shard.png")
@@ -216,7 +211,7 @@ for y in range(1, 15):
     for x in range(8 - half, 8 + half):
         rim = x in (8 - half, 8 + half - 1) or y in (1, 14)
         core = abs(x - 7.5) < 1.6 and 4 <= y <= 11
-        crystal.putpixel((x, y), edge if rim else (206, 250, 255, 255) if core else jitter((96, 196, 250), -12 if x >= 8 else 12, 6))
+        crystal.putpixel((x, y), edge if rim else (206, 250, 255, 255) if core else jitter(rng, (96, 196, 250), -12 if x >= 8 else 12, 6))
 for (x, y) in [(6, 4), (6, 5), (7, 3)]:
     crystal.putpixel((x, y), (255, 255, 255, 255))
 crystal.save(f"{OUT}/item/enchanted_ice_crystal.png")
@@ -227,7 +222,7 @@ for y in range(2, 15):
     for x in range(8 - half, 8 + half):
         rim = x in (8 - half, 8 + half - 1) or y in (2, 14)
         core = 6 <= x <= 9 and 7 <= y <= 11
-        vial.putpixel((x, y), (28, 44, 92, 255) if rim else (90, 220, 255, 255) if core else jitter((196, 232, 250), 0, 6))
+        vial.putpixel((x, y), (28, 44, 92, 255) if rim else (90, 220, 255, 255) if core else jitter(rng, (196, 232, 250), 0, 6))
 for x in range(6, 10):
     vial.putpixel((x, 1), (230, 246, 255, 255))
 for (x, y) in [(7, 8), (8, 9)]:
@@ -314,7 +309,7 @@ for x in range(16):
         half = 3.3 * (1.0 - along / length) + crown_rng.uniform(-0.25, 0.25)
         if 0.0 <= along <= length and abs(across) <= half:
             shade = 0 if across < -0.8 else (1 if across < 0.6 else 2)
-            fragment.putpixel((x, y), jitter(SPIKE[shade], spread=4) if crown_rng.random() > 0.08 else SPIKE[3] + (255,))
+            fragment.putpixel((x, y), jitter(rng, SPIKE[shade], spread=4) if crown_rng.random() > 0.08 else SPIKE[3] + (255,))
 for x, y in ((2, 13), (3, 13), (2, 12), (1, 12), (3, 14), (4, 14)):
     fragment.putpixel((x, y), (44, 52, 78, 255))
 for x, y in ((6, 9), (7, 8), (8, 7)):

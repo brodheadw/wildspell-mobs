@@ -2,7 +2,7 @@ import random
 
 from PIL import Image
 
-import painting
+from painting import jitter
 
 OUT = "src/main/resources/assets/wildspellmobs/textures"
 rng = random.Random(11)
@@ -19,14 +19,10 @@ GLOW_SOFT = (96, 214, 176)
 GOLD = (236, 255, 170)
 
 
-def jitter(color, spread=6):
-    return painting.jitter(rng, color, spread=spread)
-
-
 def fill(img, x0, y0, w, h, palette, spread=6):
     for x in range(x0, x0 + w):
         for y in range(y0, y0 + h):
-            img.putpixel((x, y), jitter(rng.choice(palette), spread))
+            img.putpixel((x, y), jitter(rng, rng.choice(palette), spread=spread))
 
 
 FOREWING = [4, 5, 6, 7, 7, 6]
@@ -38,13 +34,13 @@ def paint_wing(skin, glow, u, v, rows, eyespot, under=False):
         for i in range(length):
             rim = i == length - 1 or j in (0, len(rows) - 1) and i >= length - 3
             if under:
-                color = jitter(rng.choice(WING_UNDER), 4)
+                color = jitter(rng, rng.choice(WING_UNDER), spread=4)
             elif rim:
-                color = jitter(EDGE, 6)
+                color = jitter(rng, EDGE, spread=6)
             elif i in (2, 3) and j >= 1:
-                color = jitter(BAND, 8)
+                color = jitter(rng, BAND, spread=8)
             else:
-                color = jitter(rng.choice(WING), 6)
+                color = jitter(rng, rng.choice(WING), spread=6)
             skin.putpixel((u + i, v + j), color)
             if not under and rim and (i + j) % 2 == 0 and i > 1:
                 glow.putpixel((u + i, v + j), GLOW_SOFT + (255,))
@@ -65,29 +61,29 @@ fill(skin, 6, 0, 4, 6, FUR)
 fill(skin, 0, 6, 16, 2, FUR)
 for z in (3, 5):
     for x in (6, 7):
-        skin.putpixel((x, z), jitter(FUR_BAND, 6))
-    skin.putpixel((z, 6), jitter(FUR_BAND, 6))
-    skin.putpixel((13 - z, 7), jitter(FUR_BAND, 6))
+        skin.putpixel((x, z), jitter(rng, FUR_BAND, spread=6))
+    skin.putpixel((z, 6), jitter(rng, FUR_BAND, spread=6))
+    skin.putpixel((13 - z, 7), jitter(rng, FUR_BAND, spread=6))
 for x, y in ((14, 6), (15, 6), (14, 7), (15, 7)):
     skin.putpixel((x, y), GLOW + (255,))
     glow.putpixel((x, y), GLOW_SOFT + (255,))
 
 fill(skin, 16, 0, 8, 4, FUR)
-skin.putpixel((18, 2), jitter(FUR_BAND, 4))
-skin.putpixel((19, 2), jitter(FUR_BAND, 4))
+skin.putpixel((18, 2), jitter(rng, FUR_BAND, spread=4))
+skin.putpixel((19, 2), jitter(rng, FUR_BAND, spread=4))
 
 for x in range(24, 28):
     for y in range(0, 2):
-        skin.putpixel((x, y), jitter(EYE, 4))
+        skin.putpixel((x, y), jitter(rng, EYE, spread=4))
 for x, y in ((25, 1), (27, 1)):
     skin.putpixel((x, y), (60, 110, 104, 255))
     glow.putpixel((x, y), (40, 120, 100, 255))
 
 for face_u in (20, 22):
     for y in range(4):
-        skin.putpixel((face_u, 4 + y), jitter(FUR_BAND, 6))
+        skin.putpixel((face_u, 4 + y), jitter(rng, FUR_BAND, spread=6))
         if y % 2 == 1:
-            skin.putpixel((face_u + 1, 4 + y), jitter(FUR[1], 6))
+            skin.putpixel((face_u + 1, 4 + y), jitter(rng, FUR[1], spread=6))
     skin.putpixel((face_u, 7), GLOW + (255,))
     glow.putpixel((face_u, 7), GLOW + (255,))
 
@@ -123,7 +119,7 @@ CORK = [(150, 108, 70), (132, 94, 60), (164, 120, 80)]
 BODY = {4: (7, 8), 5: (7, 8), 6: (5, 10), 7: (4, 11), 8: (4, 11), 9: (4, 11), 10: (4, 11), 11: (4, 11), 12: (5, 10)}
 for x in range(6, 10):
     for y in (1, 2):
-        bottle.putpixel((x, y), jitter(rng.choice(CORK), 6))
+        bottle.putpixel((x, y), jitter(rng, rng.choice(CORK), spread=6))
 for x in (6, 9):
     bottle.putpixel((x, 3), GLASS)
 for x in (7, 8):
