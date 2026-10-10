@@ -66,7 +66,7 @@ public class WatcherTests {
         helper.succeed();
     }
 
-    @GameTest(template = SKY, batch = "watchers")
+    @GameTest(template = SKY, batch = "watchers", timeoutTicks = 400)
     public static void theBurningHauntsLavaAndTheWeightTheDeep(GameTestHelper helper) {
         Player player = knower(helper, 0.7F);
         helper.assertFalse(Face.SABBATAIOS.haunts(helper.getLevel(), player), "the flame-faced haunts a place with no fire");
