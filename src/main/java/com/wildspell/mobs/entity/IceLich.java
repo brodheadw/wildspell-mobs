@@ -16,7 +16,6 @@ import net.minecraft.world.Difficulty;
 import net.minecraft.network.syncher.EntityDataAccessor;
 import net.minecraft.network.syncher.EntityDataSerializers;
 import net.minecraft.network.syncher.SynchedEntityData;
-import net.minecraft.server.level.ServerBossEvent;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvent;
@@ -46,18 +45,14 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.ClipContext;
 import net.minecraft.world.level.Level;
-import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import org.joml.Vector3f;
-import software.bernie.geckolib.animatable.GeoEntity;
-import software.bernie.geckolib.animatable.instance.AnimatableInstanceCache;
 import software.bernie.geckolib.animation.AnimatableManager;
 import software.bernie.geckolib.animation.AnimationController;
 import software.bernie.geckolib.animation.RawAnimation;
-import software.bernie.geckolib.util.GeckoLibUtil;
 
-public class IceLich extends Monster implements RangedAttackMob, GeoEntity {
+public class IceLich extends HoveringBoss implements RangedAttackMob {
     public static final String MINION_TAG = WildspellMobs.MODID + ".lich_minion";
     public static final int ACTION_IDLE = 0;
     public static final int ACTION_CAST = 1;
@@ -83,7 +78,6 @@ public class IceLich extends Monster implements RangedAttackMob, GeoEntity {
     private static final int BLINK_AFTER_UNSEEN = 60;
     private static final int IDLE_LIMIT = 60;
     private static final int FULL_CAP_RECHECK = 40;
-    private static final EntityDataAccessor<Byte> DATA_ACTION = SynchedEntityData.defineId(IceLich.class, EntityDataSerializers.BYTE);
     private static final EntityDataAccessor<Vector3f> DATA_BEAM_DIR = SynchedEntityData.defineId(IceLich.class, EntityDataSerializers.VECTOR3);
 
     private static final RawAnimation IDLE = RawAnimation.begin().thenLoop("animation.ice_lich.idle");
@@ -94,16 +88,12 @@ public class IceLich extends Monster implements RangedAttackMob, GeoEntity {
     private static final RawAnimation TOSS = RawAnimation.begin().thenPlay("animation.ice_lich.toss");
     private static final RawAnimation SPIN = RawAnimation.begin().thenPlay("animation.ice_lich.spin");
 
-    private final ServerBossEvent bossEvent = (ServerBossEvent) new ServerBossEvent(this.getDisplayName(),
-            BossEvent.BossBarColor.BLUE, BossEvent.BossBarOverlay.NOTCHED_10);
-    private final AnimatableInstanceCache geoCache = GeckoLibUtil.createInstanceCache(this);
     private int boltCooldown = 40;
     private int summonCooldown = 100;
     private int beamCooldown = 160;
     private int burstCooldown = 100;
     private int spinCooldown = 120;
     private int blinkCooldown;
-    private int actionTicks;
     private int burstTicks;
     private int unseenTicks;
     private int idleSeconds;
@@ -118,11 +108,9 @@ public class IceLich extends Monster implements RangedAttackMob, GeoEntity {
     private UUID hunted;
 
     public IceLich(EntityType<? extends IceLich> type, Level level) {
-        super(type, level);
+        super(type, level, BossEvent.BossBarColor.BLUE, BossEvent.BossBarOverlay.NOTCHED_10);
         this.moveControl = new HoverMoveControl(this);
-        this.setNoGravity(true);
         this.xpReward = 150;
-        this.setPersistenceRequired();
     }
 
     public static AttributeSupplier.Builder createAttributes() {
@@ -167,17 +155,7 @@ public class IceLich extends Monster implements RangedAttackMob, GeoEntity {
     @Override
     protected void defineSynchedData(SynchedEntityData.Builder builder) {
         super.defineSynchedData(builder);
-        builder.define(DATA_ACTION, (byte) ACTION_IDLE);
         builder.define(DATA_BEAM_DIR, new Vector3f());
-    }
-
-    public int getAction() {
-        return this.entityData.get(DATA_ACTION);
-    }
-
-    private void startAction(int action, int ticks) {
-        this.entityData.set(DATA_ACTION, (byte) action);
-        this.actionTicks = ticks;
     }
 
     public boolean isEnraged() {
@@ -698,30 +676,6 @@ public class IceLich extends Monster implements RangedAttackMob, GeoEntity {
     }
 
     @Override
-    public boolean canFreeze() {
-        return false;
-    }
-
-    @Override
-    public boolean canChangeDimensions(Level from, Level to) {
-        return false;
-    }
-
-    @Override
-    public boolean causeFallDamage(float fallDistance, float multiplier, DamageSource source) {
-        return false;
-    }
-
-    @Override
-    protected void checkFallDamage(double y, boolean onGround, BlockState state, BlockPos pos) {
-    }
-
-    @Override
-    public boolean removeWhenFarAway(double distance) {
-        return false;
-    }
-
-    @Override
     public void startSeenByPlayer(ServerPlayer player) {
         super.startSeenByPlayer(player);
         this.bossEvent.addPlayer(player);
@@ -797,11 +751,6 @@ public class IceLich extends Monster implements RangedAttackMob, GeoEntity {
             case ACTION_SPIN -> SPIN;
             default -> IDLE;
         })));
-    }
-
-    @Override
-    public AnimatableInstanceCache getAnimatableInstanceCache() {
-        return this.geoCache;
     }
 
     private static class HoverMoveControl extends ThrustMoveControl {

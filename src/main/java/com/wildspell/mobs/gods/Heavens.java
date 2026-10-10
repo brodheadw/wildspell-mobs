@@ -1,6 +1,6 @@
 package com.wildspell.mobs.gods;
 
-import com.wildspell.mobs.SpawnBalance;
+import com.wildspell.mobs.MobsConfig;
 import com.wildspell.mobs.WildspellMobs;
 import com.wildspell.mobs.entity.Apollo;
 import com.wildspell.mobs.entity.Diana;
@@ -102,11 +102,11 @@ public class Heavens extends SavedData {
     }
 
     public static boolean sunWillAnswer(Player player) {
-        return wardensSlain(player) >= SpawnBalance.APOLLO_WARDENS.get();
+        return wardensSlain(player) >= MobsConfig.APOLLO_WARDENS.get();
     }
 
     public static void wardenFell(ServerLevel level, Vec3 at) {
-        int needed = SpawnBalance.APOLLO_WARDENS.get();
+        int needed = MobsConfig.APOLLO_WARDENS.get();
         for (ServerPlayer player : level.players()) {
             if (player.isSpectator() || player.position().distanceTo(at) > WARDEN_WITNESS) {
                 continue;
@@ -277,7 +277,7 @@ public class Heavens extends SavedData {
     }
 
     private void watch(ServerPlayer player) {
-        int seconds = SpawnBalance.GOD_GAZE_SECONDS.get();
+        int seconds = MobsConfig.GOD_GAZE_SECONDS.get();
         if (this.gazeAt(player, Gaze.SUN, this.sunGaze, this.apolloCanCome(player.server) && sunWillAnswer(player)) >= seconds) {
             this.sunGaze.remove(player.getUUID());
             Apollo.descend(player.serverLevel(), player, this.apolloIsWary());
@@ -296,7 +296,7 @@ public class Heavens extends SavedData {
             return 0;
         }
         int seconds = held.merge(player.getUUID(), 1, Integer::sum);
-        float rise = (float) seconds / SpawnBalance.GOD_GAZE_SECONDS.get();
+        float rise = (float) seconds / MobsConfig.GOD_GAZE_SECONDS.get();
         player.playNotifySound(body == Gaze.SUN ? SoundEvents.BEACON_AMBIENT : SoundEvents.AMETHYST_BLOCK_RESONATE,
                 SoundSource.AMBIENT, 0.6F + rise, 0.6F + rise * 0.9F);
         return seconds;

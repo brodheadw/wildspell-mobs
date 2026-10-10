@@ -295,7 +295,6 @@ def m_ray_short(face, x, y, fw, fh, cube):
 
 
 
-# The chariot: gilded like him, the breastwork a madder panel in a meander frame, the wheels four-spoked.
 def m_car_floor(face, x, y, fw, fh, cube):
     if face == "top":
         return ramp(GOLD, 0.44 + (0.06 if (x + y) % 2 == 0 else 0.0)), 0
@@ -360,7 +359,6 @@ def m_wheel(face, x, y, fw, fh, cube):
     return None, 0
 
 
-# The team: four gilded horses with the same light in their seams, manes and tails of light, ember eyes.
 HORSE_CRACKS = {(6, 2), (7, 3), (7, 4), (8, 5), (15, 3), (16, 4), (16, 5)}
 
 

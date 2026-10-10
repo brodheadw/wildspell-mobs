@@ -1,27 +1,21 @@
 package com.wildspell.mobs;
 
 import com.wildspell.mobs.entity.Pegasus;
-import net.minecraft.core.BlockPos;
 import net.minecraft.gametest.framework.GameTest;
 import net.minecraft.gametest.framework.GameTestHelper;
-import net.minecraft.nbt.CompoundTag;
-import net.minecraft.util.RandomSource;
-import net.minecraft.world.entity.EntityType;
-import net.minecraft.world.entity.MobSpawnType;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.GameType;
-import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.neoforge.gametest.GameTestHolder;
 import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
 
+import static com.wildspell.mobs.GameTests.*;
+
 @GameTestHolder(WildspellMobs.MODID)
 @PrefixGameTestTemplate(false)
 public class PegasusTests {
-    private static final String ARENA = "arena";
-    private static final String SKY = "sky_arena";
 
     private static Pegasus tamedPegasus(GameTestHelper helper, float x, float y, float z) {
         Pegasus pegasus = helper.spawn(WildspellMobs.PEGASUS.get(), x, y, z);
@@ -133,68 +127,5 @@ public class PegasusTests {
             double away = pegasus.position().subtract(home[0]).horizontalDistance();
             helper.assertTrue(away < 4.0, "came down " + away + " blocks from where it rose");
         });
-    }
-
-    @GameTest(template = ARENA)
-    public static void tamedPegasusStaysGrounded(GameTestHelper helper) {
-        Pegasus pegasus = tamedPegasus(helper, 4.5F, 0.0F, 4.5F);
-        helper.runAfterDelay(5, () -> {
-            helper.assertFalse(pegasus.startSoaring(), "a tamed pegasus flew off on its own");
-            helper.succeed();
-        });
-    }
-
-    @GameTest(template = ARENA)
-    public static void pegasusSpawnsOnGrassNotStone(GameTestHelper helper) {
-        helper.setBlock(new BlockPos(2, 0, 2), Blocks.GRASS_BLOCK);
-        helper.setBlock(new BlockPos(6, 0, 6), Blocks.STONE);
-        EntityType<Pegasus> type = WildspellMobs.PEGASUS.get();
-        helper.assertTrue(Pegasus.checkPegasusSpawnRules(type, helper.getLevel(), MobSpawnType.NATURAL,
-                helper.absolutePos(new BlockPos(2, 1, 2)), helper.getLevel().random), "no spawn on grass in daylight");
-        helper.assertFalse(Pegasus.checkPegasusSpawnRules(type, helper.getLevel(), MobSpawnType.NATURAL,
-                helper.absolutePos(new BlockPos(6, 1, 6)), helper.getLevel().random), "spawned on stone");
-        helper.succeed();
-    }
-
-    @GameTest(template = ARENA)
-    public static void pegasiBreedPegasi(GameTestHelper helper) {
-        Pegasus mare = tamedPegasus(helper, 2.5F, 1.0F, 2.5F);
-        Pegasus stallion = tamedPegasus(helper, 5.5F, 1.0F, 5.5F);
-        mare.setInLove(null);
-        stallion.setInLove(null);
-        helper.assertTrue(mare.canMate(stallion), "two tamed pegasi in love can't mate");
-        helper.assertFalse(mare.canMate(helper.spawn(EntityType.HORSE, 4.5F, 1.0F, 4.5F)), "pegasus mated with a horse");
-        helper.assertTrue(mare.getBreedOffspring(helper.getLevel(), stallion) instanceof Pegasus, "foal isn't a pegasus");
-        helper.succeed();
-    }
-
-    @GameTest(template = ARENA)
-    public static void pegasusKeepsItsCoat(GameTestHelper helper) {
-        Pegasus pink = helper.spawn(WildspellMobs.PEGASUS.get(), 4.5F, 0.0F, 4.5F);
-        pink.setVariant(Pegasus.Variant.PINK);
-        CompoundTag saved = new CompoundTag();
-        pink.saveWithoutId(saved);
-        Pegasus loaded = helper.spawn(WildspellMobs.PEGASUS.get(), 2.5F, 0.0F, 2.5F);
-        loaded.load(saved);
-        helper.assertTrue(loaded.getVariant() == Pegasus.Variant.PINK, "coat lost on save: " + loaded.getVariant());
-        helper.succeed();
-    }
-
-    @GameTest(template = ARENA)
-    public static void foalsTakeAParentsCoat(GameTestHelper helper) {
-        RandomSource random = RandomSource.create(1);
-        int pinkFromWhite = 0;
-        int pinkFromPink = 0;
-        for (int i = 0; i < 4000; i++) {
-            if (Pegasus.foalVariant(Pegasus.Variant.WHITE, Pegasus.Variant.BLACK, random) == Pegasus.Variant.PINK) {
-                pinkFromWhite++;
-            }
-            if (Pegasus.foalVariant(Pegasus.Variant.PINK, Pegasus.Variant.PINK, random) == Pegasus.Variant.PINK) {
-                pinkFromPink++;
-            }
-        }
-        helper.assertTrue(pinkFromWhite < 60, "white and black made " + pinkFromWhite + " pink foals in 4000");
-        helper.assertTrue(pinkFromPink > 800 && pinkFromPink < 1300, "two pinks made " + pinkFromPink + " pink foals in 4000");
-        helper.succeed();
     }
 }

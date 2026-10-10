@@ -13,7 +13,6 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.network.syncher.EntityDataAccessor;
 import net.minecraft.network.syncher.EntityDataSerializers;
 import net.minecraft.network.syncher.SynchedEntityData;
-import net.minecraft.server.level.ServerBossEvent;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvent;
@@ -30,16 +29,12 @@ import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.monster.Monster;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
-import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.Vec3;
-import software.bernie.geckolib.animatable.GeoEntity;
-import software.bernie.geckolib.animatable.instance.AnimatableInstanceCache;
 import software.bernie.geckolib.animation.AnimatableManager;
 import software.bernie.geckolib.animation.AnimationController;
 import software.bernie.geckolib.animation.RawAnimation;
-import software.bernie.geckolib.util.GeckoLibUtil;
 
-public class Diana extends Monster implements GeoEntity {
+public class Diana extends HoveringBoss {
     public static final int ACTION_IDLE = 0;
     public static final int ACTION_DRAW = 1;
     public static final int ACTION_LOOSE = 2;
@@ -57,7 +52,6 @@ public class Diana extends Monster implements GeoEntity {
     private static final int LOSE_UNSEEN = 300;
     private static final int YIELD_TICKS = 60;
     private static final int DEPART_TICKS = 40;
-    private static final EntityDataAccessor<Byte> DATA_ACTION = SynchedEntityData.defineId(Diana.class, EntityDataSerializers.BYTE);
     private static final EntityDataAccessor<Boolean> DATA_GRIEVING = SynchedEntityData.defineId(Diana.class, EntityDataSerializers.BOOLEAN);
 
     private static final RawAnimation IDLE = RawAnimation.begin().thenLoop("animation.diana.idle");
@@ -66,10 +60,6 @@ public class Diana extends Monster implements GeoEntity {
     private static final RawAnimation SLASH = RawAnimation.begin().thenPlay("animation.diana.slash");
     private static final RawAnimation YIELD = RawAnimation.begin().thenPlay("animation.diana.yield").thenLoop("animation.diana.kneel");
 
-    private final ServerBossEvent bossEvent = (ServerBossEvent) new ServerBossEvent(Component.translatable("bossbar.wildspellmobs.diana_hunt"),
-            BossEvent.BossBarColor.BLUE, BossEvent.BossBarOverlay.PROGRESS);
-    private final AnimatableInstanceCache geoCache = GeckoLibUtil.createInstanceCache(this);
-    private int actionTicks;
     private int drawn;
     private int volleyLeft;
     private int shotCooldown = 40;
@@ -81,11 +71,10 @@ public class Diana extends Monster implements GeoEntity {
     private boolean restored;
 
     public Diana(EntityType<? extends Diana> type, Level level) {
-        super(type, level);
+        super(type, level, BossEvent.BossBarColor.BLUE, BossEvent.BossBarOverlay.PROGRESS);
         this.moveControl = new StalkMoveControl(this);
-        this.setNoGravity(true);
+        this.bossEvent.setName(Component.translatable("bossbar.wildspellmobs.diana_hunt"));
         this.xpReward = 0;
-        this.setPersistenceRequired();
     }
 
     public static AttributeSupplier.Builder createAttributes() {
@@ -146,17 +135,7 @@ public class Diana extends Monster implements GeoEntity {
     @Override
     protected void defineSynchedData(SynchedEntityData.Builder builder) {
         super.defineSynchedData(builder);
-        builder.define(DATA_ACTION, (byte) ACTION_IDLE);
         builder.define(DATA_GRIEVING, false);
-    }
-
-    public int getAction() {
-        return this.entityData.get(DATA_ACTION);
-    }
-
-    private void startAction(int action, int ticks) {
-        this.entityData.set(DATA_ACTION, (byte) action);
-        this.actionTicks = ticks;
     }
 
     public boolean isGrieving() {
@@ -500,35 +479,10 @@ public class Diana extends Monster implements GeoEntity {
     @Override
     public void remove(RemovalReason reason) {
         super.remove(reason);
-        this.bossEvent.removeAllPlayers();
         Heavens.Hunt hunt = this.hunt();
         if (hunt != null) {
             hunt.release(this);
         }
-    }
-
-    @Override
-    public boolean canFreeze() {
-        return false;
-    }
-
-    @Override
-    public boolean canChangeDimensions(Level from, Level to) {
-        return false;
-    }
-
-    @Override
-    public boolean causeFallDamage(float fallDistance, float multiplier, DamageSource source) {
-        return false;
-    }
-
-    @Override
-    protected void checkFallDamage(double y, boolean onGround, BlockState state, BlockPos pos) {
-    }
-
-    @Override
-    public boolean removeWhenFarAway(double distance) {
-        return false;
     }
 
     @Override
@@ -555,11 +509,6 @@ public class Diana extends Monster implements GeoEntity {
             case ACTION_YIELD, ACTION_DEPART -> YIELD;
             default -> IDLE;
         })));
-    }
-
-    @Override
-    public AnimatableInstanceCache getAnimatableInstanceCache() {
-        return this.geoCache;
     }
 
     private static class StalkMoveControl extends ThrustMoveControl {
