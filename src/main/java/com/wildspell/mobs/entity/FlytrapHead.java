@@ -2,6 +2,7 @@ package com.wildspell.mobs.entity;
 
 import com.wildspell.mobs.WildspellMobs;
 import com.wildspell.mobs.flytrap.FlytrapBlock;
+import java.util.List;
 import javax.annotation.Nullable;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.registries.Registries;
@@ -21,6 +22,7 @@ import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.EntityDimensions;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.MoverType;
 import net.minecraft.world.entity.Pose;
 import net.minecraft.world.entity.ai.attributes.AttributeSupplier;
@@ -44,6 +46,7 @@ import software.bernie.geckolib.util.GeckoLibUtil;
 public class FlytrapHead extends Monster implements GeoEntity {
     private static final EntityDataAccessor<Byte> DATA_ACTION = SynchedEntityData.defineId(FlytrapHead.class, EntityDataSerializers.BYTE);
     private static final EntityDataAccessor<Byte> DATA_SIZE = SynchedEntityData.defineId(FlytrapHead.class, EntityDataSerializers.BYTE);
+    private static final EntityDataAccessor<Boolean> DATA_AWAKE = SynchedEntityData.defineId(FlytrapHead.class, EntityDataSerializers.BOOLEAN);
     public static final byte ACTION_IDLE = 0;
     public static final byte ACTION_LUNGE = 1;
     public static final byte ACTION_HOLD = 2;
@@ -62,6 +65,7 @@ public class FlytrapHead extends Monster implements GeoEntity {
 
     public static final double SENSE_RADIUS = 8.0;
     private static final int SENSE_INTERVAL = 4;
+    private static final int SETTLE_TICKS = 40;
     public static final int LUNGE_TICKS = 8;
     public static final int HOLD_TICKS = 24;
     private static final int HOLD_SLOWNESS = 4;
@@ -69,6 +73,7 @@ public class FlytrapHead extends Monster implements GeoEntity {
     private static final int HOLD_COOLDOWN = 30;
     private static final int CUT_COOLDOWN = 60;
 
+    private static final RawAnimation REST = RawAnimation.begin().thenLoop("animation.flytrap_head.rest");
     private static final RawAnimation IDLE = RawAnimation.begin().thenLoop("animation.flytrap_head.idle");
     private static final RawAnimation LUNGE = RawAnimation.begin().thenPlay("animation.flytrap_head.lunge");
     private static final RawAnimation HOLD = RawAnimation.begin().thenLoop("animation.flytrap_head.hold");
@@ -80,6 +85,7 @@ public class FlytrapHead extends Monster implements GeoEntity {
     private int lungeTicks;
     private int holdTicks;
     private int cooldown;
+    private int wakeTicks;
     @Nullable
     private LivingEntity held;
 
@@ -110,6 +116,11 @@ public class FlytrapHead extends Monster implements GeoEntity {
         super.defineSynchedData(builder);
         builder.define(DATA_ACTION, ACTION_IDLE);
         builder.define(DATA_SIZE, (byte) SIZE_MEDIUM);
+        builder.define(DATA_AWAKE, false);
+    }
+
+    public boolean isAwake() {
+        return this.entityData.get(DATA_AWAKE);
     }
 
     public byte getAction() {
@@ -218,7 +229,17 @@ public class FlytrapHead extends Monster implements GeoEntity {
 
     @Override
     protected void registerGoals() {
-        this.goalSelector.addGoal(8, new RandomLookAroundGoal(this));
+        this.goalSelector.addGoal(8, new RandomLookAroundGoal(this) {
+            @Override
+            public boolean canUse() {
+                return FlytrapHead.this.isAwake() && super.canUse();
+            }
+
+            @Override
+            public boolean canContinueToUse() {
+                return FlytrapHead.this.isAwake() && super.canContinueToUse();
+            }
+        });
     }
 
     @Override
@@ -235,8 +256,11 @@ public class FlytrapHead extends Monster implements GeoEntity {
     protected void customServerAiStep() {
         super.customServerAiStep();
         if (this.tickCount % SENSE_INTERVAL == 0) {
-            this.motion.sense(this.level().getEntitiesOfClass(LivingEntity.class, this.getBoundingBox().inflate(SENSE_RADIUS),
-                    e -> e != this && e.isAlive()));
+            List<LivingEntity> near = this.level().getEntitiesOfClass(LivingEntity.class, this.getBoundingBox().inflate(SENSE_RADIUS),
+                    e -> e != this && e.isAlive());
+            this.motion.sense(near);
+            this.wakeTicks = near.stream().anyMatch(this::notices) ? SETTLE_TICKS : Math.max(0, this.wakeTicks - SENSE_INTERVAL);
+            this.entityData.set(DATA_AWAKE, this.wakeTicks > 0);
         }
         if (this.cooldown > 0) {
             --this.cooldown;
@@ -280,6 +304,10 @@ public class FlytrapHead extends Monster implements GeoEntity {
         return other != this && other.isAlive() && !other.getType().is(HOSTILE_GROWTH) && !other.isSpectator()
                 && !(other instanceof Player player && player.isCreative()) && !other.isShiftKeyDown()
                 && this.hunts(other) && this.isMoving(other) && this.getSensing().hasLineOfSight(other);
+    }
+
+    private boolean notices(LivingEntity other) {
+        return (other instanceof Mob || other instanceof Player) && !other.isSpectator() && !other.getType().is(HOSTILE_GROWTH);
     }
 
     public boolean hunts(LivingEntity other) {
@@ -504,7 +532,7 @@ public class FlytrapHead extends Monster implements GeoEntity {
                 this.isDeadOrDying() ? WITHER : switch (this.getAction()) {
                     case ACTION_LUNGE -> LUNGE;
                     case ACTION_HOLD -> HOLD;
-                    default -> IDLE;
+                    default -> this.isAwake() ? IDLE : REST;
                 })));
     }
 

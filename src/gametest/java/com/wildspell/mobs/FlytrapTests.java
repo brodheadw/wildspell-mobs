@@ -11,6 +11,8 @@ import net.minecraft.gametest.framework.GameTest;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.util.RandomSource;
 import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.animal.Pig;
@@ -24,8 +26,10 @@ import net.minecraft.world.level.GameType;
 import net.minecraft.world.level.biome.Biome;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.LeavesBlock;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.properties.IntegerProperty;
+import net.minecraft.world.level.levelgen.feature.configurations.NoneFeatureConfiguration;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.neoforge.gametest.GameTestHolder;
 import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
@@ -186,6 +190,71 @@ public class FlytrapTests {
             clearPlants(helper);
             helper.succeed();
         });
+    }
+
+    @GameTest(template = ARENA, timeoutTicks = 200, batch = "flytrapWake")
+    public static void headLiesStillUntilSomethingComesNear(GameTestHelper helper) {
+        lawn(helper);
+        plant(helper, PLANT, 1);
+        plant(helper, new BlockPos(1, 1, 1), 1);
+        Pig[] pig = {null};
+        helper.runAfterDelay(12, () -> {
+            helper.assertFalse(head(helper, PLANT).isAwake(), "a flytrap with nothing near it is awake");
+            pig[0] = helper.spawn(EntityType.PIG, 8.5F, 1.0F, 8.5F);
+            pig[0].setNoAi(true);
+        });
+        helper.runAfterDelay(24, () -> {
+            helper.assertTrue(head(helper, PLANT).isAwake(), "a pig standing beside the flytrap didn't wake it");
+            pig[0].discard();
+        });
+        helper.runAfterDelay(80, () -> {
+            helper.assertFalse(head(helper, PLANT).isAwake(), "the flytrap never settled after the pig left");
+            clearPlants(helper);
+            helper.succeed();
+        });
+    }
+
+    @GameTest(template = SKY, timeoutTicks = 40, batch = "flytrapThicket", skyAccess = true)
+    public static void patchesTakeOnlyShadyThickets(GameTestHelper helper) {
+        BlockPos centre = new BlockPos(4, 1, 4);
+        lawn(helper);
+        canopy(helper, Blocks.OAK_LEAVES.defaultBlockState().setValue(LeavesBlock.PERSISTENT, true));
+        helper.assertTrue(growPatch(helper, centre) == 0, "a patch grew under a bare canopy with no undergrowth");
+        canopy(helper, Blocks.AIR.defaultBlockState());
+        for (int x = 0; x < 9; ++x) {
+            for (int z = 0; z < 9; ++z) {
+                if ((x + z) % 2 == 0) {
+                    helper.setBlock(x, 1, z, Blocks.FERN);
+                }
+            }
+        }
+        helper.assertTrue(growPatch(helper, centre) == 0, "a patch grew among ferns out in open sky");
+        canopy(helper, Blocks.OAK_LEAVES.defaultBlockState().setValue(LeavesBlock.PERSISTENT, true));
+        helper.assertTrue(growPatch(helper, centre) > 0, "no patch grew among ferns in shade");
+        clearPlants(helper);
+        helper.succeed();
+    }
+
+    private static int growPatch(GameTestHelper helper, BlockPos origin) {
+        clearPlants(helper);
+        ServerLevel level = helper.getLevel();
+        WildspellMobs.FLYTRAP_PATCH.get().place(NoneFeatureConfiguration.INSTANCE, level, level.getChunkSource().getGenerator(),
+                RandomSource.create(7), helper.absolutePos(origin));
+        int plants = 0;
+        for (BlockPos pos : BlockPos.betweenClosed(helper.absolutePos(new BlockPos(0, 0, 0)), helper.absolutePos(new BlockPos(8, 3, 8)))) {
+            if (level.getBlockState(pos).is(WildspellMobs.FLYTRAP.get())) {
+                ++plants;
+            }
+        }
+        return plants;
+    }
+
+    private static void canopy(GameTestHelper helper, BlockState leaves) {
+        for (int x = -1; x <= 9; ++x) {
+            for (int z = -1; z <= 9; ++z) {
+                helper.setBlock(x, 7, z, leaves);
+            }
+        }
     }
 
     private static void clearPlants(GameTestHelper helper) {
