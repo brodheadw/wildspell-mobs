@@ -14,7 +14,9 @@ import net.neoforged.fml.ModContainer;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.fml.common.Mod;
 import net.neoforged.neoforge.client.event.EntityRenderersEvent;
+import net.neoforged.neoforge.client.event.RegisterGuiLayersEvent;
 import net.neoforged.neoforge.client.event.RegisterParticleProvidersEvent;
+import net.neoforged.neoforge.client.gui.VanillaGuiLayers;
 import net.neoforged.neoforge.client.gui.ConfigurationScreen;
 import net.neoforged.neoforge.client.gui.IConfigScreenFactory;
 
@@ -66,6 +68,12 @@ public class WildspellMobsClient {
         event.registerEntityRenderer(WildspellMobs.DIANA.get(), DianaRenderer::new);
         event.registerEntityRenderer(WildspellMobs.STEMWALKER.get(), StemwalkerRenderer::new);
         event.registerEntityRenderer(WildspellMobs.MOON_ARROW.get(), MoonArrowRenderer::new);
+        WildspellMobs.WATCHERS.forEach((face, type) -> event.registerEntityRenderer(type.get(), context -> new WatcherRenderer(context, face.id)));
+    }
+
+    @SubscribeEvent
+    static void registerGuiLayers(RegisterGuiLayersEvent event) {
+        event.registerAbove(VanillaGuiLayers.CAMERA_OVERLAYS, WildspellMobs.id("glare"), new GlareOverlay());
     }
 
     @SubscribeEvent
