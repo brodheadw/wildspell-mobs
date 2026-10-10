@@ -96,9 +96,7 @@ configurations {
 
 dependencies {
     gametestImplementation sourceSets.main.output
-    // YUNG's Cave Biomes (+ its API) at dev runtime only, so gametests can check the Frosted Caves spawn list; not shipped or declared.
     localRuntime rootProject.fileTree(dir: 'libs', include: '*.jar')
-    // Compiled against from its Maven so a clean checkout (and CI) builds; at dev runtime it comes from ./libs.
     compileOnly "software.bernie.geckolib:geckolib-neoforge-${minecraft_version}:${geckolib_version}"
 }
 

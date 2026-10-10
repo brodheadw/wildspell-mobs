@@ -1,6 +1,6 @@
 package com.wildspell.mobs.gods;
 
-import com.wildspell.mobs.SpawnBalance;
+import com.wildspell.mobs.MobsConfig;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.player.Player;
@@ -42,7 +42,7 @@ public enum Gaze {
 
     public boolean holds(Player player) {
         return isAloft(player) && this.holds(player.getViewVector(1.0F), player.level().getTimeOfDay(1.0F),
-                SpawnBalance.GOD_ZENITH_DEGREES.get(), SpawnBalance.GOD_GAZE_DEGREES.get());
+                MobsConfig.GOD_ZENITH_DEGREES.get(), MobsConfig.GOD_GAZE_DEGREES.get());
     }
 
     public static double degreesBetween(Vec3 a, Vec3 b) {
@@ -50,10 +50,10 @@ public enum Gaze {
     }
 
     public static boolean isGodSky(Level level) {
-        return level.dimension().location().equals(ResourceLocation.tryParse(SpawnBalance.GOD_SKY_DIMENSION.get()));
+        return level.dimension().location().equals(ResourceLocation.tryParse(MobsConfig.GOD_SKY_DIMENSION.get()));
     }
 
     public static boolean isAloft(Player player) {
-        return player.isAlive() && !player.isSpectator() && isGodSky(player.level()) && player.getY() > SpawnBalance.GOD_ARRIVAL_HEIGHT.get();
+        return player.isAlive() && !player.isSpectator() && isGodSky(player.level()) && player.getY() > MobsConfig.GOD_ARRIVAL_HEIGHT.get();
     }
 }

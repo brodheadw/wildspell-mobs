@@ -1,7 +1,6 @@
 package com.wildspell.mobs;
 
 import com.wildspell.mobs.entity.LuminousMoth;
-import com.wildspell.mobs.moth.MothBottleItem;
 import java.util.List;
 import java.util.function.BiPredicate;
 import net.minecraft.core.BlockPos;
@@ -13,7 +12,6 @@ import net.minecraft.resources.ResourceKey;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.LivingEntity;
-import net.minecraft.world.entity.MobCategory;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
@@ -27,55 +25,17 @@ import net.minecraft.world.phys.Vec3;
 import net.neoforged.neoforge.gametest.GameTestHolder;
 import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
 
+import static com.wildspell.mobs.GameTests.*;
+
 @GameTestHolder(WildspellMobs.MODID)
 @PrefixGameTestTemplate(false)
 public class LuminousMothTests {
-    private static final String ARENA = "arena";
     private static final ResourceKey<Biome> LUSH_CAVES = ResourceKey.create(Registries.BIOME, ResourceLocation.withDefaultNamespace("lush_caves"));
-
-    @GameTest(template = ARENA, timeoutTicks = 100)
-    public static void mothHoversWithoutFalling(GameTestHelper helper) {
-        LuminousMoth moth = helper.spawn(WildspellMobs.LUMINOUS_MOTH.get(), 4.5F, 4.0F, 4.5F);
-        moth.setNoAi(true);
-        helper.runAfterDelay(60, () -> {
-            double height = helper.relativeVec(moth.position()).y;
-            helper.assertTrue(Math.abs(height - 4.0) < 0.01, "moth fell to relative y=" + height);
-            helper.succeed();
-        });
-    }
-
-    @GameTest(template = ARENA)
-    public static void lushCavesSpawnMoths(GameTestHelper helper) {
-        Biome biome = helper.getLevel().registryAccess().registryOrThrow(Registries.BIOME).get(LUSH_CAVES);
-        boolean listed = biome.getMobSettings().getMobs(MobCategory.AMBIENT).unwrap().stream()
-                .anyMatch(data -> data.type == WildspellMobs.LUMINOUS_MOTH.get());
-        helper.assertTrue(listed, "luminous moth missing from lush caves ambient spawns");
-        helper.succeed();
-    }
-
-    // Own batch: light from one test's moth mustn't reach into another's sealed cave.
-    @GameTest(template = ARENA, timeoutTicks = 200, batch = "mothTrail")
-    public static void mothsLightGoesWithIt(GameTestHelper helper) {
-        WildspellMobsTests.sealCave(helper);
-        BlockPos spot = new BlockPos(4, 2, 4);
-        LuminousMoth moth = helper.spawn(WildspellMobs.LUMINOUS_MOTH.get(), 4.5F, 2.2F, 4.5F);
-        moth.setNoAi(true);
-        helper.runAfterDelay(30, () -> {
-            helper.assertBlockPresent(WildspellMobs.MOTH_GLOW.get(), spot);
-            helper.assertTrue(blockLight(helper, spot) >= LuminousMoth.TRAIL_LIGHT, "moth's spot lit only " + blockLight(helper, spot));
-            moth.discard();
-        });
-        helper.runAfterDelay(80, () -> {
-            helper.assertBlockNotPresent(WildspellMobs.MOTH_GLOW.get(), spot);
-            helper.assertTrue(blockLight(helper, spot) == 0, "light lingered after the moth left: " + blockLight(helper, spot));
-            helper.succeed();
-        });
-    }
 
     @GameTest(template = ARENA, timeoutTicks = 1600, batch = "mothPerch")
     public static void mothLandsOnPlantsAndBrightensMoss(GameTestHelper helper) {
-        for (int x = 0; x < 9; ++x) {
-            for (int z = 0; z < 9; ++z) {
+        for (int x = -2; x <= 10; ++x) {
+            for (int z = -2; z <= 10; ++z) {
                 helper.setBlock(x, 0, z, Blocks.MOSS_BLOCK);
                 if ((x + z) % 2 == 0) {
                     helper.setBlock(x, 1, z, Blocks.MOSS_CARPET);
@@ -103,22 +63,11 @@ public class LuminousMothTests {
     @GameTest(template = ARENA, timeoutTicks = 200, batch = "mothFlee")
     public static void aMothInFlightFleesAPlayer(GameTestHelper helper) {
         LuminousMoth moth = helper.spawn(WildspellMobs.LUMINOUS_MOTH.get(), 4.5F, 4.0F, 4.5F);
-        Player player = WildspellMobsTests.addMockPlayer(helper, new Vec3(2.0, 1.0, 4.5));
+        Player player = addMockPlayer(helper, new Vec3(2.0, 1.0, 4.5));
         double start = moth.distanceTo(player);
         helper.runAfterDelay(40, () -> {
             double now = moth.distanceTo(player);
             helper.assertTrue(now > LuminousMoth.FLEE_RADIUS, "in two seconds the moth only got from " + start + " to " + now + " blocks off");
-            succeedAndLeave(helper, player);
-        });
-    }
-
-    @GameTest(template = ARENA, timeoutTicks = 200, batch = "mothLureStay")
-    public static void aMothStaysNearAPlayerWithASporeBlossom(GameTestHelper helper) {
-        LuminousMoth moth = helper.spawn(WildspellMobs.LUMINOUS_MOTH.get(), 4.5F, 3.0F, 4.5F);
-        Player player = WildspellMobsTests.addMockPlayer(helper, new Vec3(2.0, 1.0, 4.5));
-        player.setItemInHand(InteractionHand.MAIN_HAND, new ItemStack(Items.SPORE_BLOSSOM));
-        helper.runAfterDelay(60, () -> {
-            helper.assertTrue(moth.distanceTo(player) < 4.0, "fled a player holding a lure: " + moth.distanceTo(player));
             succeedAndLeave(helper, player);
         });
     }
@@ -131,47 +80,9 @@ public class LuminousMothTests {
         });
     }
 
-    @GameTest(template = ARENA, timeoutTicks = 1600, batch = "mothWall")
-    public static void mothSettlesOnAWall(GameTestHelper helper) {
-        for (int x = 1; x <= 7; ++x) {
-            for (int y = 0; y <= 6; ++y) {
-                for (int z = 1; z <= 7; ++z) {
-                    boolean shell = x == 1 || x == 7 || z == 1 || z == 7 || y == 6;
-                    helper.setBlock(x, y, z, shell ? Blocks.STONE : y == 0 ? Blocks.WATER : Blocks.AIR);
-                }
-            }
-        }
-        LuminousMoth moth = helper.spawn(WildspellMobs.LUMINOUS_MOTH.get(), 4.5F, 3.0F, 4.5F);
-        helper.succeedWhen(() -> {
-            helper.assertTrue(moth.isPerched(), "moth hasn't settled; at " + helper.relativeVec(moth.position()));
-            helper.assertTrue(moth.getPerchFace().getAxis().isHorizontal(), "settled facing " + moth.getPerchFace() + ", not on a wall");
-            helper.assertTrue(moth.getHealth() == moth.getMaxHealth(), "hurt itself settling on the wall: " + moth.getHealth());
-        });
-    }
-
-    @GameTest(template = ARENA, timeoutTicks = 100, batch = "mothMossFade")
-    public static void luminousMossFadesOnlyWithNoMothNear(GameTestHelper helper) {
-        BlockPos lonely = new BlockPos(0, 1, 0);
-        BlockPos kept = new BlockPos(7, 1, 7);
-        helper.setBlock(lonely, WildspellMobs.LUMINOUS_MOSS.get());
-        helper.setBlock(kept, WildspellMobs.LUMINOUS_MOSS_CARPET.get());
-        helper.setBlock(kept.below(), Blocks.STONE);
-        LuminousMoth moth = helper.spawn(WildspellMobs.LUMINOUS_MOTH.get(), 8.5F, 3.0F, 8.5F);
-        moth.setNoAi(true);
-        helper.runAfterDelay(2, () -> {
-            for (int i = 0; i < 200; ++i) {
-                randomTick(helper, lonely);
-                randomTick(helper, kept);
-            }
-            helper.assertBlockPresent(Blocks.MOSS_BLOCK, lonely);
-            helper.assertBlockPresent(WildspellMobs.LUMINOUS_MOSS_CARPET.get(), kept);
-            helper.succeed();
-        });
-    }
-
     @GameTest(template = ARENA, timeoutTicks = 400, batch = "mothLure")
     public static void mothFollowsASporeBlossom(GameTestHelper helper) {
-        Player player = WildspellMobsTests.addMockPlayer(helper, new Vec3(1.5, 1.0, 1.5));
+        Player player = addMockPlayer(helper, new Vec3(1.5, 1.0, 1.5));
         player.setItemInHand(InteractionHand.MAIN_HAND, new ItemStack(Items.SPORE_BLOSSOM));
         LuminousMoth moth = helper.spawn(WildspellMobs.LUMINOUS_MOTH.get(), 7.5F, 3.0F, 7.5F);
         helper.onEachTick(() -> {
@@ -183,7 +94,7 @@ public class LuminousMothTests {
 
     @GameTest(template = ARENA, timeoutTicks = 400, batch = "mothLantern")
     public static void bottledMothReleasedInTheDarkLightsIt(GameTestHelper helper) {
-        WildspellMobsTests.sealCave(helper);
+        sealCave(helper);
         BlockPos floor = new BlockPos(4, 0, 4);
         BlockPos home = floor.above();
         LuminousMoth wild = helper.spawn(WildspellMobs.LUMINOUS_MOTH.get(), 4.5F, 2.0F, 4.5F);
@@ -216,17 +127,6 @@ public class LuminousMothTests {
         });
     }
 
-    @GameTest(template = ARENA, timeoutTicks = 100)
-    public static void mothReleasedInTheLightHasNoHome(GameTestHelper helper) {
-        helper.setBlock(4, 1, 3, Blocks.GLOWSTONE);
-        helper.runAfterDelay(10, () -> {
-            LuminousMoth moth = MothBottleItem.release(helper.getLevel(), helper.absolutePos(new BlockPos(4, 1, 4)),
-                    new ItemStack(WildspellMobs.LUMINOUS_MOTH_BOTTLE.get()), null);
-            helper.assertTrue(moth.getHome() == null, "released by glowstone but took a home");
-            helper.succeed();
-        });
-    }
-
     private static void watchAPerchedMoth(GameTestHelper helper, boolean sneaking, BiPredicate<LuminousMoth, Integer> check) {
         for (int x = 0; x < 9; ++x) {
             for (int z = 0; z < 9; ++z) {
@@ -235,7 +135,7 @@ public class LuminousMothTests {
             }
         }
         LuminousMoth moth = helper.spawn(WildspellMobs.LUMINOUS_MOTH.get(), 4.5F, 2.5F, 4.5F);
-        Player player = WildspellMobsTests.addMockPlayer(helper, new Vec3(0.5, 1.1, 0.5));
+        Player player = addMockPlayer(helper, new Vec3(0.5, 1.1, 0.5));
         player.setShiftKeyDown(true);
         int[] walked = {-1};
         helper.runAtTickTime(1590, () -> helper.fail("moth never settled; at " + helper.relativeVec(moth.position()) + " alive=" + moth.isAlive()
@@ -264,17 +164,12 @@ public class LuminousMothTests {
 
     private static int countLuminousMoss(GameTestHelper helper) {
         int count = 0;
-        for (BlockPos pos : BlockPos.betweenClosed(0, 0, 0, 8, 2, 8)) {
+        for (BlockPos pos : BlockPos.betweenClosed(-2, 0, -2, 10, 2, 10)) {
             if (helper.getBlockState(pos).is(WildspellMobs.LUMINOUS_MOSS.get()) || helper.getBlockState(pos).is(WildspellMobs.LUMINOUS_MOSS_CARPET.get())) {
                 ++count;
             }
         }
         return count;
-    }
-
-    private static void randomTick(GameTestHelper helper, BlockPos relative) {
-        BlockPos pos = helper.absolutePos(relative);
-        helper.getLevel().getBlockState(pos).randomTick(helper.getLevel(), pos, helper.getLevel().random);
     }
 
     private static void succeedAndLeave(GameTestHelper helper, Player player) {

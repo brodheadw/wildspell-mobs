@@ -16,9 +16,7 @@ stonecutter {
     centralScript = 'build.gradle'
 
     create(rootProject) {
-        // One target per Minecraft version the mod builds for. The Frozen Zombie is compiled in below 26.4,
-        // where Minecraft has its own (the Frostbite). To add a version, add a line here and a
-        // versions/<mc>-neoforge/gradle.properties.
+        // A new version needs a line here and a versions/<mc>-neoforge/gradle.properties.
         vers('1.21.1-neoforge', '1.21.1')
         vcsVersion = '1.21.1-neoforge'
     }

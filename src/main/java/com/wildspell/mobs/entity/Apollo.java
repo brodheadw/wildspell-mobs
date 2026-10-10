@@ -22,7 +22,6 @@ import net.minecraft.network.syncher.EntityDataAccessor;
 import net.minecraft.network.syncher.EntityDataSerializers;
 import net.minecraft.network.syncher.SynchedEntityData;
 import net.minecraft.server.MinecraftServer;
-import net.minecraft.server.level.ServerBossEvent;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvent;
@@ -42,17 +41,13 @@ import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.monster.Monster;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
-import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
-import software.bernie.geckolib.animatable.GeoEntity;
-import software.bernie.geckolib.animatable.instance.AnimatableInstanceCache;
 import software.bernie.geckolib.animation.AnimatableManager;
 import software.bernie.geckolib.animation.AnimationController;
 import software.bernie.geckolib.animation.RawAnimation;
-import software.bernie.geckolib.util.GeckoLibUtil;
 
-public class Apollo extends Monster implements GeoEntity {
+public class Apollo extends HoveringBoss {
     public static final int ACTION_IDLE = 0;
     public static final int ACTION_THROW = 1;
     public static final int ACTION_FOCUS = 2;
@@ -80,7 +75,6 @@ public class Apollo extends Monster implements GeoEntity {
     private static final int DESCEND_TICKS = 60;
     private static final int LEAVE_TICKS = 40;
     private static final double ARRIVE_DISTANCE = 40.0;
-    private static final EntityDataAccessor<Byte> DATA_ACTION = SynchedEntityData.defineId(Apollo.class, EntityDataSerializers.BYTE);
     private static final EntityDataAccessor<Byte> DATA_RAYS = SynchedEntityData.defineId(Apollo.class, EntityDataSerializers.BYTE);
 
     private static final RawAnimation IDLE = RawAnimation.begin().thenLoop("animation.apollo.idle");
@@ -90,12 +84,8 @@ public class Apollo extends Monster implements GeoEntity {
     private static final RawAnimation CONCEDE = RawAnimation.begin().thenLoop("animation.apollo.concede");
     private static final RawAnimation WARNED = RawAnimation.begin().thenLoop("animation.apollo.warned");
 
-    private final ServerBossEvent bossEvent = (ServerBossEvent) new ServerBossEvent(this.getDisplayName(),
-            BossEvent.BossBarColor.YELLOW, BossEvent.BossBarOverlay.NOTCHED_12);
-    private final AnimatableInstanceCache geoCache = GeckoLibUtil.createInstanceCache(this);
     private final Set<UUID> participants = new LinkedHashSet<>();
     private final Set<UUID> strikers = new HashSet<>();
-    private int actionTicks;
     private int throwCooldown = 30;
     private int focusCooldown = 140;
     private int glareCooldown = 200;
@@ -112,11 +102,9 @@ public class Apollo extends Monster implements GeoEntity {
     private boolean slain;
 
     public Apollo(EntityType<? extends Apollo> type, Level level) {
-        super(type, level);
+        super(type, level, BossEvent.BossBarColor.YELLOW, BossEvent.BossBarOverlay.NOTCHED_12);
         this.moveControl = new GlideMoveControl(this);
-        this.setNoGravity(true);
         this.xpReward = 500;
-        this.setPersistenceRequired();
     }
 
     public static AttributeSupplier.Builder createAttributes() {
@@ -157,12 +145,7 @@ public class Apollo extends Monster implements GeoEntity {
     @Override
     protected void defineSynchedData(SynchedEntityData.Builder builder) {
         super.defineSynchedData(builder);
-        builder.define(DATA_ACTION, (byte) ACTION_IDLE);
         builder.define(DATA_RAYS, (byte) MAX_RAYS);
-    }
-
-    public int getAction() {
-        return this.entityData.get(DATA_ACTION);
     }
 
     public int rays() {
@@ -171,11 +154,6 @@ public class Apollo extends Monster implements GeoEntity {
 
     private void setRays(int rays) {
         this.entityData.set(DATA_RAYS, (byte) Mth.clamp(rays, 0, MAX_RAYS));
-    }
-
-    private void startAction(int action, int ticks) {
-        this.entityData.set(DATA_ACTION, (byte) action);
-        this.actionTicks = ticks;
     }
 
     public boolean isEnraged() {
@@ -719,39 +697,9 @@ public class Apollo extends Monster implements GeoEntity {
     @Override
     public void remove(RemovalReason reason) {
         super.remove(reason);
-        this.bossEvent.removeAllPlayers();
         if (this.level() instanceof ServerLevel level) {
             Heavens.get(level).apolloGone(this);
         }
-    }
-
-    @Override
-    public boolean fireImmune() {
-        return true;
-    }
-
-    @Override
-    public boolean canFreeze() {
-        return false;
-    }
-
-    @Override
-    public boolean canChangeDimensions(Level from, Level to) {
-        return false;
-    }
-
-    @Override
-    public boolean causeFallDamage(float fallDistance, float multiplier, DamageSource source) {
-        return false;
-    }
-
-    @Override
-    protected void checkFallDamage(double y, boolean onGround, BlockState state, BlockPos pos) {
-    }
-
-    @Override
-    public boolean removeWhenFarAway(double distance) {
-        return false;
     }
 
     @Override
@@ -790,11 +738,6 @@ public class Apollo extends Monster implements GeoEntity {
             case ACTION_WARNED -> WARNED;
             default -> IDLE;
         })));
-    }
-
-    @Override
-    public AnimatableInstanceCache getAnimatableInstanceCache() {
-        return this.geoCache;
     }
 
     private static class GlideMoveControl extends ThrustMoveControl {
