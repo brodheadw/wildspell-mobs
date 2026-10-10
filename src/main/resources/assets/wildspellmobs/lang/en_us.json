@@ -113,5 +113,11 @@
   "effect.wildspellmobs.bound": "Bound",
   "effect.wildspellmobs.glare": "Glare",
   "wildspellmobs.configuration.watcherChance": "Watcher Chance",
-  "wildspellmobs.configuration.watcherRestSeconds": "Watcher Rest (seconds)"
+  "wildspellmobs.configuration.watcherRestSeconds": "Watcher Rest (seconds)",
+  "entity.wildspellmobs.scorpion": "Scorpion",
+  "item.wildspellmobs.scorpion_spawn_egg": "Scorpion Spawn Egg",
+  "item.wildspellmobs.scorpion_stinger": "Scorpion Stinger",
+  "entity.wildspellmobs.scarab": "Scarab",
+  "item.wildspellmobs.scarab_spawn_egg": "Scarab Spawn Egg",
+  "item.wildspellmobs.bottled_scarab": "Bottled Scarab"
 }

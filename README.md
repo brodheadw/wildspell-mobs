@@ -1,7 +1,7 @@
 # Wildspell Mobs
 
-Cold-cave monsters for YUNG's Cave Biomes' Frosted Caves, a glowing moth for the Lush Caves, and the sun and moon gods
-above the Aether, NeoForge 1.21.1. MIT licensed.
+Cold-cave monsters for YUNG's Cave Biomes' Frosted Caves, scorpions and scarabs for its Lost Caves, a glowing moth for the
+Lush Caves, and the sun and moon gods above the Aether, NeoForge 1.21.1. MIT licensed.
 The player-facing description is [publish/DESCRIPTION.md](publish/DESCRIPTION.md); Modrinth project
 `wildspell-mobs` (id `EAr8sZ9J`).
 
@@ -119,6 +119,27 @@ The player-facing description is [publish/DESCRIPTION.md](publish/DESCRIPTION.md
   `flytrap_patch_jungle` and `flytrap_patch_lush_caves`). Wildspell Magic places the block by id at
   any `age` at the edge of runaway growth (placing the grown stage builds its stem) and withers it to
   air on a reversal; `#wildspellmobs:hostile_growth` holds both blocks and the head.
+- **Scorpion**: a small scorpion (GeckoLib model, about silverfish size: pale straw with dusky keels, the tail held
+  arched over the back) of YUNG's Lost Caves and, at night, desert and badlands sand (`#wildspellmobs:scorpion_spawns`;
+  the Lost Caves id is optional). It spawns only on `#wildspellmobs:scorpion_burrows_in` (sand, red sand, ancient sand)
+  and starts buried, its eyes, claw tips and sting just above the sand. It feels the ground: anything walking within 3
+  blocks wakes it, while a sneaking player, anything standing still and anything off the ground don't. It stings
+  players and animals, never monsters or scarabs: 1.5 damage, Poison (2/4/7 s by difficulty) and a second of Slowness
+  II, and it chases no farther than 6 blocks from where it came up. With nothing to sting for 5 seconds it digs back
+  in, on the spot or on sand within 8 blocks. Hurt, it runs from whatever hurt it for 2.5 s, then burrows somewhere else. Sunlight drives it under: in the open
+  by day it burrows at once, wakes only for something right on top of it (1.25 blocks) and goes back under after one
+  sting. The underground spawn balance doesn't thin it. It drops 0-1 **Scorpion Stinger** (Looting adds one), kept
+  for Wildspell Magic.
+- **Scarab**: rare, small and peaceful (ambient; GeckoLib model, dark iridescent gold-green, the head's edge toothed
+  like a rake), on sand in the Lost Caves at any hour and on desert sand only at dawn (`#wildspellmobs:scarab_spawns`,
+  on `#wildspellmobs:scarab_spawnable_on`). Head down, it walks backwards pushing a ball with its hind legs: sand if it
+  rose from sand, dung anywhere else. It rolls in a straight line; every 12 blocks, or when a wall, water or a drop
+  stops it, it climbs onto the ball and turns there to take a new bearing. Under the open sky the bearing is the sun's:
+  east through the morning (it rolls the sun up), west in the afternoon. Underground or at night it keeps roughly the
+  line it had, and when blocked it turns 70-150 degrees away. Once dawn is over, a wild scarab under the sky on sand
+  digs itself and its ball in and is gone. A glass bottle catches it as `wildspellmobs:bottled_scarab` (the id
+  Wildspell Magic looks it up by), keeping its ball; using the bottle on a block releases it, and a released scarab
+  stays.
 - **The Sun** (`apollo` in code and ids: Apollo and Helios as one figure; the name is the one lang key
   `entity.wildspellmobs.apollo`): a
   boss nothing spawns. The sun only answers a player who has helped slay `apolloWardens` (4) Sun Spirits, the
@@ -230,10 +251,11 @@ The player-facing description is [publish/DESCRIPTION.md](publish/DESCRIPTION.md
   - `entity/`: `RimeSkull`, `FrozenZombie`, `IceLich`, `LichWisp` (its soul in flight), `FrostShard`
     (every frost projectile), `Frost` (the shared freezing rules), `ElectricEel`, `FlytrapHead`,
     `ColdEffects` (spot searches and shared effects), `ThrustMoveControl` (the flyers' steering),
-    `MotionSense` (what moved, for the moth and the flytrap), `Stemwalker`, `Watcher`.
+    `MotionSense` (what moved, for the moth, the flytrap and the scorpion), `Stemwalker`, `Watcher`, `Scorpion`, `Scarab`.
   - `crypt/`: the crypt structure and its piece, the phylactery block and its block entity (ambushes,
     re-forming, the braziers, the wards).
-  - `item/`: `FrostboundStaffItem`, `SoulseekerItem` and its recipe type.
+  - `item/`: `FrostboundStaffItem`, `SoulseekerItem` and its recipe type, `CreatureBottleItem` (a creature caught in a
+    glass bottle and released from it, for the moth and the scarab) and `ScarabBottleItem`.
   - `moth/`: the moth's glow block, Luminous Moss and the bottled moth; the moth itself is in `entity/`.
   - `flytrap/`: the flytrap's block, its stem and its world-generation patch; its heads are in `entity/`.
   - `gods/`: the sun and moon gods' arrival (`Gaze`: where the sun and moon stand, who is gazing) and their world
@@ -247,7 +269,8 @@ The player-facing description is [publish/DESCRIPTION.md](publish/DESCRIPTION.md
 - `src/main/resources/`: textures, sounds, lang, loot tables, biome modifiers and biome tags.
 - `tools/`: generators for the art and sound. Edit these, not the PNG/OGG files directly.
   - `geckolib_model.py` and `painting.py`: the shared GeckoLib model builder (bones, box-UV packing,
-    keyframes, texel walk) and pixel helpers the model and paint scripts use.
+    keyframes, texel walk) and pixel helpers the model and paint scripts use, including the glass bottle the bottled
+    creatures are drawn in.
   - `paint_textures.py` (needs Pillow): every texture, including the skull variants and the Frozen
     Zombie skin, painted from scratch.
   - `make_sounds.py` (needs numpy and soundfile): the Frozen Zombie's crunch and shatter sounds, as
@@ -276,6 +299,10 @@ The player-facing description is [publish/DESCRIPTION.md](publish/DESCRIPTION.md
     GeckoLib models and animations from one body and seven heads (the pupils are bones the renderer turns), their
     textures and glowmasks (the eyes), the Weighed, Bound and Glare effect icons, and software previews of any face in
     any pose (`python3 tools/preview_watcher.py <out dir> athoth,yao windup@2`).
+  - `make_scorpion_model.py`, `paint_scorpion.py` (needs Pillow): the Scorpion's GeckoLib model (built at twice size and
+    drawn at half) and animations (walk, sting, dig, buried, emerge), its texture and the Scorpion Stinger.
+  - `make_scarab_model.py`, `paint_scarab.py` (needs Pillow): the Scarab's GeckoLib model (twice size, drawn at half)
+    and animations (roll, the dance on its ball, dig), its sand-ball and dung-ball textures and the Bottled Scarab.
   - `make_arena.py`: the empty gametest arena structures (the small arena, and the tall sky arena flight
     tests need).
 - `publish/`: Modrinth/CurseForge page text, icon and gallery image.
@@ -323,7 +350,10 @@ walker on soil near its quarry, dawn sinking the bound, an unbound walker bleedi
 tall stem's base), and the watchers (only a knowing, unhidden mind noticed and forgetting losing it, the flame by lava and
 the weight in the deep, one arriving in sight of its quarry and never saved, the weight pressing only what it sees, the
 rot spoiling food and wearing tools, the turning dragging the quarry back along its path, the glare blinding only those
-who look, the heat setting its quarry alight, and a felled watcher leaving nothing but the record). They need
+who look, the heat setting its quarry alight, and a felled watcher leaving nothing but the record), and the Scorpion and Scarab (a buried scorpion stinging a walker but not a sneaking or still one,
+a hurt one retreating and burrowing elsewhere, the sun driving one under, a scarab rolling straight and turning at a
+wall, a wild one going under once dawn is over while a kept one stays, bottling keeping its ball, and both keeping
+to sand). They need
 YUNG's Cave Biomes and its
 dependencies at dev runtime: put `YungsCaveBiomes`, `YungsApi`, `geckolib` and `TerraBlender` jars
 for NeoForge 1.21.1 in `libs/` (gitignored, never shipped; GeckoLib is compiled against from its Maven, so a
