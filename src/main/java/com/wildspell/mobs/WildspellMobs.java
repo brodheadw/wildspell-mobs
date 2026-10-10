@@ -27,6 +27,7 @@ import com.wildspell.mobs.entity.Scarab;
 import com.wildspell.mobs.entity.Scorpion;
 import com.wildspell.mobs.entity.Stemwalker;
 import com.wildspell.mobs.entity.SolarRay;
+import com.wildspell.mobs.entity.Watcher;
 import com.wildspell.mobs.flytrap.FlytrapBlock;
 import com.wildspell.mobs.flytrap.FlytrapPatchFeature;
 import com.wildspell.mobs.flytrap.FlytrapStemBlock;
@@ -41,6 +42,11 @@ import com.wildspell.mobs.item.SoulseekerRecipe;
 import com.wildspell.mobs.moth.LuminousMoss;
 import com.wildspell.mobs.moth.MothBottleItem;
 import com.wildspell.mobs.moth.MothGlowBlock;
+import com.wildspell.mobs.watch.Face;
+import com.wildspell.mobs.watch.OfficeEffect;
+import com.wildspell.mobs.watch.Watchers;
+import java.util.EnumMap;
+import java.util.Map;
 import java.util.UUID;
 import java.util.function.Supplier;
 import net.minecraft.core.UUIDUtil;
@@ -51,11 +57,14 @@ import net.minecraft.core.particles.SimpleParticleType;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.sounds.SoundEvent;
+import net.minecraft.world.effect.MobEffect;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.MobCategory;
 import net.minecraft.world.entity.SpawnPlacementTypes;
+import net.minecraft.world.entity.ai.attributes.AttributeModifier;
+import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.monster.Monster;
 import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.CreativeModeTabs;
@@ -107,6 +116,7 @@ public class WildspellMobs {
     public static final DeferredRegister<MapCodec<? extends BiomeModifier>> BIOME_MODIFIER_SERIALIZERS =
             DeferredRegister.create(NeoForgeRegistries.Keys.BIOME_MODIFIER_SERIALIZERS, MODID);
     public static final DeferredRegister<Feature<?>> FEATURES = DeferredRegister.create(Registries.FEATURE, MODID);
+    public static final DeferredRegister<MobEffect> MOB_EFFECTS = DeferredRegister.create(Registries.MOB_EFFECT, MODID);
 
     public static final DeferredHolder<DataComponentType<?>, DataComponentType<UUID>> SOUL = DATA_COMPONENTS.registerComponentType("soul",
             builder -> builder.persistent(UUIDUtil.CODEC).networkSynchronized(UUIDUtil.STREAM_CODEC));
@@ -265,6 +275,19 @@ public class WildspellMobs {
             .clientTrackingRange(10)
             .updateInterval(20));
 
+    public static final Map<Face, DeferredHolder<EntityType<?>, EntityType<Watcher>>> WATCHERS = watchers();
+
+    public static final DeferredHolder<MobEffect, OfficeEffect> WEIGHED = MOB_EFFECTS.register("weighed", () -> (OfficeEffect) new OfficeEffect(0x4A4650)
+            .addAttributeModifier(Attributes.MOVEMENT_SPEED, id("weighed_slow"), -0.6, AttributeModifier.Operation.ADD_MULTIPLIED_TOTAL)
+            .addAttributeModifier(Attributes.JUMP_STRENGTH, id("weighed_jump"), -1.0, AttributeModifier.Operation.ADD_MULTIPLIED_TOTAL)
+            .addAttributeModifier(Attributes.GRAVITY, id("weighed_fall"), 1.0, AttributeModifier.Operation.ADD_MULTIPLIED_BASE));
+
+    public static final DeferredHolder<MobEffect, OfficeEffect> BOUND = MOB_EFFECTS.register("bound", () -> (OfficeEffect) new OfficeEffect(0x4C6A36)
+            .addAttributeModifier(Attributes.MOVEMENT_SPEED, id("bound_feet"), -1.0, AttributeModifier.Operation.ADD_MULTIPLIED_TOTAL)
+            .addAttributeModifier(Attributes.JUMP_STRENGTH, id("bound_jump"), -1.0, AttributeModifier.Operation.ADD_MULTIPLIED_TOTAL));
+
+    public static final DeferredHolder<MobEffect, OfficeEffect> GLARE = MOB_EFFECTS.register("glare", () -> new OfficeEffect(0xFFF4D0));
+
     public static final DeferredHolder<Block, PhylacteryBlock> FROZEN_PHYLACTERY_BLOCK = BLOCKS.register("frozen_phylactery",
             () -> new PhylacteryBlock(BlockBehaviour.Properties.of()
                     .mapColor(MapColor.ICE)
@@ -344,6 +367,8 @@ public class WildspellMobs {
 
     public static final DeferredItem<DeferredSpawnEggItem> PEGASUS_SPAWN_EGG = spawnEgg("pegasus_spawn_egg", PEGASUS, 0xF4F1E8, 0xE8C766);
 
+    public static final Map<Face, DeferredItem<DeferredSpawnEggItem>> WATCHER_SPAWN_EGGS = watcherEggs();
+
     public static final DeferredItem<Item> TRAP_JAW = ITEMS.registerSimpleItem("trap_jaw");
 
     public static final DeferredItem<ItemNameBlockItem> FLYTRAP_SPROUT = ITEMS.register("flytrap_sprout",
@@ -381,6 +406,7 @@ public class WildspellMobs {
         PARTICLE_TYPES.register(modBus);
         BIOME_MODIFIER_SERIALIZERS.register(modBus);
         FEATURES.register(modBus);
+        MOB_EFFECTS.register(modBus);
         modBus.addListener(WildspellMobs::registerAttributes);
         modBus.addListener(WildspellMobs::registerSpawnPlacements);
         modBus.addListener(WildspellMobs::addToCreativeTabs);
@@ -394,6 +420,7 @@ public class WildspellMobs {
         NeoForge.EVENT_BUS.addListener(Heavens::onServerTick);
         NeoForge.EVENT_BUS.addListener(Heavens::onLogin);
         NeoForge.EVENT_BUS.addListener(Heavens::onDeath);
+        NeoForge.EVENT_BUS.addListener(Watchers::onServerTick);
     }
 
     public static ResourceLocation id(String path) {
@@ -402,6 +429,27 @@ public class WildspellMobs {
 
     private static <T extends Entity> DeferredHolder<EntityType<?>, EntityType<T>> entity(String name, EntityType.Builder<T> builder) {
         return ENTITY_TYPES.register(name, () -> builder.build(name));
+    }
+
+    private static Map<Face, DeferredHolder<EntityType<?>, EntityType<Watcher>>> watchers() {
+        Map<Face, DeferredHolder<EntityType<?>, EntityType<Watcher>>> out = new EnumMap<>(Face.class);
+        for (Face face : Face.values()) {
+            EntityType.Builder<Watcher> builder = EntityType.Builder.<Watcher>of((type, level) -> new Watcher(type, level, face), MobCategory.MONSTER)
+                    .sized(0.9F, 2.6F)
+                    .eyeHeight((float) Watcher.EYE)
+                    .clientTrackingRange(10);
+            out.put(face, entity("watcher_" + face.id, face == Face.SABBATAIOS ? builder.fireImmune() : builder));
+        }
+        return out;
+    }
+
+    private static Map<Face, DeferredItem<DeferredSpawnEggItem>> watcherEggs() {
+        int[] colors = {0xD6CCB4, 0x60646E, 0x967E3A, 0x407C68, 0x625692, 0xC6A246, 0xC45428};
+        Map<Face, DeferredItem<DeferredSpawnEggItem>> out = new EnumMap<>(Face.class);
+        for (Face face : Face.values()) {
+            out.put(face, spawnEgg("watcher_" + face.id + "_spawn_egg", WATCHERS.get(face), 0x4A4244, colors[face.ordinal()]));
+        }
+        return out;
     }
 
     private static DeferredItem<DeferredSpawnEggItem> spawnEgg(String name, Supplier<? extends EntityType<? extends Mob>> type, int background, int highlight) {
@@ -425,6 +473,7 @@ public class WildspellMobs {
         event.put(APOLLO.get(), Apollo.createAttributes().build());
         event.put(DIANA.get(), Diana.createAttributes().build());
         event.put(STEMWALKER.get(), Stemwalker.createAttributes().build());
+        WATCHERS.values().forEach(type -> event.put(type.get(), Watcher.createAttributes().build()));
         event.put(SCORPION.get(), Scorpion.createAttributes().build());
         event.put(SCARAB.get(), Scarab.createAttributes().build());
     }
@@ -460,6 +509,7 @@ public class WildspellMobs {
             event.accept(LUMINOUS_MOTH_SPAWN_EGG);
             event.accept(ELECTRIC_EEL_SPAWN_EGG);
             event.accept(PEGASUS_SPAWN_EGG);
+            WATCHER_SPAWN_EGGS.values().forEach(event::accept);
             event.accept(SCORPION_SPAWN_EGG);
             event.accept(SCARAB_SPAWN_EGG);
         } else if (event.getTabKey() == CreativeModeTabs.INGREDIENTS) {

@@ -192,6 +192,42 @@ The player-facing description is [publish/DESCRIPTION.md](publish/DESCRIPTION.md
   offline); a quarry who dies is caught and leaves the hunt unmarked. If the sun was killed in that world she grieves:
   a blood-moon face and a mourning chiton, shorter draws, other words, and anyone who struck the sun down is not released
   at dawn: only bringing her low ends their hunt. Struck by a player not yet hunted, she hunts them too.
+- **The watchers** (the archons' servants): seven entity types, one class (`Watcher`), one per face of the seven who
+  keep the world's forces in Wildspell Magic's canon: Sheep-Faced (Athoth, the turning), Ass-Faced (Eloaiou, the weight),
+  Hyena-Faced (Astaphaios, the rot), Seven-Headed (Yao, the binding), Dragon-Faced (Sabaoth, the storm), Ape-Faced
+  (Adonin, the glare) and Flame-Faced (Sabbataios, the burning). Seven types rather than one with variants so each has
+  its own name, spawn egg and id for other mods and tags to tell apart; the behaviour is shared and switched on the
+  face. GeckoLib model: a legless column of three pairs of ragged wings on a dark hide spine, tapering to a point, under
+  the archon's beast face with its eyes sealed shut (they're blind); the eyes are on the wings' inner faces, twenty of
+  them, hidden while the wings are folded, and their pupils turn to follow whoever it watches (or wander when it has
+  lost them). Nothing spawns them naturally: they come only to those who know. The contract with Wildspell Magic (no
+  dependency either way): Magic writes `wildspell_knowing` (a float, 0-1) and `wildspell_unseen_until` (a game time)
+  into the player's persistent data every second; without Magic knowing stays 0 and no watcher ever comes. Each second
+  a knowing player (not creative, not unseen, not on Peaceful) standing where a face haunts draws one with
+  `watcherChance` (0.004) times knowing squared, then rests for `watcherRestSeconds` (600) times 1.5 minus knowing
+  (`wildspellmobs:watched_until` in the persisted player data). Where they haunt
+  (`#wildspellmobs:watcher_haunts/<face>` biome tags): the sheep-faced open country under the sky at dawn and dusk; the
+  ass-faced underground below y 0 or in the deep dark; the hyena-faced swamps and mangroves; the serpent lush caves
+  and jungles; the dragon mountain peaks under the sky in a thunderstorm; the ape deserts, badlands and YUNG's Lost
+  Caves at noon (clear sky) or, underground, in block light 12 or more; the flame the Nether or within 6 blocks of
+  lava. A watcher unfolds 10-16 blocks off with a line to its quarry, watches for 5-10 s (shorter the more they
+  know), then telegraphs its office for 2 s (its flight wings rise, a sound for each face): breaking line of sight
+  then breaks the working (three breaks and it gives up), and reach is 24 blocks. Offices: the sheep-faced drags its
+  quarry back along its last 4 s of path; the ass-faced presses them down while it sees them (**Weighed**: slowed,
+  no jumping, falls twice as fast); the hyena-faced spoils carried food into rotten flesh and wears tools and armour
+  (never breaking them); the serpent binds their feet (**Bound**, 2.5 s, three times); the dragon marks where they stand
+  with a ring of sparks and calls lightning there 1.25 s later, three times; the ape's glare whites out the screen
+  (**Glare**, a GUI overlay) only if they're looking at it; the flame heats a ring of air round them that creeps after
+  them slower than a walk and sets them alight while they stand in it. At knowing 0.85 or more it works twice. Then it
+  folds its wings and shrinks away. If the quarry forgets (knowing falls 0.2 below what drew it: dropping the codex),
+  becomes unseen, goes 48 blocks off or out of sight for 10 s, its eyes lose them and wander, and it withdraws; it
+  never lasts past 2 minutes, is never saved with the chunk, and doesn't follow through portals. 70 health, armour 8,
+  no knockback; a blow from its quarry while it watches makes it work at once, and close in its wings buffet (4
+  damage and a shove). Killed, it drops nothing but XP, and the face is added to the string list
+  `wildspellmobs:watchers_felled` in the persisted player data for Magic to read. Hit by a player, a spawn-egg watcher
+  (which has no quarry and just watches the nearest player) takes them as its quarry. The flame-faced is fire immune
+  and the dragon-faced lightning immune. Fundamentals: Principles' heat is not used yet (no compile artifact to build
+  an optional bridge against); the burning is vanilla fire.
 - **Frost**: every frost hit builds vanilla freezing (the shards a little at a time); like powder snow,
   any piece of leather armour keeps it off.
 - **Ice Cube drops**: YUNG's Ice Cubes have no loot of their own; this gives them 0-2 Ice.
@@ -215,7 +251,7 @@ The player-facing description is [publish/DESCRIPTION.md](publish/DESCRIPTION.md
   - `entity/`: `RimeSkull`, `FrozenZombie`, `IceLich`, `LichWisp` (its soul in flight), `FrostShard`
     (every frost projectile), `Frost` (the shared freezing rules), `ElectricEel`, `FlytrapHead`,
     `ColdEffects` (spot searches and shared effects), `ThrustMoveControl` (the flyers' steering),
-    `MotionSense` (what moved, for the moth, the flytrap and the scorpion), `Stemwalker`, `Scorpion`, `Scarab`.
+    `MotionSense` (what moved, for the moth, the flytrap and the scorpion), `Stemwalker`, `Watcher`, `Scorpion`, `Scarab`.
   - `crypt/`: the crypt structure and its piece, the phylactery block and its block entity (ambushes,
     re-forming, the braziers, the wards).
   - `item/`: `FrostboundStaffItem`, `SoulseekerItem` and its recipe type, `CreatureBottleItem` (a creature caught in a
@@ -227,7 +263,9 @@ The player-facing description is [publish/DESCRIPTION.md](publish/DESCRIPTION.md
     `SolarRay` and `MoonArrow` are in `entity/`.
   - `grove/`: the Sporeheart block, its block entity (waking at night, raising and felling its walkers) and its
     world-generation feature (the base of a tall grove stem); the Stemwalker is in `entity/`.
-  - `client/`: models, renderers, the frost mote particle.
+  - `watch/`: the watchers' coming (`Watchers`: the knowing contract, the chance, the rest, where they arrive), their
+    faces and where each haunts (`Face`), and the office effects; the Watcher itself is in `entity/`.
+  - `client/`: models, renderers, the frost mote particle, the glare overlay.
 - `src/main/resources/`: textures, sounds, lang, loot tables, biome modifiers and biome tags.
 - `tools/`: generators for the art and sound. Edit these, not the PNG/OGG files directly.
   - `geckolib_model.py` and `painting.py`: the shared GeckoLib model builder (bones, box-UV packing,
@@ -257,6 +295,10 @@ The player-facing description is [publish/DESCRIPTION.md](publish/DESCRIPTION.md
   - `make_stemwalker_model.py`, `paint_stemwalker.py`, `paint_sporeheart.py` (needs Pillow and numpy): the
     Stemwalker's GeckoLib model and animations, its texture and glowmask (the pores), and the Sporeheart's
     dormant, alive and top textures.
+  - `make_watcher_model.py`, `paint_watcher.py`, `preview_watcher.py` (needs Pillow and numpy): the seven watchers'
+    GeckoLib models and animations from one body and seven heads (the pupils are bones the renderer turns), their
+    textures and glowmasks (the eyes), the Weighed, Bound and Glare effect icons, and software previews of any face in
+    any pose (`python3 tools/preview_watcher.py <out dir> athoth,yao windup@2`).
   - `make_scorpion_model.py`, `paint_scorpion.py` (needs Pillow): the Scorpion's GeckoLib model (built at twice size and
     drawn at half) and animations (walk, sting, dig, buried, emerge), its texture and the Scorpion Stinger.
   - `make_scarab_model.py`, `paint_scarab.py` (needs Pillow): the Scarab's GeckoLib model (twice size, drawn at half)
@@ -305,7 +347,10 @@ showing for the whole draw and cover holding the shot, her grief in a sunless wo
 after its wardens fall), the Pegasus herd taking wing in formation, and the Stemwalker and Sporeheart (the heart
 waking only at night in its stem, a bound walker shrugging off blows until its heart breaks, the heart raising a
 walker on soil near its quarry, dawn sinking the bound, an unbound walker bleeding, and the heart taking only a
-tall stem's base), and the Scorpion and Scarab (a buried scorpion stinging a walker but not a sneaking or still one,
+tall stem's base), and the watchers (only a knowing, unhidden mind noticed and forgetting losing it, the flame by lava and
+the weight in the deep, one arriving in sight of its quarry and never saved, the weight pressing only what it sees, the
+rot spoiling food and wearing tools, the turning dragging the quarry back along its path, the glare blinding only those
+who look, the heat setting its quarry alight, and a felled watcher leaving nothing but the record), and the Scorpion and Scarab (a buried scorpion stinging a walker but not a sneaking or still one,
 a hurt one retreating and burrowing elsewhere, the sun driving one under, a scarab rolling straight and turning at a
 wall, a wild one going under once dawn is over while a kept one stays, bottling keeping its ball, and both keeping
 to sand). They need

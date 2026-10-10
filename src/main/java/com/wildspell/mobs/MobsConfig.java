@@ -68,6 +68,18 @@ public final class MobsConfig {
                     "before the sun answers their gaze and Apollo comes.")
             .defineInRange("apolloWardens", 4, 0, 64);
 
+    public static final ModConfigSpec.DoubleValue WATCHER_CHANCE = BUILDER
+            .comment("Chance (0-1), each second, that one of the archons' watchers comes to a player who knows all there is to",
+                    "know (Wildspell Magic's knowing at 1) while they stand in a place one of them haunts. It scales with the square",
+                    "of their knowing, so a player carrying a codex (about 0.6) draws one about a third as often. Without Wildspell",
+                    "Magic nobody knows anything and none ever comes. 0 = never.")
+            .defineInRange("watcherChance", 0.004, 0.0, 1.0);
+
+    public static final ModConfigSpec.IntValue WATCHER_REST_SECONDS = BUILDER
+            .comment("After a watcher comes, how long (seconds) before another can come to the same player, at a knowing of 0.5;",
+                    "it shortens as knowing grows (half as long at 1).")
+            .defineInRange("watcherRestSeconds", 600, 0, 86400);
+
     static final ModConfigSpec SPEC = BUILDER.build();
 
     private MobsConfig() {
