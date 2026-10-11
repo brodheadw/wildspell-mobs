@@ -1,5 +1,6 @@
 package com.wildspell.mobs;
 
+import com.wildspell.mobs.entity.EelTestAccess;
 import com.wildspell.mobs.entity.ElectricEel;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.registries.Registries;
@@ -14,6 +15,7 @@ import net.minecraft.world.entity.animal.Pig;
 import net.minecraft.world.level.LightLayer;
 import net.minecraft.world.level.biome.Biome;
 import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.phys.Vec3;
 import net.neoforged.neoforge.gametest.GameTestHolder;
 import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
 
@@ -66,16 +68,26 @@ public class ElectricEelTests {
         eels[0] = helper.spawn(WildspellMobs.ELECTRIC_EEL.get(), 2.5F, 2.0F, 3.5F);
         eels[1] = helper.spawn(WildspellMobs.ELECTRIC_EEL.get(), 4.5F, 2.0F, 5.5F);
         helper.assertTrue((eels[0].getId() + eels[1].getId()) % 2 == 1, "the two eels tick on opposite parities");
+        Vec3[] starts = {eels[0].position(), eels[1].position()};
         helper.runAfterDelay(120, () -> {
+            for (int i = 0; i < 2; ++i) {
+                eels[i].moveTo(starts[i].x, starts[i].y, starts[i].z, 0.0F, 0.0F);
+                eels[i].setDeltaMovement(Vec3.ZERO);
+                eels[i].getNavigation().stop();
+            }
             eels[0].setDen(helper.absolutePos(new BlockPos(1, 1, 1)));
             eels[1].setDen(helper.absolutePos(new BlockPos(5, 1, 7)));
         });
-        helper.runAfterDelay(123, () -> {
-            helper.assertTrue(eels[0].getNavigation().isInProgress() || eels[1].getNavigation().isInProgress(), "the lurk goal set off for the den");
-            eels[0].setDen(null);
-            eels[1].setDen(null);
+        boolean[] cleared = {false};
+        helper.onEachTick(() -> {
+            if (!cleared[0] && EelTestAccess.settingOffForDen(eels[0]) && EelTestAccess.settingOffForDen(eels[1])) {
+                cleared[0] = true;
+                eels[0].setDen(null);
+                eels[1].setDen(null);
+            }
         });
         helper.runAfterDelay(160, () -> {
+            helper.assertTrue(cleared[0], "the lurk goal never set off for both dens");
             helper.assertTrue(eels[0].isAlive() && eels[1].isAlive(), "both eels are still with us");
             helper.succeed();
         });
