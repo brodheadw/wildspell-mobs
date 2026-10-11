@@ -11,6 +11,7 @@ import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.animal.Cod;
 import net.minecraft.world.entity.animal.Pig;
+import net.minecraft.world.level.LightLayer;
 import net.minecraft.world.level.biome.Biome;
 import net.minecraft.world.level.block.Blocks;
 import net.neoforged.neoforge.gametest.GameTestHolder;
@@ -78,6 +79,38 @@ public class ElectricEelTests {
             helper.assertTrue(eels[0].isAlive() && eels[1].isAlive(), "both eels are still with us");
             helper.succeed();
         });
+    }
+
+    @GameTest(template = SKY, timeoutTicks = 200)
+    public static void eelsSpawnInDarkCaveWaterJustBelowTheSurface(GameTestHelper helper) {
+        helper.assertTrue(ElectricEel.isUpperCaveDepth(48, 63) && ElectricEel.isUpperCaveDepth(23, 63) && ElectricEel.isUpperCaveDepth(58, 63),
+                "an eel can't spawn in the upper caves");
+        helper.assertFalse(ElectricEel.isUpperCaveDepth(-30, 63) || ElectricEel.isUpperCaveDepth(62, 63), "an eel spawns outside the upper caves");
+        flooded(helper, 2, 6, true);
+        flooded(helper, 10, 6, true);
+        helper.setBlock(12, 2, 12, Blocks.SEA_LANTERN);
+        flooded(helper, 20, 16, false);
+        BlockPos dark = new BlockPos(4, 2, 4);
+        BlockPos lit = new BlockPos(12, 2, 13);
+        BlockPos open = new BlockPos(22, 1, 22);
+        helper.succeedWhen(() -> {
+            helper.assertTrue(helper.getLevel().getBrightness(LightLayer.SKY, helper.absolutePos(lit)) == 0, "the lit cave isn't sealed yet");
+            helper.assertTrue(helper.getLevel().getRawBrightness(helper.absolutePos(open), 0) <= ElectricEel.SPAWN_LIGHT_MAX, "the open shaft isn't dark at the bottom yet");
+            helper.assertTrue(ElectricEel.isDarkCaveWater(helper.getLevel(), helper.absolutePos(dark)), "an eel can't spawn in dark cave water");
+            helper.assertFalse(ElectricEel.isDarkCaveWater(helper.getLevel(), helper.absolutePos(lit)), "an eel spawns in lit water");
+            helper.assertFalse(ElectricEel.isDarkCaveWater(helper.getLevel(), helper.absolutePos(open)), "an eel spawns in water open to the sky");
+        });
+    }
+
+    private static void flooded(GameTestHelper helper, int corner, int height, boolean roofed) {
+        for (int x = corner; x <= corner + 4; ++x) {
+            for (int z = corner; z <= corner + 4; ++z) {
+                for (int y = 0; y <= height; ++y) {
+                    boolean shell = y == 0 || x == corner || x == corner + 4 || z == corner || z == corner + 4 || roofed && y == height;
+                    helper.setBlock(x, y, z, shell ? Blocks.STONE : Blocks.WATER);
+                }
+            }
+        }
     }
 
     private static void pool(GameTestHelper helper) {

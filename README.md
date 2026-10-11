@@ -55,8 +55,9 @@ The player-facing description is [publish/DESCRIPTION.md](publish/DESCRIPTION.md
   (`#wildspellmobs:luminous_moth_lures`: Spore Blossom). A glass bottle catches it; released
   somewhere dark (light below 8), it keeps to that spot and lights it. Its light is real block light:
   invisible `moth_glow` blocks that remove themselves once no moth is keeping them.
-- **Electric Eel**: an underground water creature in flooded caves anywhere in the Overworld
-  (`#wildspellmobs:electric_eel_spawns`; the glow squid's spawn rules: deep, dark water). It takes a
+- **Electric Eel**: an underground water creature in the upper flooded caves anywhere in the Overworld
+  (`#wildspellmobs:electric_eel_spawns`, weight 10 like the glow squid, sharing its cap): water 5 to 40 blocks
+  below sea level, under a roof (no sky above the water's surface) and at light 7 or less. It takes a
   crevice near its spawn as its den and lies in it. Swimmers within 6 blocks of the den are hunted
   (it senses them, no line of sight needed), and so is anything that hurts it. It hunts fish only when
   hungry, catching one and swallowing it whole; a meal keeps it fed for 3-4.5 minutes. Against
