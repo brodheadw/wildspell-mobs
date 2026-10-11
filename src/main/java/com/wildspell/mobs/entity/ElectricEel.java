@@ -62,6 +62,9 @@ public class ElectricEel extends WaterAnimal {
     public static final double LEAP_RANGE = 4.0;
     public static final double TERRITORY = 6.0;
     public static final int DEN_RANGE = 10;
+    public static final int SPAWN_DEPTH_MIN = 5;
+    public static final int SPAWN_DEPTH_MAX = 40;
+    public static final int SPAWN_LIGHT_MAX = 7;
     private static final int DEN_SEARCH = 6;
     private static final int GIVE_UP_TICKS = 60;
     public static final int FED_TICKS = 3600;
@@ -92,7 +95,15 @@ public class ElectricEel extends WaterAnimal {
     }
 
     public static boolean checkEelSpawnRules(EntityType<ElectricEel> type, LevelAccessor level, MobSpawnType spawnType, BlockPos pos, RandomSource random) {
-        return pos.getY() <= level.getSeaLevel() - 33 && level.getRawBrightness(pos, 0) == 0 && level.getBlockState(pos).is(Blocks.WATER);
+        return isUpperCaveDepth(pos.getY(), level.getSeaLevel()) && isDarkCaveWater(level, pos);
+    }
+
+    public static boolean isUpperCaveDepth(int y, int seaLevel) {
+        return y >= seaLevel - SPAWN_DEPTH_MAX && y <= seaLevel - SPAWN_DEPTH_MIN;
+    }
+
+    public static boolean isDarkCaveWater(LevelAccessor level, BlockPos pos) {
+        return level.getBlockState(pos).is(Blocks.WATER) && !level.canSeeSkyFromBelowWater(pos) && level.getRawBrightness(pos, 0) <= SPAWN_LIGHT_MAX;
     }
 
     @Override
