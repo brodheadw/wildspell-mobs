@@ -41,6 +41,7 @@ import net.minecraft.world.level.LevelReader;
 import net.minecraft.world.level.ServerLevelAccessor;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.pathfinder.Path;
 import net.minecraft.world.phys.Vec3;
 import software.bernie.geckolib.animatable.GeoEntity;
 import software.bernie.geckolib.animatable.instance.AnimatableInstanceCache;
@@ -207,8 +208,8 @@ public class Scorpion extends Monster implements GeoEntity {
             return;
         }
         ++this.phaseTicks;
-        if (this.retreatTicks > 0) {
-            --this.retreatTicks;
+        if (this.retreatTicks > 0 && --this.retreatTicks == 0) {
+            this.digInAfterRetreat(level);
         }
         switch (this.getPhase()) {
             case DIGGING -> {
@@ -261,6 +262,17 @@ public class Scorpion extends Monster implements GeoEntity {
         Vec3 from = this.lair != null ? Vec3.atBottomCenterOf(this.lair) : this.position();
         if (!stings(target) || target.distanceToSqr(from) > chase * chase) {
             this.setTarget(null);
+        }
+    }
+
+    private void digInAfterRetreat(ServerLevel level) {
+        if (this.getPhase() != SURFACE || this.getTarget() != null) {
+            return;
+        }
+        if (this.onGround() && canBurrowAt(level, this.blockPosition())) {
+            this.burrow();
+        } else {
+            this.idleTicks = RESTLESS_TICKS;
         }
     }
 
@@ -420,10 +432,25 @@ public class Scorpion extends Monster implements GeoEntity {
         }
 
         private void flee() {
-            Vec3 away = DefaultRandomPos.getPosAway(Scorpion.this, 8, 3, Scorpion.this.threat);
-            if (away != null) {
-                Scorpion.this.getNavigation().moveTo(away.x, away.y, away.z, 1.5);
+            Vec3 threat = Scorpion.this.threat;
+            Vec3 away = DefaultRandomPos.getPosAway(Scorpion.this, 8, 3, threat);
+            if (away == null) {
+                return;
             }
+            Path path = Scorpion.this.getNavigation().createPath(away.x, away.y, away.z, 0);
+            if (path != null && path.canReach() && neverCloser(path, threat)) {
+                Scorpion.this.getNavigation().moveTo(path, 1.5);
+            }
+        }
+
+        private static boolean neverCloser(Path path, Vec3 threat) {
+            double from = Vec3.atBottomCenterOf(path.getNodePos(0)).distanceToSqr(threat);
+            for (int i = 1; i < path.getNodeCount(); ++i) {
+                if (Vec3.atBottomCenterOf(path.getNodePos(i)).distanceToSqr(threat) < from) {
+                    return false;
+                }
+            }
+            return true;
         }
 
         @Override
@@ -473,6 +500,10 @@ public class Scorpion extends Monster implements GeoEntity {
 
         @Override
         public void tick() {
+            // Odd ticks run this without asking canContinueToUse, so a scorpion hurt on its way down would dig in where it was hit.
+            if (!this.wanted()) {
+                return;
+            }
             BlockPos here = Scorpion.this.blockPosition();
             if (here.equals(this.spot) || Scorpion.this.getNavigation().isDone() && canBurrowAt(Scorpion.this.level(), here)) {
                 Scorpion.this.burrow();

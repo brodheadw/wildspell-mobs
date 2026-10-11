@@ -13,6 +13,7 @@ import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.util.RandomSource;
 import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.EquipmentSlot;
@@ -77,12 +78,29 @@ public class WildspellMobsTests {
     @GameTest(template = ARENA, timeoutTicks = 500)
     public static void skullSpitsFromRange(GameTestHelper helper) {
         shade(helper);
-        Pig pig = helper.spawn(EntityType.PIG, 8.5F, 1.0F, 8.5F);
-        pig.setNoAi(true);
-        RimeSkull skull = helper.spawn(WildspellMobs.RIME_SKULL.get(), 0.5F, 4.0F, 0.5F);
-        skull.setTarget(pig);
-        helper.succeedWhen(() -> helper.assertTrue(pig.hasEffect(MobEffects.MOVEMENT_SLOWDOWN),
-                "no frost shard has landed; skull at " + helper.relativeVec(skull.position()) + ", line of sight " + skull.hasLineOfSight(pig)));
+        // The arena's barrier ring starts a block up; floor the gap so a skull that dives at the pig can't slip out under it.
+        for (int x = 0; x <= 8; ++x) {
+            for (int z = 0; z <= 8; ++z) {
+                helper.setBlock(x, 0, z, Blocks.STONE);
+            }
+        }
+        Pig[] pig = new Pig[1];
+        RimeSkull[] skull = new RimeSkull[1];
+        helper.startSequence()
+                .thenWaitUntil(() -> helper.assertFalse(BlockPos.betweenClosedStream(0, 1, 0, 8, 1, 8).anyMatch(pos -> helper.getLevel().canSeeSky(helper.absolutePos(pos))),
+                        "the sun still reaches under the shade"))
+                .thenExecute(() -> {
+                    pig[0] = helper.spawn(EntityType.PIG, 8.5F, 1.0F, 8.5F);
+                    pig[0].setNoAi(true);
+                    // The skull's lunges and their frost would otherwise kill the pig before a shard lands.
+                    pig[0].getAttribute(Attributes.MAX_HEALTH).setBaseValue(1000.0);
+                    pig[0].setHealth(1000.0F);
+                    skull[0] = helper.spawn(WildspellMobs.RIME_SKULL.get(), 0.5F, 4.0F, 0.5F);
+                    skull[0].setTarget(pig[0]);
+                })
+                .thenWaitUntil(() -> helper.assertTrue(pig[0].hasEffect(MobEffects.MOVEMENT_SLOWDOWN),
+                        "no frost shard has landed; skull at " + helper.relativeVec(skull[0].position()) + ", line of sight " + skull[0].hasLineOfSight(pig[0])))
+                .thenSucceed();
     }
 
     //? if <26.4 {
@@ -177,7 +195,7 @@ public class WildspellMobsTests {
         helper.assertBlockPresent(icicle, 6, 2, 4);
         helper.setBlock(6, 0, 4, Blocks.MAGMA_BLOCK);
         helper.setBlock(6, 1, 4, icicle);
-        int melted = IceMelting.sampleAround(helper.getLevel(), helper.absolutePos(new BlockPos(4, 2, 4)), 2000, 4, 2);
+        int melted = IceMelting.sampleAround(helper.getLevel(), RandomSource.create(1L), helper.absolutePos(new BlockPos(4, 2, 4)), 2000, 4, 2);
         helper.assertTrue(melted == 2, "the sampler melted " + melted);
         helper.assertBlockPresent(Blocks.AIR, 6, 1, 4);
         helper.assertBlockPresent(Blocks.AIR, 6, 2, 4);
