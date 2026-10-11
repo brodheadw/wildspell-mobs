@@ -35,7 +35,7 @@ A little glowing moth of the Lush Caves. It never attacks.
 - Catch one with a glass bottle. Let it out somewhere dark and it stays there, lighting the area up like a living lantern; bottle it again to move it.
 
 ## Electric Eel
-A long, dark eel of the flooded caves, orange at the throat. Leave its water alone and it leaves you alone.
+A long, dark eel of the flooded caves just below the surface, orange at the throat. Leave its water alone and it leaves you alone.
 - It lies in a crevice in the rock with its head out. Swim near its den and it comes for you. It senses you by its electric field, so it doesn't need to see you.
 - Before it strikes it goes still, crackling, and its flanks light up brighter and brighter. That's your warning to get out of the water: the discharge shocks everything swimming nearby and locks up your muscles for a moment.
 - Standing at the water's edge isn't safe either. Like real electric eels, it leaps out at you and shocks you on contact.
