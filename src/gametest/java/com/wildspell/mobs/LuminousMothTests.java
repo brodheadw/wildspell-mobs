@@ -34,16 +34,19 @@ public class LuminousMothTests {
 
     @GameTest(template = ARENA, timeoutTicks = 1600, batch = "mothPerch")
     public static void mothLandsOnPlantsAndBrightensMoss(GameTestHelper helper) {
-        for (int x = -2; x <= 10; ++x) {
-            for (int z = -2; z <= 10; ++z) {
+        // Inside the test's barrier ring (painting past it opens holes the moth flies out of), under a low roof so
+        // every perch it can find, plant or wall, is within reach of the moss.
+        for (int x = 0; x <= 8; ++x) {
+            for (int z = 0; z <= 8; ++z) {
                 helper.setBlock(x, 0, z, Blocks.MOSS_BLOCK);
                 if ((x + z) % 2 == 0) {
                     helper.setBlock(x, 1, z, Blocks.MOSS_CARPET);
                 }
+                helper.setBlock(x, 3, z, Blocks.STONE);
             }
         }
         helper.setBlock(4, 1, 5, Blocks.AZALEA);
-        LuminousMoth moth = helper.spawn(WildspellMobs.LUMINOUS_MOTH.get(), 4.5F, 3.0F, 4.5F);
+        LuminousMoth moth = helper.spawn(WildspellMobs.LUMINOUS_MOTH.get(), 4.5F, 2.0F, 4.5F);
         boolean[] perched = {false};
         helper.onEachTick(() -> perched[0] |= moth.isPerched());
         helper.succeedWhen(() -> {
