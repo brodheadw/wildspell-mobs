@@ -18,6 +18,7 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.context.UseOnContext;
 import net.minecraft.world.level.GameType;
+import net.minecraft.world.level.LightLayer;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.phys.BlockHitResult;
@@ -74,19 +75,27 @@ public class DesertTests {
     @GameTest(template = ARENA, timeoutTicks = 500, batch = "scorpionRetreat")
     public static void aHurtScorpionRetreatsAndBurrowsAgain(GameTestHelper helper) {
         dunes(helper, true);
-        Scorpion scorpion = helper.spawn(WildspellMobs.SCORPION.get(), 2.5F, 1.0F, 4.5F);
-        Player attacker = walker(helper);
+        // Only the blow's source: left out of the world so no leftover mob next door comes for it and hits the scorpion too.
+        Player attacker = helper.makeMockPlayer(GameType.SURVIVAL);
         place(helper, attacker, new Vec3(1.5, 1.0, 4.5));
-        Vec3 from = scorpion.position();
-        helper.runAfterDelay(5, () -> {
-            scorpion.hurt(helper.getLevel().damageSources().playerAttack(attacker), 1.0F);
-            helper.assertTrue(scorpion.isRetreating(), "a hurt scorpion isn't retreating");
-        });
-        helper.succeedWhen(() -> {
-            helper.assertTrue(scorpion.isAlive() && scorpion.isBuried(), "never burrowed again; phase " + scorpion.getPhase());
-            helper.assertTrue(scorpion.position().distanceTo(from) > 1.5, "burrowed where it was hit");
-            attacker.discard();
-        });
+        Scorpion[] scorpion = new Scorpion[1];
+        Vec3[] from = new Vec3[1];
+        helper.startSequence()
+                .thenWaitUntil(() -> helper.assertTrue(helper.getLevel().getBrightness(LightLayer.SKY, helper.absolutePos(new BlockPos(2, 1, 4))) == 0,
+                        "the sun still reaches under the roof"))
+                .thenExecute(() -> {
+                    scorpion[0] = helper.spawn(WildspellMobs.SCORPION.get(), 2.5F, 1.0F, 4.5F);
+                    from[0] = scorpion[0].position();
+                })
+                .thenExecuteAfter(5, () -> {
+                    scorpion[0].hurt(helper.getLevel().damageSources().playerAttack(attacker), 1.0F);
+                    helper.assertTrue(scorpion[0].isRetreating(), "a hurt scorpion isn't retreating");
+                })
+                .thenWaitUntil(() -> {
+                    helper.assertTrue(scorpion[0].isAlive() && scorpion[0].isBuried(), "never burrowed again; phase " + scorpion[0].getPhase());
+                    helper.assertTrue(scorpion[0].position().distanceTo(from[0]) > 1.5, "burrowed where it was hit");
+                })
+                .thenSucceed();
     }
 
     @GameTest(template = ARENA, timeoutTicks = 90, batch = "scorpionNoon")
@@ -110,6 +119,11 @@ public class DesertTests {
         helper.getLevel().addFreshEntity(wild);
         onFinish(helper, wild::discard);
         Scarab kept = helper.spawn(WildspellMobs.SCARAB.get(), 5.5F, 1.0F, 4.5F);
+        // A wild scarab goes under on a one-in-ten roll each second it rolls; seed both so the run is the same every time.
+        wild.getRandom().setSeed(1L);
+        wild.setHeading(Scarab.EAST);
+        kept.getRandom().setSeed(2L);
+        kept.setHeading(Scarab.EAST);
         helper.succeedWhen(() -> {
             helper.assertTrue(wild.isRemoved(), "a wild scarab is still rolling at noon");
             helper.assertTrue(kept.isAlive(), "a kept scarab went under");

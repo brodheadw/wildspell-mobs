@@ -9,6 +9,7 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.tags.TagKey;
+import net.minecraft.util.RandomSource;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
@@ -38,16 +39,16 @@ public final class IceMelting {
     }
 
     public static int sampleAround(ServerLevel level, BlockPos center, int samples) {
-        return sampleAround(level, center, samples, REACH, REACH_Y);
+        return sampleAround(level, level.random, center, samples, REACH, REACH_Y);
     }
 
-    public static int sampleAround(ServerLevel level, BlockPos center, int samples, int reach, int reachY) {
+    public static int sampleAround(ServerLevel level, RandomSource random, BlockPos center, int samples, int reach, int reachY) {
         int melted = 0;
         BlockPos.MutableBlockPos pos = new BlockPos.MutableBlockPos();
         for (int i = 0; i < samples; ++i) {
-            pos.set(center.getX() + level.random.nextInt(2 * reach + 1) - reach,
-                    center.getY() + level.random.nextInt(2 * reachY + 1) - reachY,
-                    center.getZ() + level.random.nextInt(2 * reach + 1) - reach);
+            pos.set(center.getX() + random.nextInt(2 * reach + 1) - reach,
+                    center.getY() + random.nextInt(2 * reachY + 1) - reachY,
+                    center.getZ() + random.nextInt(2 * reach + 1) - reach);
             if (level.isLoaded(pos) && melt(level, pos)) {
                 ++melted;
             }

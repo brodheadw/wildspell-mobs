@@ -77,7 +77,7 @@ public class ElectricEel extends WaterAnimal {
     private int strandedTicks;
     private int lurkCooldown = 100;
     private int fedTicks = this.random.nextInt(FED_TICKS);
-    private boolean lurking;
+    boolean lurking;
     private int flashTicks;
 
     public ElectricEel(EntityType<? extends ElectricEel> type, Level level) {
@@ -507,7 +507,7 @@ public class ElectricEel extends WaterAnimal {
         }
     }
 
-    private class LurkGoal extends Goal {
+    class LurkGoal extends Goal {
         private int ticks;
         private int stayTicks;
         private boolean atMouth;
