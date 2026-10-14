@@ -66,6 +66,7 @@ public class WildspellMobsClient {
         event.registerEntityRenderer(WildspellMobs.APOLLO.get(), ApolloRenderer::new);
         event.registerEntityRenderer(WildspellMobs.SOLAR_RAY.get(), SolarRayRenderer::new);
         event.registerEntityRenderer(WildspellMobs.DIANA.get(), DianaRenderer::new);
+        event.registerEntityRenderer(WildspellMobs.GAIA_MANIFESTATION.get(), GaiaManifestationRenderer::new);
         event.registerEntityRenderer(WildspellMobs.STEMWALKER.get(), StemwalkerRenderer::new);
         event.registerEntityRenderer(WildspellMobs.MOON_ARROW.get(), MoonArrowRenderer::new);
         WildspellMobs.WATCHERS.forEach((face, type) -> event.registerEntityRenderer(type.get(), context -> new WatcherRenderer(context, face.id)));

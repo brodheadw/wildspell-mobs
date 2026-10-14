@@ -308,6 +308,29 @@ The player-facing description is [publish/DESCRIPTION.md](publish/DESCRIPTION.md
     tests need).
 - `publish/`: Modrinth/CurseForge page text, icon and gallery image.
 
+## Gaia's Navel prototype
+
+Mobs 1.11.0 adds an operator-placed grass-and-root sphere containing a seated,
+non-hostile leaf manifestation. Her subtle idle animation stays grounded. The
+occupant keeps her location and facing after saving, survives Peaceful, cannot
+be pushed, leashed or transported, and yields no items or experience. Operators
+can remove her with `/kill`.
+
+    /place feature wildspellmobs:gaias_navel <x> <y> <z>
+
+Use the ground block's Y coordinate. The entrance faces south. Choose an empty,
+loaded clearing with a 39 by 39 footprint, five blocks below the floor and 25
+above it. Stand outside that footprint. Placement refuses occupied space,
+above-ground solids, block entities, incomplete chunks, borders and build limits.
+After teleporting or force-loading chunks, allow loading to finish before placement.
+Below the floor, only ordinary earth and stone are accepted. Minecraft does not
+record whether those blocks were placed by a player, so use an undeveloped site.
+The feature checks the full site before changing it and refuses repeat placement.
+
+The shell uses persistent leaves and moss in dark areas. The chamber includes a
+root cradle, shallow pool, narrow entrance and offset skylight. Natural generation,
+communion, progression, rewards and avatar abilities are not part of this prototype.
+
 ## Build
 
 Needs JDK 21 (`JAVA_HOME`).

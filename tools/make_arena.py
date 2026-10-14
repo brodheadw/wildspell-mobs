@@ -35,4 +35,5 @@ def write(path, size):
 
 write("src/gametest/resources/data/wildspellmobs/structure/arena.nbt", [9, 7, 9])
 write("src/gametest/resources/data/wildspellmobs/structure/sky_arena.nbt", [31, 24, 31])
+write("src/gametest/resources/data/wildspellmobs/structure/gaia_arena.nbt", [43, 38, 43])
 print("arenas written")
