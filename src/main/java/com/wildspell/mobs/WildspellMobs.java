@@ -14,6 +14,7 @@ import com.wildspell.mobs.entity.ElectricEel;
 import com.wildspell.mobs.entity.FlytrapHead;
 import com.wildspell.mobs.entity.FrostOrb;
 import com.wildspell.mobs.entity.FrostShard;
+import com.wildspell.mobs.entity.GaiaManifestation;
 //? if <26.4 {
 import com.wildspell.mobs.entity.FrozenZombie;
 //?}
@@ -31,6 +32,7 @@ import com.wildspell.mobs.entity.Watcher;
 import com.wildspell.mobs.flytrap.FlytrapBlock;
 import com.wildspell.mobs.flytrap.FlytrapPatchFeature;
 import com.wildspell.mobs.flytrap.FlytrapStemBlock;
+import com.wildspell.mobs.gaia.GaiasNavelFeature;
 import com.wildspell.mobs.gods.Heavens;
 import com.wildspell.mobs.grove.SporeheartBlock;
 import com.wildspell.mobs.grove.SporeheartBlockEntity;
@@ -231,6 +233,15 @@ public class WildspellMobs {
 
     public static final DeferredHolder<Feature<?>, FlytrapPatchFeature> FLYTRAP_PATCH =
             FEATURES.register("flytrap_patch", FlytrapPatchFeature::new);
+
+    public static final DeferredHolder<EntityType<?>, EntityType<GaiaManifestation>> GAIA_MANIFESTATION = entity("gaia_manifestation", EntityType.Builder.of(GaiaManifestation::new, MobCategory.CREATURE)
+            .sized(2.0F, 3.0F)
+            .eyeHeight(2.4F)
+            .clientTrackingRange(10)
+            .fireImmune());
+
+    public static final DeferredHolder<Feature<?>, GaiasNavelFeature> GAIAS_NAVEL =
+            FEATURES.register("gaias_navel", GaiasNavelFeature::new);
 
     public static final DeferredHolder<Feature<?>, SporeheartFeature> SPOREHEART_FEATURE =
             FEATURES.register("sporeheart", SporeheartFeature::new);
@@ -461,6 +472,7 @@ public class WildspellMobs {
     }
 
     private static void registerAttributes(EntityAttributeCreationEvent event) {
+        event.put(GAIA_MANIFESTATION.get(), GaiaManifestation.createAttributes().build());
         event.put(RIME_SKULL.get(), RimeSkull.createAttributes().build());
 //? if <26.4 {
         event.put(FROZEN_ZOMBIE.get(), FrozenZombie.createAttributes().build());
