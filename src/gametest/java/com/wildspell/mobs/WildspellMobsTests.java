@@ -103,6 +103,24 @@ public class WildspellMobsTests {
                 .thenSucceed();
     }
 
+    @GameTest(template = ARENA, timeoutTicks = 500)
+    public static void skullKeepsOffTheFloor(GameTestHelper helper) {
+        shade(helper);
+        for (int x = 0; x <= 8; ++x) {
+            for (int z = 0; z <= 8; ++z) {
+                helper.setBlock(x, 0, z, Blocks.STONE);
+            }
+        }
+        RimeSkull skull = helper.spawn(WildspellMobs.RIME_SKULL.get(), 1.5F, 1.0F, 1.5F);
+        skull.getRandom().setSeed(7L);
+        helper.onEachTick(() -> {
+            if (helper.getTick() > 200) {
+                helper.assertTrue(helper.relativeVec(skull.position()).y - 1.0 > 1.0, "skull near the floor at " + helper.relativeVec(skull.position()));
+            }
+        });
+        helper.runAfterDelay(450, helper::succeed);
+    }
+
     //? if <26.4 {
     @GameTest(template = ARENA, timeoutTicks = 300, batch = "freezing")
     public static void zombieFreezesInFrostedCaves(GameTestHelper helper) {
