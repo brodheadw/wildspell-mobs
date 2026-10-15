@@ -347,7 +347,7 @@ Frostbite, so from 26.4 the mod has no Frozen Zombie and the Ice Lich raises Fro
 ## Test
 
 Gametests cover the mobs' spawning, AI and variants, zombie freezing and thawing (sun and fire), fear of
-fire, Rime Skulls burning in the sun, the spawn balance, the Ice Lich (volleys, minions, the
+fire, Rime Skulls burning in the sun and keeping off the floor, the spawn balance, the Ice Lich (volleys, minions, the
 interruptible summon, enraged bursts, re-forming at its phylactery, wards, carrying and burning the
 phylactery, the last form, the cleansing and safe zone, the crypt waking, ambushes, the Crown Fragment
 and Soulseeker, and the crypt built right in every orientation), frost and leather, the staff, the

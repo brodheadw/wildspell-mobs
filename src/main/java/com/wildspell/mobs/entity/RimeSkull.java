@@ -91,7 +91,10 @@ public class RimeSkull extends Monster {
         if (!MobSpawnType.ignoresLightRequirements(spawnType) && !Monster.isDarkEnoughToSpawn(level, pos, random)) {
             return false;
         }
-        for (int dy = 1; dy <= HOVER_SPAWN_HEIGHT; ++dy) {
+        if (!level.getBlockState(pos.below()).getCollisionShape(level, pos.below()).isEmpty()) {
+            return false;
+        }
+        for (int dy = 2; dy <= HOVER_SPAWN_HEIGHT; ++dy) {
             if (!level.getBlockState(pos.below(dy)).getCollisionShape(level, pos.below(dy)).isEmpty()) {
                 return true;
             }
@@ -257,6 +260,8 @@ public class RimeSkull extends Monster {
     }
 
     private static class SkullMoveControl extends ThrustMoveControl {
+        private int wantedTicks;
+
         SkullMoveControl(RimeSkull skull) {
             super(skull, 0.05, 0.5);
         }
@@ -264,6 +269,26 @@ public class RimeSkull extends Monster {
         @Override
         protected double arrival() {
             return this.mob.getBoundingBox().getSize();
+        }
+
+        @Override
+        protected Vec3 drift(Vec3 motion) {
+            return motion.multiply(1.0, 0.9, 1.0);
+        }
+
+        @Override
+        public void setWantedPosition(double x, double y, double z, double speed) {
+            super.setWantedPosition(x, y, z, speed);
+            this.wantedTicks = 0;
+        }
+
+        @Override
+        public void tick() {
+            // A spot it cannot reach (behind a wall, under the floor) would otherwise be pushed at forever.
+            if (this.operation == Operation.MOVE_TO && ++this.wantedTicks > 100) {
+                this.operation = Operation.WAIT;
+            }
+            super.tick();
         }
 
         @Override
@@ -450,8 +475,9 @@ public class RimeSkull extends Monster {
             BlockPos origin = RimeSkull.this.blockPosition();
             for (int attempt = 0; attempt < 3; ++attempt) {
                 BlockPos pos = origin.offset(RimeSkull.this.random.nextInt(9) - 4, RimeSkull.this.random.nextInt(5) - 2, RimeSkull.this.random.nextInt(9) - 4);
-                if (ColdEffects.isOpen(RimeSkull.this.level(), pos, 1)) {
-                    RimeSkull.this.getMoveControl().setWantedPosition(pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5, 0.25);
+                Vec3 at = Vec3.atCenterOf(pos);
+                if (ColdEffects.isOpen(RimeSkull.this.level(), pos.below(), 2) && ColdEffects.clearPath(RimeSkull.this, RimeSkull.this.getEyePosition(), at)) {
+                    RimeSkull.this.getMoveControl().setWantedPosition(at.x, at.y, at.z, 0.25);
                     return;
                 }
             }
